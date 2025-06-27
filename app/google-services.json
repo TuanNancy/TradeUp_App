@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "612893384832",
+    "firebase_url": "https://tradeup-7034b-default-rtdb.firebaseio.com",
     "project_id": "tradeup-7034b",
     "storage_bucket": "tradeup-7034b.firebasestorage.app"
   },
@@ -12,7 +13,12 @@
           "package_name": "com.example.tradeup_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "612893384832-6mc745n3oe6u3gtmf3t9mgl9dtdntvkj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD3zT2FZT0vamSuMSRsaahqb5lwiL8zSNw"
@@ -20,7 +26,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "612893384832-6mc745n3oe6u3gtmf3t9mgl9dtdntvkj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

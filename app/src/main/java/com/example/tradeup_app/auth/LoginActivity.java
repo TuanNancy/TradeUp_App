@@ -1,102 +1,222 @@
 package com.example.tradeup_app.auth;
 
 import android.content.Intent;
+import android.content.IntentSender;
 import android.os.Bundle;
-import android.util.Patterns;
-import android.widget.*;
-import androidx.annotation.Nullable;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.gms.auth.api.signin.*;
+import com.example.tradeup_app.auth.Domain.UserModel;
+import com.example.tradeup_app.auth.Helper.CurrentUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.android.gms.auth.api.identity.BeginSignInRequest;
+import com.google.android.gms.auth.api.identity.Identity;
+import com.google.android.gms.auth.api.identity.SignInClient;
+import com.google.android.gms.auth.api.identity.SignInCredential;
 import com.google.android.gms.common.SignInButton;
-import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.*;
+import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
 import com.example.tradeup_app.R;
 
+
 public class LoginActivity extends AppCompatActivity {
-    private EditText inputEmail, inputPassword;
-    private Button btnLogin;
-    private TextView textRegister, textForgot;
-    private SignInButton btnGoogle;
-    private FirebaseAuth mAuth;
-    private static final int RC_GOOGLE = 1001;
+
+    private EditText emailEditText, passwordEditText;
+    private Button loginButton;
+    private SignInButton googleSignInButton;
+    private TextView registerLink, forgotPasswordText;
+
+    private FirebaseAuth auth;
+    private SignInClient oneTapClient;
+    private BeginSignInRequest signInRequest;
+    private final int REQ_ONE_TAP = 2; // Can be any value
 
     @Override
-    protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        inputEmail = findViewById(R.id.inputEmail);
-        inputPassword = findViewById(R.id.inputPassword);
-        btnLogin = findViewById(R.id.btnLogin);
-        textForgot = findViewById(R.id.textForgot);
-        textRegister = findViewById(R.id.textRegister);
-        btnGoogle = findViewById(R.id.btnGoogleSignIn);
+        auth = FirebaseAuth.getInstance();
 
-        mAuth = FirebaseAuth.getInstance();
+        emailEditText = findViewById(R.id.emailEditText);
+        passwordEditText = findViewById(R.id.passwordEditText);
+        loginButton = findViewById(R.id.loginButton);
+        googleSignInButton = findViewById(R.id.googleSignInButton);
+        registerLink = findViewById(R.id.registerLink);
+        forgotPasswordText = findViewById(R.id.forgotPasswordText);
 
-        SimpleTextWatcher watcher = new SimpleTextWatcher() {
-            @Override public void onTextChanged() {
-                String e = inputEmail.getText().toString().trim();
-                String p = inputPassword.getText().toString().trim();
-                btnLogin.setEnabled(!e.isEmpty() && !p.isEmpty());
+        // Disable login button initially
+        loginButton.setEnabled(false);
+
+        TextWatcher inputWatcher = new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String email = emailEditText.getText().toString().trim();
+                String pass = passwordEditText.getText().toString().trim();
+                loginButton.setEnabled(!email.isEmpty() && !pass.isEmpty());
             }
+            @Override public void afterTextChanged(Editable s) {}
         };
-        inputEmail.addTextChangedListener(watcher);
-        inputPassword.addTextChangedListener(watcher);
 
-        btnLogin.setOnClickListener(v -> {
-            String email = inputEmail.getText().toString().trim();
-            String pass  = inputPassword.getText().toString().trim();
-            if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                inputEmail.setError("Invalid email"); return;
-            }
-            mAuth.signInWithEmailAndPassword(email, pass)
-                    .addOnSuccessListener(auth -> {
-                        FirebaseUser u = mAuth.getCurrentUser();
-                        if (u != null && u.isEmailVerified()) {
-                            startActivity(new Intent(this, UserProfileActivity.class));
-                            finish();
+        emailEditText.addTextChangedListener(inputWatcher);
+        passwordEditText.addTextChangedListener(inputWatcher);
+
+        loginButton.setOnClickListener(v -> {
+            String email = emailEditText.getText().toString().trim();
+            String pass = passwordEditText.getText().toString().trim();
+
+            auth.signInWithEmailAndPassword(email, pass)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            FirebaseUser user = auth.getCurrentUser();
+                            if (user != null && user.isEmailVerified()) {
+                                String uid = user.getUid();
+                                FirebaseDatabase.getInstance().getReference("Users").child(uid).get()
+                                        .addOnSuccessListener(snapshot -> {
+                                            if (snapshot.exists()) {
+                                                UserModel userModel = snapshot.getValue(UserModel.class);
+                                                CurrentUser.setUser(userModel); // Gán vào singleton
+                                                startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                                                finish();
+                                            }
+                                        });
+                            }else {
+                                Toast.makeText(this, "Please verify your email", Toast.LENGTH_SHORT).show();
+                                auth.signOut();
+                            }
                         } else {
-                            Toast.makeText(this, "Verify your email first", Toast.LENGTH_LONG).show();
+                            Toast.makeText(this, "Login failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                         }
-                    })
-                    .addOnFailureListener(e ->
-                            Toast.makeText(this, "Login failed: "+e.getMessage(), Toast.LENGTH_SHORT).show());
+                    });
         });
 
-        textForgot.setOnClickListener(v ->
-                startActivity(new Intent(this, ForgotPasswordActivity.class)));
+        googleSignInButton.setOnClickListener(v -> signInWithGoogle());
 
-        textRegister.setOnClickListener(v ->
-                startActivity(new Intent(this, RegisterActivity.class)));
+        registerLink.setOnClickListener(v ->
+                startActivity(new Intent(LoginActivity.this, RegisterActivity.class))
+        );
 
-        btnGoogle.setOnClickListener(v -> {
-            GoogleSignInOptions opts = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestIdToken(getString(R.string.default_web_client_id))
-                    .requestEmail().build();
-            GoogleSignInClient client = GoogleSignIn.getClient(this, opts);
-            startActivityForResult(client.getSignInIntent(), RC_GOOGLE);
-        });
+        forgotPasswordText.setOnClickListener(v ->
+                startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class))
+        );
+
+        setupGoogleSignIn();
     }
 
+    private void setupGoogleSignIn() {
+        oneTapClient = Identity.getSignInClient(this);
+        signInRequest = BeginSignInRequest.builder()
+                .setGoogleIdTokenRequestOptions(
+                        BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
+                                .setSupported(true)
+                                .setServerClientId(getString(R.string.default_web_client_id))
+                                .setFilterByAuthorizedAccounts(false)
+                                .build())
+                .build();
+    }
+
+    private void signInWithGoogle() {
+        oneTapClient.beginSignIn(signInRequest)
+                .addOnSuccessListener(this, result -> {
+                    try {
+                        startIntentSenderForResult(
+                                result.getPendingIntent().getIntentSender(),
+                                REQ_ONE_TAP,
+                                null, 0, 0, 0, null);
+                    } catch (IntentSender.SendIntentException e) {
+                        Toast.makeText(this, "Error starting Google Sign-In: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(this, e -> {
+                    Toast.makeText(this, "Google Sign-in Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
+
+
     @Override
-    protected void onActivityResult(int req, int res, @Nullable Intent data) {
-        super.onActivityResult(req, res, data);
-        if (req == RC_GOOGLE) {
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_ONE_TAP) {
             try {
-                GoogleSignInAccount acct = task.getResult(ApiException.class);
-                AuthCredential cred = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
-                mAuth.signInWithCredential(cred)
-                        .addOnSuccessListener(a -> {
-                            startActivity(new Intent(this, UserProfileActivity.class));
-                            finish();
-                        });
+                SignInCredential credential = oneTapClient.getSignInCredentialFromIntent(data);
+                String idToken = credential.getGoogleIdToken();
+                if (idToken != null) {
+                    AuthCredential firebaseCredential = GoogleAuthProvider.getCredential(idToken, null);
+                    auth.signInWithCredential(firebaseCredential)
+                            .addOnCompleteListener(task -> {
+                                if (task.isSuccessful()) {
+                                    FirebaseUser user = auth.getCurrentUser();
+                                    if (user == null) {
+                                        Toast.makeText(this, "User not found", Toast.LENGTH_SHORT).show();
+                                        return;
+                                    }
+
+                                    String uid = user.getUid();
+                                    FirebaseDatabase.getInstance().getReference("Users").child(uid)
+                                            .get()
+                                            .addOnSuccessListener(snapshot -> {
+                                                if (snapshot.exists()) {
+                                                    // Đã có user => vào app
+                                                    UserModel userModel = snapshot.getValue(UserModel.class);
+                                                    if (userModel != null) {
+                                                        CurrentUser.setUser(userModel);
+                                                    }
+                                                    startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                                                    finish();
+                                                } else {
+                                                    // Chưa có => đăng ký nhanh user mới
+                                                    String email = user.getEmail() != null ? user.getEmail() : "";
+                                                    String username = user.getDisplayName() != null ? user.getDisplayName() : "User";
+                                                    String photoUrl = user.getPhotoUrl() != null ? user.getPhotoUrl().toString() : "";
+
+                                                    UserModel newUser = new UserModel(
+                                                            uid,
+                                                            email,
+                                                            username,
+                                                            photoUrl,
+                                                            "",     // bio
+                                                            "",     // contact
+                                                            ""      // rating
+                                                    );
+
+                                                    FirebaseDatabase.getInstance().getReference("Users").child(uid)
+                                                            .setValue(newUser)
+                                                            .addOnSuccessListener(unused -> {
+                                                                CurrentUser.setUser(newUser);
+                                                                Toast.makeText(this, "Đăng nhập Google thành công!", Toast.LENGTH_SHORT).show();
+                                                                startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                                                                finish();
+                                                            })
+                                                            .addOnFailureListener(e -> {
+                                                                Toast.makeText(this, "Lỗi lưu user: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                                            });
+                                                }
+                                            })
+                                            .addOnFailureListener(e -> {
+                                                Toast.makeText(this, "Lỗi truy vấn user: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                            });
+
+                                } else {
+                                    Toast.makeText(this, "Firebase Auth failed", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                }
             } catch (Exception e) {
-                Toast.makeText(this, "Google sign-in failed", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Google Sign-in Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
     }
+
+
 }

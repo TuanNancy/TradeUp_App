@@ -1,60 +1,197 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cream"
     android:padding="24dp">
 
     <LinearLayout
-        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:gravity="center_horizontal">
 
+        <!-- Top Header -->
+        <LinearLayout
+            android:id="@+id/backBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="start|center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <ImageView
+                android:id="@+id/imageView9"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                tools:ignore="ContentDescription" />
+
+            <TextView
+                android:id="@+id/textView7"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Back"
+                android:textColor="@color/darkBrown"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Page Title -->
+
+
+        <!-- Profile Picture -->
         <ImageView
-            android:id="@+id/imageProfile"
+            android:id="@+id/profileImageView"
             android:layout_width="120dp"
             android:layout_height="120dp"
-            android:src="@drawable/ic_user"
             android:scaleType="centerCrop"
-            android:background="@drawable/profile_circle_bg"
-            android:layout_marginBottom="24dp"/>
 
+            android:layout_marginBottom="16dp"
+            android:contentDescription="Profile picture"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Display Name -->
+        <TextView
+            android:id="@+id/displayNameTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Display Name"
+            android:textColor="@color/darkBrown"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Rating -->
+        <TextView
+            android:id="@+id/ratingTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Rating: 4.5"
+            android:textColor="@color/grey"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Bio -->
         <EditText
-            android:id="@+id/editDisplayName"
+            android:id="@+id/bioEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/display_name_hint"/>
+            android:hint="Bio"
+            android:textColor="@color/black"
+            android:backgroundTint="@color/lightGrey"
+            android:minHeight="80dp"
+            android:gravity="top"
 
+            android:padding="12dp"
+            android:layout_marginBottom="12dp"
+            android:allowClickWhenDisabled="false"
+            />
+
+        <!-- Contact Info -->
         <EditText
-            android:id="@+id/editBio"
+            android:id="@+id/contactEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/bio_hint"
-            android:layout_marginTop="16dp"/>
+            android:hint="Contact Info"
+            android:textColor="@color/black"
+            android:backgroundTint="@color/lightGrey"
 
-        <Button
-            android:id="@+id/btnUpdate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/update_profile"
-            android:layout_marginTop="24dp"/>
+            android:padding="12dp"
+            android:layout_marginBottom="24dp"
+            android:allowClickWhenDisabled="false"
+            />
 
+        <!-- Update Profile Button -->
         <Button
-            android:id="@+id/btnLogout"
+            android:id="@+id/updateProfileButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/logout"
-            android:layout_marginTop="16dp"
-            android:backgroundTint="#CCCCCC"/>
+            android:text="Update Profile"
+            android:backgroundTint="@color/orange"
+            android:textColor="@color/white"
+            android:layout_marginBottom="12dp" />
 
+        <!-- Deactivate Account Button -->
         <Button
-            android:id="@+id/btnDeleteAccount"
+            android:id="@+id/deactivateAccountButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/delete_account"
-            android:layout_marginTop="16dp"
-            android:backgroundTint="#FF5555"
-            android:textColor="#FFFFFF"/>
+            android:text="Deactivate Account"
+            android:backgroundTint="@color/lightGrey"
+            android:textColor="@color/brown"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Delete Account Button -->
+        <Button
+            android:id="@+id/deleteAccountButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Delete Account Permanently"
+            android:backgroundTint="#660000"
+            android:textColor="@color/white" />
+        <TextView
+            android:id="@+id/userlist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Wanna see another user?"
+            android:textColor="@color/orange"
+            android:layout_marginTop="16dp" />
+        <!-- Transaction Summary -->
+        <TextView
+            android:id="@+id/transactionSummaryLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Transaction Summary"
+            android:textColor="@color/darkBrown"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp" />
+
+        <TextView
+            android:id="@+id/totalTransactionsTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Total Transactions: 12"
+            android:textColor="@color/grey"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Purchase History -->
+        <TextView
+            android:id="@+id/purchaseHistoryLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Purchase History"
+            android:textColor="@color/darkBrown"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp" />
+
+        <ListView
+            android:id="@+id/purchaseHistoryListView"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:background="@color/white"
+            android:layout_marginBottom="12dp" />
+
+        <!-- User Reviews -->
+        <TextView
+            android:id="@+id/userReviewsLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="User Reviews"
+            android:textColor="@color/darkBrown"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp" />
+
+        <ListView
+            android:id="@+id/userReviewsListView"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:background="@color/white"
+            android:layout_marginBottom="24dp" />
 
     </LinearLayout>
 </ScrollView>

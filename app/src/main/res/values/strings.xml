@@ -19,5 +19,8 @@
     <string name="update_profile">Update Profile</string>
     <string name="logout">Logout</string>
     <string name="delete_account">Delete Account</string>
-    <string name="default_web_client_id" />
+
+    <string name="rating_format">Rating: %1$.1f</string>
+    <string name="default_web_client_id">612893384832-6mc745n3oe6u3gtmf3t9mgl9dtdntvkj.apps.googleusercontent.com</string>
+
 </resources>

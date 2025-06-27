@@ -64,9 +64,25 @@ dependencies {
 
     // Google Play Services Auth (kiểm tra phiên bản mới nhất tương thích)
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.database)
 
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation(libs.appcompat)
+    implementation(libs.material)
+    implementation(libs.activity)
+    implementation(libs.constraintlayout)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.ext.junit)
+    androidTestImplementation(libs.espresso.core)
+    implementation ("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation ("com.evernote:android-job:1.4.3")
+    implementation ("com.github.bumptech.glide:glide:4.16.0")
+    implementation ("com.google.firebase:firebase-auth:22.3.0")
+    implementation ("com.google.android.gms:play-services-auth:21.1.0")
+    implementation ("com.cloudinary:cloudinary-android:2.2.0")
+    implementation ("com.google.code.gson:gson:2.10.1")
 }
