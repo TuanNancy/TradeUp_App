@@ -33,33 +33,10 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <Button
-            android:id="@+id/btnLogin"
+            android:id="@+id/btnRegister"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/login"
-            android:layout_marginTop="24dp"
-            android:enabled="false"/>
-
-        <TextView
-            android:id="@+id/textForgot"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/forgot_password"
-            android:textColor="?attr/colorPrimary"
-            android:layout_marginTop="12dp"/>
-
-        <com.google.android.gms.common.SignInButton
-            android:id="@+id/btnGoogleSignIn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:text="@string/register"
             android:layout_marginTop="24dp"/>
-
-        <TextView
-            android:id="@+id/textRegister"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/no_account"
-            android:textColor="?attr/colorPrimary"
-            android:layout_marginTop="32dp"/>
     </LinearLayout>
 </ScrollView>
