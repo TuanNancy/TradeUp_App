@@ -62,8 +62,19 @@ dependencies {
     // Firebase Firestore (không cần chỉ định phiên bản khi dùng BoM)
     implementation("com.google.firebase:firebase-firestore")
 
+    // Firebase Storage for image uploads
+    implementation("com.google.firebase:firebase-storage")
+
+    // Firebase Cloud Messaging for push notifications
+    implementation("com.google.firebase:firebase-messaging")
+
     // Google Play Services Auth (kiểm tra phiên bản mới nhất tương thích)
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+
+    // Google Play Services Maps and Location
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+
     implementation(libs.firebase.auth)
     implementation(libs.firebase.database)
 

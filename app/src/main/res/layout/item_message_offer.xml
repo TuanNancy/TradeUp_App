@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:gravity="center">
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        app:cardBackgroundColor="@android:color/holo_orange_light"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        android:layout_marginHorizontal="32dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💰 Đề xuất giá"
+                android:textStyle="bold"
+                android:textColor="@android:color/white"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/offer_amount_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="500,000 VNĐ"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/message_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Đề xuất giá: 500,000 VNĐ"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/time_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="10:30"
+        android:textSize="10sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginStart="8dp"
+        android:layout_gravity="bottom" />
+
+</LinearLayout>

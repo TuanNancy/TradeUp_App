@@ -2,17 +2,50 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.tradeup_app">
 
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
+        android:name=".TradeUpApplication"
         android:allowBackup="true"
         android:label="@string/app_name"
         android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
 
-        <activity android:name=".auth.ForgotPasswordActivity"/>
-        <activity android:name=".auth.RegisterActivity"/>
-        <activity android:name=".auth.UserProfileActivity"/>
+        <!-- Firebase Messaging Service -->
+        <service
+            android:name=".utils.TradeUpFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
+        <!-- Chat Activity -->
+        <activity android:name=".activities.ChatActivity"
+            android:exported="false"
+            android:parentActivityName=".auth.MainActivity"/>
+
+        <!-- Main Activity -->
+        <activity android:name=".auth.MainActivity"
+            android:exported="false"/>
+
+        <!-- Auth Activities -->
+        <activity android:name=".auth.ForgotPasswordActivity"
+            android:exported="false"/>
+        <activity android:name=".auth.RegisterActivity"
+            android:exported="false"/>
+        <activity android:name=".auth.UserProfileActivity"
+            android:exported="false"/>
+
+        <!-- Login Activity as Launcher -->
         <activity android:name=".auth.LoginActivity"
             android:exported="true">
             <intent-filter>
