@@ -1,12 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="orange">#f69724</color>
-    <color name="cream">#efdec9</color>
-    <color name="lightCream">#ded9d1</color>
-    <color name="grey">#8d8d8d</color>
-    <color name="lightGrey">#f6f6f6</color>
-    <color name="brown">#7e4616</color>
-    <color name="darkBrown">#220c01</color>
+    <!-- Primary Colors -->
+    <color name="primary">#FF6B35</color>
+    <color name="primary_dark">#E55A2B</color>
+    <color name="primary_light">#FF8A65</color>
+
+    <!-- Secondary Colors -->
+    <color name="secondary">#2196F3</color>
+    <color name="secondary_dark">#1976D2</color>
+    <color name="secondary_light">#64B5F6</color>
+
+    <!-- Background Colors -->
+    <color name="background_primary">#FFFFFF</color>
+    <color name="background_secondary">#F5F5F5</color>
+    <color name="surface">#FFFFFF</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_hint">#BDBDBD</color>
+
+    <!-- Status Colors -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FF9800</color>
+    <color name="error">#F44336</color>
+
+    <!-- Other Colors -->
+    <color name="divider">#E0E0E0</color>
+    <color name="overlay">#80000000</color>
+    <color name="transparent">#00000000</color>
+
+    <!-- Legacy colors -->
+    <color name="orange">#FF6B35</color>
+
+    <!-- Missing Colors - Add these to fix the build error -->
+    <color name="cream">#FFF8E1</color>
+    <color name="darkBrown">#3E2723</color>
+    <color name="grey">#9E9E9E</color>
+    <color name="lightGrey">#F5F5F5</color>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="brown">#795548</color>
 </resources>

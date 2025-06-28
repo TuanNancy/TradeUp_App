@@ -96,4 +96,6 @@ dependencies {
     implementation ("com.google.android.gms:play-services-auth:21.1.0")
     implementation ("com.cloudinary:cloudinary-android:2.2.0")
     implementation ("com.google.code.gson:gson:2.10.1")
+    // CircleImageView for profile pictures
+    implementation ("de.hdodenhof:circleimageview:3.1.0")
 }
