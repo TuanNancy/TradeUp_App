@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:hint="Email"
 
-        android:textColor="#FFFFFF"
+        android:textColor="#456456"
         android:backgroundTint="#FFFFFF"
         android:inputType="textEmailAddress"
         android:minHeight="48dp" />
@@ -26,7 +26,7 @@
         android:layout_height="wrap_content"
         android:hint="Password"
 
-        android:textColor="#FFFFFF"
+        android:textColor="#513213"
         android:backgroundTint="#FFFFFF"
         android:inputType="textPassword"
         android:minHeight="48dp" />
