@@ -11,7 +11,7 @@ public class UserModel {
     public String contact;
     public int rating;
     private boolean deactivated;
-
+    public UserModel() {}
     public UserModel(String uid, String email, String username, String photoUrl, String bio, String contact, String s) {} // Firebase cần constructor rỗng
 
     public UserModel(String uid, String email, String username, String profilePic, String bio, String contact, int rating) {
