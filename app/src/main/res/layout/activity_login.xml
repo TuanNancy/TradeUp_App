@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:hint="Email"
 
-        android:textColor="#456456"
+        android:textColor="#456426"
         android:backgroundTint="#FFFFFF"
         android:inputType="textEmailAddress"
         android:minHeight="48dp" />
