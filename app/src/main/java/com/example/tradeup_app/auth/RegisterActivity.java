@@ -37,8 +37,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
 
 public class RegisterActivity extends AppCompatActivity {
 
@@ -50,7 +48,6 @@ public class RegisterActivity extends AppCompatActivity {
     private TextView loginLink;
 
     private FirebaseAuth auth;
-    private FirebaseStorage storage;
     private SignInClient oneTapClient;
     private BeginSignInRequest signInRequest;
 
@@ -72,7 +69,6 @@ public class RegisterActivity extends AppCompatActivity {
 
     private void initFirebase() {
         auth = FirebaseAuth.getInstance();
-        storage = FirebaseStorage.getInstance();
     }
 
     private void initViews() {
@@ -300,18 +296,50 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void uploadImageAndCreateProfile(String uid, String username, String email) {
-        StorageReference storageRef = storage.getReference()
-                .child("profile_images")
-                .child(uid + ".jpg");
+        if (selectedImageUri == null) {
+            saveUserProfile(uid, username, email, "");
+            return;
+        }
 
-        storageRef.putFile(selectedImageUri)
-                .addOnSuccessListener(taskSnapshot ->
-                    storageRef.getDownloadUrl().addOnSuccessListener(uri ->
-                        saveUserProfile(uid, username, email, uri.toString())))
-                .addOnFailureListener(e -> {
-                    // Save profile without image if upload fails
+        // TODO: Implement Cloudinary upload logic here
+        // For now, save profile without image URL
+        // You can implement Cloudinary upload using MediaManager.get().upload()
+        saveUserProfile(uid, username, email, "");
+
+        // Example Cloudinary upload (commented out - implement as needed):
+        /*
+        MediaManager.get().upload(selectedImageUri)
+            .option("folder", "profile_images")
+            .option("public_id", "user_" + uid)
+            .callback(new UploadCallback() {
+                @Override
+                public void onStart(String requestId) {
+                    // Upload started
+                }
+
+                @Override
+                public void onProgress(String requestId, long bytes, long totalBytes) {
+                    // Upload progress
+                }
+
+                @Override
+                public void onSuccess(String requestId, Map resultData) {
+                    String imageUrl = (String) resultData.get("secure_url");
+                    saveUserProfile(uid, username, email, imageUrl);
+                }
+
+                @Override
+                public void onError(String requestId, ErrorInfo error) {
+                    // Upload failed, save profile without image
                     saveUserProfile(uid, username, email, "");
-                });
+                }
+
+                @Override
+                public void onReschedule(String requestId, ErrorInfo error) {
+                    // Upload rescheduled
+                }
+            }).dispatch();
+        */
     }
 
     private void saveUserProfile(String uid, String username, String email, String photoUrl) {

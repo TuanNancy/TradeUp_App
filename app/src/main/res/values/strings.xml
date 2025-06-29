@@ -33,6 +33,9 @@
     <string name="sending">Sending…</string>
     <string name="remember_password">Remember your password? </string>
 
+    <!-- Google Sign-In -->
+    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
+
     <!-- Common -->
     <string name="buy_sell_locally">Buy and Sell Locally</string>
     <string name="email">Email</string>

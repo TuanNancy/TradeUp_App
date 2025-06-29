@@ -62,8 +62,6 @@ dependencies {
     // Firebase Firestore (không cần chỉ định phiên bản khi dùng BoM)
     implementation("com.google.firebase:firebase-firestore")
 
-    // Firebase Storage for image uploads
-    implementation("com.google.firebase:firebase-storage")
 
     // Firebase Cloud Messaging for push notifications
     implementation("com.google.firebase:firebase-messaging")
@@ -115,14 +113,9 @@ dependencies {
     // Firebase Realtime Database
     implementation("com.google.firebase:firebase-database-ktx")
 
-    // Firebase Storage và UI components
-    implementation("com.google.firebase:firebase-storage-ktx")
-    implementation("com.firebaseui:firebase-ui-storage:8.0.2")
-
-    // Image Loading and Processing
+    // Image Loading and Processing (chỉ dùng Cloudinary, không dùng Firebase Storage)
     implementation("com.github.bumptech.glide:glide:4.16.0")
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
-    implementation("id.zelory:compressor:3.0.1")
 
     // UI Components
     implementation("com.google.android.material:material:1.11.0")
