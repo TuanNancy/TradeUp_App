@@ -17,18 +17,22 @@ public class TradeUpApplication extends Application {
 
     private void initCloudinary() {
         Map<String, String> config = new HashMap<>();
-        // Chỉ cần cloud_name cho unsigned upload
-        config.put("cloud_name", "dskljyaxx"); // Thay bằng cloud name thật của bạn từ Cloudinary dashboard
+        // Cấu hình đầy đủ Cloudinary credentials
+        config.put("cloud_name", "dskljyaxx");
+        config.put("api_key", "111495714631442");
+        config.put("api_secret", "at88YOt6ZbYT4GMrOJ1BK2XHzfI");
 
         try {
             MediaManager.init(this, config);
-            android.util.Log.d("TradeUpApp", "Cloudinary initialized successfully");
+            android.util.Log.d("TradeUpApp", "Cloudinary initialized successfully with full credentials");
         } catch (Exception e) {
             android.util.Log.e("TradeUpApp", "Failed to initialize Cloudinary: " + e.getMessage());
-            // Fallback init nếu có lỗi
+            // Fallback với chỉ cloud_name để test
             try {
-                MediaManager.init(this);
-                android.util.Log.d("TradeUpApp", "Cloudinary initialized with default config");
+                Map<String, String> fallbackConfig = new HashMap<>();
+                fallbackConfig.put("cloud_name", "dskljyaxx");
+                MediaManager.init(this, fallbackConfig);
+                android.util.Log.d("TradeUpApp", "Cloudinary initialized with fallback config (cloud_name only)");
             } catch (Exception fallbackError) {
                 android.util.Log.e("TradeUpApp", "Fallback init also failed: " + fallbackError.getMessage());
             }

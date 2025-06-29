@@ -12,13 +12,49 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Product Image -->
-        <ImageView
-            android:id="@+id/product_image"
+        <!-- Product Image with Counter -->
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="180dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/ic_launcher_background" />
+            android:layout_height="180dp">
+
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/images_viewpager"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <!-- Page Indicator - smaller and transparent -->
+            <LinearLayout
+                android:id="@+id/dots_indicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal"
+                android:background="#30000000"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:visibility="gone" />
+
+            <!-- Image Counter Badge -->
+            <TextView
+                android:id="@+id/image_counter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:layout_margin="8dp"
+                android:background="#80000000"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:text="1/5"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:drawableStart="@android:drawable/ic_menu_camera"
+                android:drawablePadding="4dp"
+                android:gravity="center_vertical" />
+
+        </FrameLayout>
 
         <!-- Product Info -->
         <LinearLayout

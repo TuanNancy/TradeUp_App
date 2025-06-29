@@ -4,7 +4,7 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -80,16 +80,20 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     }
 
     class ProductViewHolder extends RecyclerView.ViewHolder {
-        private ImageView productImage;
-        private TextView titleText, priceText, locationText, conditionText;
+        private androidx.viewpager2.widget.ViewPager2 imagesViewPager;
+        private LinearLayout dotsIndicator;
+        private TextView titleText, priceText, locationText, conditionText, imageCounter;
+        private ImagePagerAdapter imagePagerAdapter;
 
         public ProductViewHolder(@NonNull View itemView) {
             super(itemView);
-            productImage = itemView.findViewById(R.id.product_image);
+            imagesViewPager = itemView.findViewById(R.id.images_viewpager);
+            dotsIndicator = itemView.findViewById(R.id.dots_indicator);
             titleText = itemView.findViewById(R.id.title_text);
             priceText = itemView.findViewById(R.id.price_text);
             locationText = itemView.findViewById(R.id.location_text);
             conditionText = itemView.findViewById(R.id.condition_text);
+            imageCounter = itemView.findViewById(R.id.image_counter);
 
             itemView.setOnClickListener(v -> {
                 if (listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
@@ -116,17 +120,86 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             locationText.setText(product.getLocation());
             conditionText.setText(product.getCondition());
 
-            // Load image with Glide
+            // Setup images with ViewPager2
             if (product.getImageUrls() != null && !product.getImageUrls().isEmpty()) {
-                Glide.with(context)
-                        .load(product.getImageUrls().get(0))
-                        .placeholder(R.drawable.ic_launcher_background)
-                        .error(R.drawable.ic_launcher_background)
-                        .centerCrop()
-                        .into(productImage);
+                // Clear any existing callbacks to prevent memory leaks
+                imagesViewPager.unregisterOnPageChangeCallback(pageChangeCallback);
+
+                // Set up adapter
+                imagePagerAdapter = new ImagePagerAdapter(context, product.getImageUrls());
+                imagesViewPager.setAdapter(imagePagerAdapter);
+                imagesViewPager.setVisibility(View.VISIBLE);
+
+                // Setup dots indicator only if more than 1 image
+                if (product.getImageUrls().size() > 1) {
+                    setupDotsIndicator(product.getImageUrls().size());
+                    dotsIndicator.setVisibility(View.VISIBLE);
+                } else {
+                    dotsIndicator.setVisibility(View.GONE);
+                }
+
+                // Set image counter
+                imageCounter.setText(String.format(Locale.getDefault(), "1/%d", product.getImageUrls().size()));
+                imageCounter.setVisibility(View.VISIBLE);
+
+                android.util.Log.d("ProductAdapter", "Setup ViewPager with " + product.getImageUrls().size() + " images");
             } else {
-                productImage.setImageResource(R.drawable.ic_launcher_background);
+                // No images - show placeholder
+                android.util.Log.d("ProductAdapter", "No image URLs found for product: " + product.getTitle());
+                imagesViewPager.setVisibility(View.GONE);
+                dotsIndicator.setVisibility(View.GONE);
+                imageCounter.setVisibility(View.GONE);
             }
+        }
+
+        private androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback pageChangeCallback =
+            new androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
+                @Override
+                public void onPageSelected(int position) {
+                    super.onPageSelected(position);
+                    // Update dots indicator safely
+                    if (dotsIndicator != null && dotsIndicator.getChildCount() > position) {
+                        for (int i = 0; i < dotsIndicator.getChildCount(); i++) {
+                            View dot = dotsIndicator.getChildAt(i);
+                            if (dot != null) {
+                                int dotColor = (i == position) ? R.drawable.dot_indicator_active : R.drawable.dot_indicator;
+                                dot.setBackgroundResource(dotColor);
+                            }
+                        }
+
+                        // Update counter badge
+                        if (imageCounter != null) {
+                            imageCounter.setText(String.format(Locale.getDefault(), "%d/%d", position + 1, dotsIndicator.getChildCount()));
+                        }
+                    }
+                }
+            };
+
+        private void setupDotsIndicator(int size) {
+            dotsIndicator.removeAllViews();
+
+            // Only show dots if there are multiple images
+            if (size <= 1) {
+                dotsIndicator.setVisibility(View.GONE);
+                return;
+            }
+
+            for (int i = 0; i < Math.min(size, 5); i++) { // Limit to 5 dots maximum
+                View dot = new View(context);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(12, 12); // Fixed size in pixels
+                params.setMargins(6, 0, 6, 0);
+                dot.setLayoutParams(params);
+                dot.setBackgroundResource(R.drawable.dot_indicator);
+                dotsIndicator.addView(dot);
+            }
+
+            // Highlight the first dot
+            if (dotsIndicator.getChildCount() > 0) {
+                dotsIndicator.getChildAt(0).setBackgroundResource(R.drawable.dot_indicator_active);
+            }
+
+            // Register page change callback
+            imagesViewPager.registerOnPageChangeCallback(pageChangeCallback);
         }
     }
 }

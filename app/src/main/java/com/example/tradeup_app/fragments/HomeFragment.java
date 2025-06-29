@@ -103,7 +103,7 @@ public class HomeFragment extends Fragment {
             @Override
             public void onError(String error) {
                 if (getActivity() != null) {
-                    Toast.makeText(getContext(), "Lỗi tải sản phẩm nổi bật: " + error, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "L��i tải sản phẩm nổi bật: " + error, Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -150,7 +150,14 @@ public class HomeFragment extends Fragment {
     public void onResume() {
         super.onResume();
         // Refresh data when fragment resumes
-        loadFeaturedItems();
-        loadRecentItems();
+        refreshData();
+    }
+
+    // Add public method to refresh data
+    public void refreshData() {
+        if (isAdded() && getContext() != null) {
+            loadFeaturedItems();
+            loadRecentItems();
+        }
     }
 }

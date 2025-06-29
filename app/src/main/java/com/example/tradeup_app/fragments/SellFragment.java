@@ -287,7 +287,7 @@ public class SellFragment extends Fragment {
         showLoadingDialog();
 
         // Upload images first
-        ImageUploadManager.uploadImages(selectedImages, requireContext(), new ImageUploadManager.UploadCallback() {
+        ImageUploadManager.uploadImages(selectedImages, requireContext(), new ImageUploadManager.ImageUploadCallback() {
             @Override
             public void onSuccess(List<String> imageUrls) {
                 product.setImageUrls(imageUrls);
@@ -304,15 +304,45 @@ public class SellFragment extends Fragment {
 
     private void publishProduct(Product product) {
         firebaseManager.addProduct(product, task -> {
+            hideLoadingDialog();
+
             if (task.isSuccessful()) {
-                hideLoadingDialog();
-                Toast.makeText(getContext(), "Đăng bán thành công!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Đăng bán thành công!", Toast.LENGTH_LONG).show();
                 clearForm();
-                // Navigate back or to product detail
-                requireActivity().onBackPressed();
+
+                // Navigate safely without causing crash
+                try {
+                    // Instead of onBackPressed, navigate to home fragment
+                    if (getActivity() != null && isAdded()) {
+                        androidx.fragment.app.FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
+
+                        // Clear back stack to prevent navigation issues
+                        fragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
+
+                        // Navigate to home fragment and refresh data
+                        com.example.tradeup_app.fragments.HomeFragment homeFragment = new com.example.tradeup_app.fragments.HomeFragment();
+                        fragmentManager.beginTransaction()
+                            .replace(R.id.fragment_container, homeFragment)
+                            .commit();
+
+                        // Notify that data has changed so home fragment can refresh
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                            if (homeFragment.isAdded()) {
+                                // Trigger refresh of home fragment data
+                                homeFragment.onResume();
+                            }
+                        }, 500);
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e("SellFragment", "Error navigating after publish", e);
+                    // Fallback: just stay on current screen
+                }
             } else {
-                hideLoadingDialog();
-                Toast.makeText(getContext(), "Lỗi: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                String errorMessage = "Lỗi đăng bán";
+                if (task.getException() != null && task.getException().getMessage() != null) {
+                    errorMessage += ": " + task.getException().getMessage();
+                }
+                Toast.makeText(getContext(), errorMessage, Toast.LENGTH_LONG).show();
             }
         });
     }
