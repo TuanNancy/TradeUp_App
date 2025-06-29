@@ -1,58 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="4dp">
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Product Image with Counter -->
+        <!-- Product Image with Status Badge -->
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="180dp">
+            android:layout_height="200dp">
 
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/images_viewpager"
+            <ImageView
+                android:id="@+id/product_image"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_image_placeholder"
+                android:background="@color/background_light" />
 
-            <!-- Page Indicator - smaller and transparent -->
-            <LinearLayout
-                android:id="@+id/dots_indicator"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center_horizontal"
-                android:layout_marginBottom="12dp"
-                android:orientation="horizontal"
-                android:background="#30000000"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="4dp"
-                android:visibility="gone" />
-
-            <!-- Image Counter Badge -->
-            <TextView
-                android:id="@+id/image_counter"
+            <!-- Status Badge -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/status_chip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|end"
                 android:layout_margin="8dp"
-                android:background="#80000000"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="4dp"
-                android:text="1/5"
+                android:text="Có sẵn"
                 android:textColor="@android:color/white"
                 android:textSize="12sp"
-                android:textStyle="bold"
-                android:visibility="gone"
-                android:drawableStart="@android:drawable/ic_menu_camera"
-                android:drawablePadding="4dp"
-                android:gravity="center_vertical" />
+                app:chipBackgroundColor="@color/success"
+                app:chipCornerRadius="12dp"
+                app:chipMinHeight="24dp" />
+
+            <!-- Favorite Button -->
+            <ImageButton
+                android:id="@+id/favorite_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="top|start"
+                android:layout_margin="8dp"
+                android:background="@drawable/circle_white_background"
+                android:src="@drawable/ic_favorite_border"
+                app:tint="@color/error"
+                android:contentDescription="Yêu thích" />
+
+            <!-- Price Badge -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|start"
+                android:layout_margin="8dp"
+                android:background="@drawable/rounded_corner_primary"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/product_price"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 VNĐ"
+                    android:textColor="@android:color/white"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
 
         </FrameLayout>
 
@@ -61,58 +82,183 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:padding="16dp">
 
             <TextView
-                android:id="@+id/title_text"
+                android:id="@+id/product_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Tên sản phẩm"
                 android:textSize="16sp"
                 android:textStyle="bold"
+                android:textColor="@color/text_primary"
                 android:maxLines="2"
                 android:ellipsize="end"
                 android:layout_marginBottom="4dp" />
 
             <TextView
-                android:id="@+id/price_text"
+                android:id="@+id/product_description"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="500,000 VNĐ"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/holo_red_dark"
-                android:layout_marginBottom="4dp" />
+                android:text="Mô tả sản phẩm..."
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:layout_marginBottom="8dp" />
 
+            <!-- Category and Condition -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="4dp">
+                android:layout_marginBottom="8dp">
 
-                <TextView
-                    android:id="@+id/condition_text"
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/category_chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Như mới"
+                    android:text="Danh mục"
                     android:textSize="12sp"
-                    android:background="@drawable/chip_background"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="2dp"
-                    android:textColor="@android:color/white" />
+                    app:chipBackgroundColor="@color/primary_light"
+                    app:chipCornerRadius="8dp"
+                    app:chipMinHeight="28dp"
+                    android:layout_marginEnd="8dp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/condition_chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tình trạng"
+                    android:textSize="12sp"
+                    app:chipBackgroundColor="@color/secondary_light"
+                    app:chipCornerRadius="8dp"
+                    app:chipMinHeight="28dp" />
 
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/location_text"
+            <!-- Seller Info and Actions -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Hồ Chí Minh"
-                android:textSize="12sp"
-                android:textColor="@android:color/darker_gray"
-                android:drawableStart="@android:drawable/ic_menu_mylocation"
-                android:drawablePadding="4dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <de.hdodenhof.circleimageview.CircleImageView
+                    android:id="@+id/seller_avatar"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_user_placeholder"
+                    app:civ_border_width="1dp"
+                    app:civ_border_color="@color/divider" />
+
+                <TextView
+                    android:id="@+id/seller_name"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="Người bán"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_secondary" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_star"
+                        app:tint="@color/warning"
+                        android:layout_marginEnd="4dp" />
+
+                    <TextView
+                        android:id="@+id/seller_rating"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="4.5"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Action Buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/chat_button"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="Chat"
+                    android:textSize="12sp"
+                    app:icon="@drawable/ic_chat"
+                    app:iconSize="16dp"
+                    app:cornerRadius="18dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/offer_button"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:text="Đề xuất"
+                    android:textSize="12sp"
+                    app:icon="@drawable/ic_attach_money"
+                    app:iconSize="16dp"
+                    app:cornerRadius="18dp" />
+
+            </LinearLayout>
+
+            <!-- View Count and Time -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_visibility"
+                    app:tint="@color/text_hint"
+                    android:layout_marginEnd="4dp" />
+
+                <TextView
+                    android:id="@+id/view_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 lượt xem"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_hint" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/time_posted"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2 giờ trước"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_hint" />
+
+            </LinearLayout>
 
         </LinearLayout>
+
     </LinearLayout>
+
 </com.google.android.material.card.MaterialCardView>

@@ -2,108 +2,279 @@
 <resources>
     <string name="app_name">TradeUp</string>
 
-    <!-- Login Screen -->
-    <string name="sign_in">Sign In</string>
-    <string name="signing_in">Signing in…</string>
-    <string name="welcome_back">Welcome Back!</string>
-    <string name="sign_in_to_continue">Sign in to continue</string>
-    <string name="email_address">Email Address</string>
-    <string name="password">Password</string>
-    <string name="forgot_password">Forgot Password?</string>
-    <string name="or_continue_with">or continue with</string>
-    <string name="continue_with_google">Continue with Google</string>
-    <string name="dont_have_account">Don\'t have an account? </string>
-    <string name="sign_up">Sign Up</string>
+    <!-- Product related strings -->
+    <string name="view_count_format">%d lượt xem</string>
+    <string name="added_to_favorites">Đã thêm vào yêu thích</string>
+    <string name="new_user">Người dùng mới</string>
+    <string name="no_bio_available">Chưa có thông tin giới thiệu</string>
+    <string name="rating_format">%.1f</string>
 
-    <!-- Register Screen -->
-    <string name="join_tradeup">Join TradeUp</string>
-    <string name="create_account_subtitle">Create your account to start trading</string>
-    <string name="tap_to_add_photo">Tap to add photo</string>
-    <string name="username">Username</string>
-    <string name="confirm_password">Confirm Password</string>
-    <string name="terms_agreement">I agree to the Terms of Service and Privacy Policy</string>
-    <string name="create_account">Create Account</string>
-    <string name="creating_account">Creating Account…</string>
-    <string name="already_have_account">Already have an account? </string>
-
-    <!-- Forgot Password Screen -->
-    <string name="reset_password">Reset Password</string>
-    <string name="reset_subtitle">Enter your email to receive reset instructions</string>
-    <string name="send_reset_email">Send Reset Email</string>
-    <string name="sending">Sending…</string>
-    <string name="remember_password">Remember your password? </string>
-
-    <!-- Google Sign-In -->
-    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
-
-    <!-- Common -->
-    <string name="buy_sell_locally">Buy and Sell Locally</string>
-    <string name="email">Email</string>
+    <!-- Navigation and actions -->
+    <string name="cancel">Hủy</string>
     <string name="ok">OK</string>
-    <string name="cancel">Cancel</string>
-    <string name="resend">Resend</string>
+    <string name="save">Lưu</string>
+    <string name="delete">Xóa</string>
+    <string name="edit">Chỉnh sửa</string>
 
-    <!-- Error Messages -->
-    <string name="invalid_email">Invalid email format</string>
-    <string name="password_too_short">Password must be at least 6 characters</string>
-    <string name="passwords_not_match">Passwords do not match</string>
-    <string name="username_too_short">Username must be at least 3 characters</string>
-    <string name="email_verification_required">Email Verification Required</string>
-    <string name="please_verify_email">Please verify your email address to continue. Would you like us to resend the verification email?</string>
-    <string name="verification_email_sent">Verification email sent!</string>
-    <string name="failed_send_verification">Failed to send verification email</string>
-    <string name="email_not_verified">Email not yet verified</string>
-    <string name="verify_your_email">Verify Your Email</string>
-    <string name="verification_email_message">We\'ve sent a verification email to your address. Please check your email and click the verification link to activate your account.</string>
-    <string name="reset_email_sent">Reset Email Sent</string>
-    <string name="reset_email_message">We\'ve sent password reset instructions to your email address. Please check your email and follow the instructions to reset your password.</string>
-    <string name="no_user_found">No account found with this email address</string>
-    <string name="network_error">Network error. Please check your connection</string>
-    <string name="permission_denied">Permission denied to read your External storage</string>
-    <string name="welcome_to_tradeup">Welcome to TradeUp!</string>
-    <string name="failed_load_user_data">Failed to load user data</string>
-    <string name="failed_save_user_profile">Failed to save user profile</string>
-    <string name="google_signin_not_available">Google Sign-in not available</string>
-    <string name="google_authentication_failed">Google authentication failed</string>
-    <string name="google_signin_failed">Google Sign-in failed</string>
-    <string name="error_starting_google_signin">Error starting Google Sign-In</string>
-    <string name="ive_verified">I\'ve Verified</string>
+    <!-- Common messages -->
+    <string name="loading">Đang tải...</string>
+    <string name="error_occurred">Đã xảy ra lỗi</string>
+    <string name="no_data">Không có dữ liệu</string>
 
-    <!-- Account Settings -->
-    <string name="account_active">Active</string>
-    <string name="deactivate_account">Deactivate Account</string>
-    <string name="delete_account">Delete Account</string>
-    <string name="deactivate">Deactivate</string>
-    <string name="delete_forever">Delete Forever</string>
-    <string name="deactivate_account_message">Are you sure you want to deactivate your account?\n\n• Your profile and listings will be hidden\n• You can reactivate anytime by logging in\n• Your data will be preserved</string>
-    <string name="delete_account_warning">⚠️ WARNING: This action is PERMANENT!\n\nDeleting your account will:\n• Remove all your listings\n• Delete your profile and messages\n• Cancel active transactions\n• This CANNOT be undone\n\nType \'DELETE\' to confirm:</string>
-    <string name="type_delete_to_confirm">Type \'DELETE\' to confirm</string>
-    <string name="please_type_delete">Please type \'DELETE\' exactly</string>
-    <string name="error_user_data_not_found">Error: User data not found</string>
-    <string name="error_user_not_found">Error: User not found</string>
-    <string name="account_deactivated_success">Account deactivated successfully</string>
-    <string name="account_deleted_success">Account deleted successfully</string>
-    <string name="failed_deactivate_account">Failed to deactivate account: </string>
-    <string name="failed_delete_account">Failed to delete account: </string>
-    <string name="failed_delete_user_data">Failed to delete user data: </string>
+    <!-- Profile related -->
+    <string name="profile">Hồ sơ</string>
+    <string name="settings">Cài đặt</string>
+    <string name="logout">Đăng xuất</string>
 
-    <!-- User Profile View -->
-    <string name="new_user">New user</string>
-    <string name="view_listings_activity">View listings to see activity</string>
-    <string name="no_bio_available">No bio available</string>
-    <string name="active_listings_count">%d active listings</string>
-    <string name="report_user">Report User</string>
-    <string name="message">Message</string>
-    <string name="report">Report</string>
-    <string name="chat_feature_coming_soon">Chat feature coming soon</string>
-    <string name="report_submitted_success">Report submitted successfully</string>
-    <string name="failed_submit_report">Failed to submit report: </string>
-    <string name="failed_load_user_listings">Failed to load user listings</string>
-    <string name="rating_format">★ %.1f</string>
-    <string name="profile">Profile</string>
-    <string name="edit_profile">Edit Profile</string>
-    <string name="save_changes">Save Changes</string>
-    <string name="bio">Bio</string>
-    <string name="contact_info">Contact Info</string>
-    <string name="display_name">Display Name</string>
+    <!-- Chat and messaging -->
+    <string name="chat">Trò chuyện</string>
+    <string name="send_message">Gửi tin nhắn</string>
+
+    <!-- Product actions -->
+    <string name="make_offer">Đề xuất giá</string>
+    <string name="buy_now">Mua ngay</string>
+    <string name="contact_seller">Liên hệ người bán</string>
+
+    <!-- Time formats -->
+    <string name="just_now">Vừa xong</string>
+    <string name="minutes_ago">%d phút trước</string>
+    <string name="hours_ago">%d giờ trước</string>
+    <string name="days_ago">%d ngày trước</string>
+
+    <!-- Account Settings Activity -->
+    <string name="account_settings">Cài đặt tài khoản</string>
+    <string name="account_active">Tài khoản đang hoạt động</string>
+    <string name="account_inactive">Tài khoản không hoạt động</string>
+    <string name="deactivate_account">Vô hiệu hóa tài khoản</string>
+    <string name="deactivate_account_message">Bạn có chắc chắn muốn vô hiệu hóa tài khoản? Bạn có thể kích hoạt lại sau.</string>
+    <string name="deactivate">Vô hiệu hóa</string>
+    <string name="delete_account">Xóa tài khoản</string>
+    <string name="delete_account_message">Bạn có chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác.</string>
+    <string name="delete_account_warning">Bạn có chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác.</string>
+    <string name="delete_forever">Xóa vĩnh viễn</string>
+    <string name="type_delete_to_confirm">Nhập "DELETE" để xác nhận</string>
+    <string name="please_type_delete">Vui lòng nhập "DELETE" để xác nhận</string>
+    <string name="confirmation_required">Vui lòng nhập "DELETE" để xác nhận</string>
+    <string name="account_deleted">Tài khoản đã được xóa</string>
+    <string name="account_deactivated">Tài khoản đã được vô hiệu hóa</string>
+    <string name="account_deactivated_success">Tài khoản đã được vô hiệu hóa thành công</string>
+    <string name="account_deleted_success">Tài khoản đã được xóa thành công</string>
+    <string name="error_deactivating">Lỗi khi vô hiệu hóa tài khoản</string>
+    <string name="error_deleting">Lỗi khi xóa tài khoản</string>
+    <string name="error_user_data_not_found">Không tìm thấy dữ liệu người dùng</string>
+    <string name="error_user_not_found">Không tìm thấy người dùng</string>
+    <string name="failed_deactivate_account">Không thể vô hiệu hóa tài khoản: </string>
+    <string name="failed_delete_account">Không thể xóa tài khoản: </string>
+    <string name="failed_delete_user_data">Không thể xóa dữ liệu người dùng: </string>
+
+    <!-- User Profile Activity -->
+    <string name="edit_profile">Chỉnh sửa hồ sơ</string>
+    <string name="update_profile">Cập nhật hồ sơ</string>
+    <string name="profile_updated">Hồ sơ đã được cập nhật</string>
+    <string name="profile_update_failed">Cập nhật hồ sơ thất bại</string>
+    <string name="username">Tên người dùng</string>
+    <string name="email">Email</string>
+    <string name="phone">Số điện thoại</string>
+    <string name="address">Địa chỉ</string>
+    <string name="bio">Giới thiệu</string>
+    <string name="profile_picture">Ảnh đại diện</string>
+    <string name="change_picture">Thay đổi ảnh</string>
+    <string name="take_photo">Chụp ảnh</string>
+    <string name="choose_from_gallery">Chọn từ thư viện</string>
+
+    <!-- Authentication -->
+    <string name="login">Đăng nhập</string>
+    <string name="register">Đăng ký</string>
+    <string name="password">Mật khẩu</string>
+    <string name="confirm_password">Xác nhận mật khẩu</string>
+    <string name="forgot_password">Quên mật khẩu</string>
+    <string name="login_failed">Đăng nhập thất bại</string>
+    <string name="register_failed">Đăng ký thất bại</string>
+    <string name="login_success">Đăng nhập thành công</string>
+    <string name="register_success">Đăng ký thành công</string>
+    <string name="password_reset_sent">Email đặt lại mật khẩu đã được gửi</string>
+    <string name="invalid_email">Email không hợp lệ</string>
+    <string name="password_too_short">Mật khẩu quá ngắn</string>
+    <string name="passwords_dont_match">Mật khẩu không khớp</string>
+
+    <!-- Product Management -->
+    <string name="add_product">Thêm sản phẩm</string>
+    <string name="edit_product">Chỉnh sửa sản phẩm</string>
+    <string name="product_title">Tiêu đề sản phẩm</string>
+    <string name="product_description">Mô tả sản phẩm</string>
+    <string name="product_price">Giá sản phẩm</string>
+    <string name="product_category">Danh mục</string>
+    <string name="product_condition">Tình trạng</string>
+    <string name="product_location">Vị trí</string>
+    <string name="product_images">Hình ảnh sản phẩm</string>
+    <string name="add_images">Thêm hình ảnh</string>
+    <string name="negotiable">Có thể thương lượng</string>
+    <string name="product_added">Sản phẩm đã được thêm</string>
+    <string name="product_updated">Sản phẩm đã được cập nhật</string>
+    <string name="product_deleted">Sản phẩm đã được xóa</string>
+    <string name="mark_as_sold">Đánh dấu đã bán</string>
+    <string name="mark_as_available">Đánh dấu có sẵn</string>
+
+    <!-- Categories -->
+    <string name="category_electronics">Điện tử</string>
+    <string name="category_fashion">Thời trang</string>
+    <string name="category_vehicles">Xe cộ</string>
+    <string name="category_home">Nhà cửa</string>
+    <string name="category_books">Sách</string>
+    <string name="category_sports">Thể thao</string>
+    <string name="category_other">Khác</string>
+
+    <!-- Conditions -->
+    <string name="condition_new">Mới</string>
+    <string name="condition_like_new">Như mới</string>
+    <string name="condition_good">Tốt</string>
+    <string name="condition_fair">Khá tốt</string>
+    <string name="condition_poor">Cũ</string>
+
+    <!-- Search and Filter -->
+    <string name="search">Tìm kiếm</string>
+    <string name="filter">Lọc</string>
+    <string name="sort">Sắp xếp</string>
+    <string name="search_products">Tìm kiếm sản phẩm</string>
+    <string name="no_results">Không có kết quả</string>
+    <string name="sort_by_relevance">Liên quan nhất</string>
+    <string name="sort_by_date">Mới nhất</string>
+    <string name="sort_by_price_low">Giá thấp đến cao</string>
+    <string name="sort_by_price_high">Giá cao đến thấp</string>
+    <string name="min_price">Giá tối thiểu</string>
+    <string name="max_price">Giá tối đa</string>
+
+    <!-- Chat and Messages -->
+    <string name="messages">Tin nhắn</string>
+    <string name="new_message">Tin nhắn mới</string>
+    <string name="type_message">Nhập tin nhắn...</string>
+    <string name="send">Gửi</string>
+    <string name="message_sent">Tin nhắn đã gửi</string>
+    <string name="message_failed">Gửi tin nhắn thất bại</string>
+    <string name="no_messages">Chưa có tin nhắn</string>
+
+    <!-- Offers -->
+    <string name="offers">Đề xuất</string>
+    <string name="my_offers">Đề xuất của tôi</string>
+    <string name="received_offers">Đề xuất nhận được</string>
+    <string name="offer_price">Giá đề xuất</string>
+    <string name="offer_message">Tin nhắn đề xuất</string>
+    <string name="submit_offer">Gửi đề xuất</string>
+    <string name="accept_offer">Chấp nhận</string>
+    <string name="reject_offer">Từ chối</string>
+    <string name="counter_offer">Đề xuất ngược</string>
+    <string name="offer_accepted">Đề xuất đã được chấp nhận</string>
+    <string name="offer_rejected">Đề xuất đã bị từ chối</string>
+    <string name="offer_submitted">Đề xuất đã được gửi</string>
+    <string name="no_offers">Chưa có đề xuất</string>
+
+    <!-- Transactions -->
+    <string name="transactions">Giao dịch</string>
+    <string name="transaction_history">Lịch sử giao dịch</string>
+    <string name="buying">Đang mua</string>
+    <string name="selling">Đang bán</string>
+    <string name="completed">Đã hoàn thành</string>
+    <string name="cancelled">Đã hủy</string>
+    <string name="pending">Đang chờ</string>
+
+    <!-- Reports -->
+    <string name="report">Báo cáo</string>
+    <string name="report_user">Báo cáo người dùng</string>
+    <string name="report_product">Báo cáo sản phẩm</string>
+    <string name="report_reason">Lý do báo cáo</string>
+    <string name="report_description">Mô tả chi tiết</string>
+    <string name="submit_report">Gửi báo cáo</string>
+    <string name="report_submitted">Báo cáo đã được gửi</string>
+    <string name="spam">Spam</string>
+    <string name="inappropriate_content">Nội dung không phù hợp</string>
+    <string name="fake_product">Sản phẩm giả</string>
+    <string name="scam">Lừa đảo</string>
+
+    <!-- Admin -->
+    <string name="admin_dashboard">Bảng điều khiển quản trị</string>
+    <string name="manage_users">Quản lý người dùng</string>
+    <string name="manage_products">Quản lý sản phẩm</string>
+    <string name="manage_reports">Quản lý báo cáo</string>
+    <string name="ban_user">Cấm người dùng</string>
+    <string name="unban_user">Bỏ cấm người dùng</string>
+    <string name="approve_product">Duyệt sản phẩm</string>
+    <string name="reject_product">Từ chối sản phẩm</string>
+
+    <!-- Notifications -->
+    <string name="notifications">Thông báo</string>
+    <string name="new_notification">Thông báo mới</string>
+    <string name="mark_as_read">Đánh dấu đã đọc</string>
+    <string name="mark_all_read">Đánh dấu tất cả đã đọc</string>
+    <string name="no_notifications">Không có thông báo</string>
+
+    <!-- General -->
+    <string name="yes">Có</string>
+    <string name="no">Không</string>
+    <string name="confirm">Xác nhận</string>
+    <string name="continue_text">Tiếp tục</string>
+    <string name="back">Quay lại</string>
+    <string name="next">Tiếp theo</string>
+    <string name="finish">Hoàn thành</string>
+    <string name="retry">Thử lại</string>
+    <string name="refresh">Làm mới</string>
+    <string name="update">Cập nhật</string>
+    <string name="upload">Tải lên</string>
+    <string name="download">Tải xuống</string>
+    <string name="share">Chia sẻ</string>
+    <string name="copy">Sao chép</string>
+    <string name="paste">Dán</string>
+    <string name="select_all">Chọn tất cả</string>
+    <string name="clear">Xóa</string>
+    <string name="close">Đóng</string>
+    <string name="open">Mở</string>
+    <string name="hide">Ẩn</string>
+    <string name="show">Hiển thị</string>
+    <string name="enable">Bật</string>
+    <string name="disable">Tắt</string>
+    <string name="on">Bật</string>
+    <string name="off">Tắt</string>
+    <string name="required">Bắt buộc</string>
+    <string name="optional">Tùy chọn</string>
+    <string name="recommended">Khuyến nghị</string>
+    <string name="version">Phiên bản</string>
+    <string name="about">Giới thiệu</string>
+    <string name="help">Trợ giúp</string>
+    <string name="support">Hỗ trợ</string>
+    <string name="feedback">Phản hồi</string>
+    <string name="terms">Điều khoản</string>
+    <string name="privacy">Quyền riêng tư</string>
+
+    <!-- Authentication - Additional -->
+    <string name="no_user_found">Không tìm thấy người dùng với email này</string>
+    <string name="network_error">Lỗi mạng, vui lòng thử lại</string>
+    <string name="resend">Gửi lại</string>
+    <string name="reset_email_message">Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.</string>
+    <string name="reset_email_sent">Email đặt lại đã gửi</string>
+    <string name="sending">Đang gửi...</string>
+    <string name="send_reset_email">Gửi email đặt lại</string>
+    <string name="ive_verified">Tôi đã xác minh</string>
+    <string name="please_verify_email">Vui lòng xác minh email của bạn trước khi đăng nhập. Kiểm tra hộp thư để xem email xác minh.</string>
+    <string name="email_verification_required">Cần xác minh email</string>
+    <string name="verification_email_sent">Email xác minh đã được gửi</string>
+    <string name="failed_send_verification">Không thể gửi email xác minh</string>
+    <string name="email_not_verified">Email chưa được xác minh</string>
+    <string name="error_starting_google_signin">Lỗi khi khởi động đăng nhập Google</string>
+    <string name="google_signin_not_available">Đăng nhập Google không khả dụng</string>
+    <string name="google_authentication_failed">Xác thực Google thất bại</string>
+    <string name="google_signin_failed">Đăng nhập Google thất bại</string>
+    <string name="failed_load_user_data">Không thể tải dữ liệu người dùng</string>
+    <string name="welcome_to_tradeup">Chào mừng đến với TradeUp!</string>
+    <string name="failed_save_user_profile">Không thể lưu hồ sơ người dùng</string>
+    <string name="signing_in">Đang đăng nhập...</string>
+    <string name="sign_in">Đăng nhập</string>
+    <string name="creating_account">Đang tạo tài khoản...</string>
+    <string name="create_account">Tạo tài khoản</string>
+
+    <!-- User Profile View Activity -->
+    <string name="chat_feature_coming_soon">Tính năng chat sẽ sớm ra mắt</string>
+    <string name="view_listings_activity">Xem danh sách</string>
+    <string name="active_listings_count">%d sản phẩm đang bán</string>
+    <string name="failed_load_user_listings">Không thể tải danh sách sản phẩm của người dùng</string>
+    <string name="report_submitted_success">Báo cáo đã được gửi thành công</string>
+    <string name="failed_submit_report">Không thể gửi báo cáo: </string>
 </resources>
