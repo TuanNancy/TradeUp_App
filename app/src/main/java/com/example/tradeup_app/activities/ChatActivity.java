@@ -119,26 +119,26 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void loadProductInfo() {
-        firebaseManager.getDatabase()
-                .getReference(FirebaseManager.PRODUCTS_NODE)
-                .child(productId)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot snapshot) {
-                        if (snapshot.exists()) {
-                            currentProduct = snapshot.getValue(Product.class);
-                            if (currentProduct != null) {
-                                currentProduct.setId(snapshot.getKey());
-                                displayProductInfo();
-                            }
+        DatabaseReference ref = firebaseManager.getDatabase().getReference();
+        ref.child(FirebaseManager.PRODUCTS_NODE)
+           .child(productId)
+           .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    if (snapshot.exists()) {
+                        currentProduct = snapshot.getValue(Product.class);
+                        if (currentProduct != null) {
+                            currentProduct.setId(snapshot.getKey());
+                            displayProductInfo();
                         }
                     }
+                }
 
-                    @Override
-                    public void onCancelled(DatabaseError error) {
-                        Toast.makeText(ChatActivity.this, "Lỗi tải thông tin sản phẩm", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    Toast.makeText(ChatActivity.this, "Lỗi tải thông tin sản phẩm", Toast.LENGTH_SHORT).show();
+                }
+            });
     }
 
     private void displayProductInfo() {

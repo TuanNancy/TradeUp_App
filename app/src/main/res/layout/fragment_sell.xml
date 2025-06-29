@@ -86,67 +86,135 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Category -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Danh mục*"
-            android:textSize="14sp"
-            android:layout_marginBottom="4dp" />
-
-        <Spinner
-            android:id="@+id/category_spinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Condition -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Tình trạng*"
-            android:textSize="14sp"
-            android:layout_marginBottom="4dp" />
-
-        <Spinner
-            android:id="@+id/condition_spinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Location -->
+        <!-- Category and Condition -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginBottom="16dp">
 
-            <com.google.android.material.textfield.TextInputLayout
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:orientation="vertical"
                 android:layout_marginEnd="8dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/location_edit_text"
-                    android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:hint="Vị trí*" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:text="Danh mục*"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="4dp" />
 
-            <Button
-                android:id="@+id/add_location_button"
-                android:layout_width="wrap_content"
+                <Spinner
+                    android:id="@+id/category_spinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="GPS"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tình trạng*"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="4dp" />
+
+                <Spinner
+                    android:id="@+id/condition_spinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- Tags -->
+        <!-- Images Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Thẻ tag (tùy chọn)"
+            android:text="Hình ảnh sản phẩm*"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/images_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="100dp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/add_images_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Thêm hình ảnh (Tối đa 10)"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Location Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Địa điểm*"
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/location_edit_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Nhập địa chỉ" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <ImageButton
+                    android:id="@+id/location_gps_button"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@android:drawable/ic_menu_mylocation"
+                    android:contentDescription="Dùng vị trí hiện tại" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Item Behavior -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/behavior_edit_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Tình trạng hoạt động (tùy chọn)" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Tags Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Thẻ tìm kiếm (tùy chọn)"
             android:textSize="14sp"
             android:layout_marginBottom="8dp" />
 
@@ -154,35 +222,28 @@
             android:id="@+id/tags_chip_group"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Images -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Hình ảnh* (tối đa 10 ảnh)"
-            android:textSize="14sp"
             android:layout_marginBottom="8dp" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/images_recycler_view"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:layout_marginBottom="8dp" />
-
-        <Button
-            android:id="@+id/add_images_button"
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Thêm hình ảnh"
-            android:layout_marginBottom="24dp"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
+            android:layout_marginBottom="16dp">
 
-        <!-- Action Buttons -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/add_tag_edit_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Thêm thẻ mới"
+                android:imeOptions="actionDone"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Preview and Publish Buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp">
 
             <Button
                 android:id="@+id/preview_button"
@@ -190,8 +251,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginEnd="8dp"
-                android:text="Xem trước"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
+                android:text="Xem trước" />
 
             <Button
                 android:id="@+id/publish_button"
@@ -201,6 +261,5 @@
                 android:layout_marginStart="8dp"
                 android:text="Đăng bán" />
         </LinearLayout>
-
     </LinearLayout>
 </ScrollView>

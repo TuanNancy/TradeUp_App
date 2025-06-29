@@ -1,35 +1,37 @@
 package com.example.tradeup_app.firebase;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.database.Query;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.OnFailureListener;
 import com.example.tradeup_app.models.Product;
-import com.example.tradeup_app.models.Conversation;
 import com.example.tradeup_app.models.Message;
+import com.example.tradeup_app.models.Conversation;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class FirebaseManager {
-
     private static FirebaseManager instance;
-    private FirebaseDatabase database;
-    private FirebaseAuth auth;
+    private final FirebaseDatabase database;
+    private final FirebaseAuth auth;
 
-    // Collection names for Realtime Database
-    public static final String PRODUCTS_NODE = "products";
-    public static final String USERS_NODE = "users";
-    public static final String CONVERSATIONS_NODE = "conversations";
+    // Node names
     public static final String MESSAGES_NODE = "messages";
+    public static final String PRODUCTS_NODE = "products";
+    public static final String CONVERSATIONS_NODE = "conversations";
+
+    // Callback interfaces
+    public interface ProductCallback {
+        void onProductsLoaded(List<Product> products);
+        void onError(String error);
+    }
+
+    public interface ConversationCallback {
+        void onConversationsLoaded(List<Conversation> conversations);
+        void onError(String error);
+    }
 
     private FirebaseManager() {
         database = FirebaseDatabase.getInstance();
@@ -43,278 +45,185 @@ public class FirebaseManager {
         return instance;
     }
 
-    // Product Operations
-    public interface ProductCallback {
-        void onSuccess(List<Product> products);
-        void onFailure(String error);
+    public FirebaseDatabase getDatabase() {
+        return database;
     }
 
-    public interface SingleProductCallback {
-        void onSuccess(Product product);
-        void onFailure(String error);
+    public String getCurrentUserId() {
+        return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
     }
 
     public void addProduct(Product product, OnCompleteListener<Void> listener) {
         String userId = getCurrentUserId();
         if (userId == null) {
-            if (listener != null) listener.onComplete(null);
+            database.getReference(PRODUCTS_NODE).child("error")
+                .setValue(null)
+                .addOnCompleteListener(task -> listener.onComplete(task));
             return;
         }
 
         product.setSellerId(userId);
+        product.setCreatedAt(new java.util.Date());
+        product.setUpdatedAt(new java.util.Date());
+        product.setStatus("Available");
+        product.setViewCount(0);
 
-        // Generate unique key for product
-        DatabaseReference productsRef = database.getReference(PRODUCTS_NODE);
-        String productKey = productsRef.push().getKey();
-
-        if (productKey != null) {
-            product.setId(productKey);
-
-            productsRef.child(productKey).setValue(product)
-                    .addOnCompleteListener(task -> {
-                        if (listener != null) listener.onComplete(task);
-                    });
-        } else {
-            if (listener != null) listener.onComplete(null);
+        String key = database.getReference(PRODUCTS_NODE).push().getKey();
+        if (key != null) {
+            product.setId(key);
+            database.getReference(PRODUCTS_NODE)
+                .child(key)
+                .setValue(product)
+                .addOnCompleteListener(listener);
         }
     }
 
+    // Product methods
     public void getProducts(ProductCallback callback) {
-        DatabaseReference productsRef = database.getReference(PRODUCTS_NODE);
-
-        productsRef.orderByChild("status").equalTo("Available")
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        List<Product> products = new ArrayList<>();
-                        for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                            Product product = snapshot.getValue(Product.class);
-                            if (product != null) {
-                                product.setId(snapshot.getKey());
-                                products.add(product);
-                            }
+        database.getReference(PRODUCTS_NODE)
+                .orderByChild("createdAt")
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    List<Product> products = new java.util.ArrayList<>();
+                    for (com.google.firebase.database.DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                        Product product = dataSnapshot.getValue(Product.class);
+                        if (product != null) {
+                            product.setId(dataSnapshot.getKey());
+                            products.add(product);
                         }
-                        callback.onSuccess(products);
                     }
-
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                        callback.onFailure(databaseError.getMessage());
-                    }
-                });
-    }
-
-    public void getProductsByCategory(String category, ProductCallback callback) {
-        DatabaseReference productsRef = database.getReference(PRODUCTS_NODE);
-
-        Query query = productsRef.orderByChild("category").equalTo(category);
-
-        query.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                List<Product> products = new ArrayList<>();
-                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                    Product product = snapshot.getValue(Product.class);
-                    if (product != null && "Available".equals(product.getStatus())) {
-                        product.setId(snapshot.getKey());
-                        products.add(product);
-                    }
-                }
-                callback.onSuccess(products);
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                callback.onFailure(databaseError.getMessage());
-            }
-        });
+                    callback.onProductsLoaded(products);
+                })
+                .addOnFailureListener(e -> callback.onError(e.getMessage()));
     }
 
     public void searchProducts(String query, String category, String condition,
-                              double minPrice, double maxPrice, String sortBy,
-                              ProductCallback callback) {
-        DatabaseReference productsRef = database.getReference(PRODUCTS_NODE);
+                             double minPrice, double maxPrice, String sortBy,
+                             ProductCallback callback) {
+        DatabaseReference ref = database.getReference(PRODUCTS_NODE);
+        Query baseQuery = ref;
 
-        productsRef.orderByChild("status").equalTo("Available")
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        List<Product> products = new ArrayList<>();
+        // Filter by category if specified
+        if (category != null && !category.isEmpty() && !category.equals("Tất cả")) {
+            baseQuery = ref.orderByChild("category").equalTo(category);
+        }
 
-                        for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                            Product product = snapshot.getValue(Product.class);
-                            if (product != null) {
-                                product.setId(snapshot.getKey());
+        baseQuery.get().addOnSuccessListener(snapshot -> {
+            List<Product> results = new java.util.ArrayList<>();
+            for (com.google.firebase.database.DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                Product product = dataSnapshot.getValue(Product.class);
+                if (product != null) {
+                    product.setId(dataSnapshot.getKey());
 
-                                // Apply filters
-                                boolean matchesFilters = true;
-
-                                // Category filter
-                                if (!category.equals("Tất cả") && !category.equals(product.getCategory())) {
-                                    matchesFilters = false;
-                                }
-
-                                // Condition filter
-                                if (!condition.equals("Tất cả") && !condition.equals(product.getCondition())) {
-                                    matchesFilters = false;
-                                }
-
-                                // Price filter
-                                if (minPrice > 0 && product.getPrice() < minPrice) {
-                                    matchesFilters = false;
-                                }
-                                if (maxPrice > 0 && product.getPrice() > maxPrice) {
-                                    matchesFilters = false;
-                                }
-
-                                // Text search filter
-                                if (!query.trim().isEmpty()) {
-                                    String searchText = query.toLowerCase();
-                                    if (!product.getTitle().toLowerCase().contains(searchText) &&
-                                        !product.getDescription().toLowerCase().contains(searchText)) {
-                                        matchesFilters = false;
-                                    }
-                                }
-
-                                if (matchesFilters) {
-                                    products.add(product);
-                                }
-                            }
-                        }
-
-                        callback.onSuccess(products);
+                    // Apply filters
+                    if (matchesSearchCriteria(product, query, condition, minPrice, maxPrice)) {
+                        results.add(product);
                     }
+                }
+            }
 
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                        callback.onFailure(databaseError.getMessage());
-                    }
-                });
+            // Apply sorting
+            if (sortBy != null) {
+                switch (sortBy) {
+                    case "price_asc":
+                        results.sort((a, b) -> Double.compare(a.getPrice(), b.getPrice()));
+                        break;
+                    case "price_desc":
+                        results.sort((a, b) -> Double.compare(b.getPrice(), a.getPrice()));
+                        break;
+                    case "date":
+                        results.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+                        break;
+                }
+            }
+
+            callback.onProductsLoaded(results);
+        }).addOnFailureListener(e -> callback.onError(e.getMessage()));
     }
 
-    public void getUserProducts(String userId, ProductCallback callback) {
-        DatabaseReference productsRef = database.getReference(PRODUCTS_NODE);
+    private boolean matchesSearchCriteria(Product product, String query, String condition,
+                                        double minPrice, double maxPrice) {
+        // Match query text
+        if (query != null && !query.isEmpty()) {
+            String lowerQuery = query.toLowerCase();
+            boolean matchesTitle = product.getTitle().toLowerCase().contains(lowerQuery);
+            boolean matchesDesc = product.getDescription().toLowerCase().contains(lowerQuery);
+            if (!matchesTitle && !matchesDesc) {
+                return false;
+            }
+        }
 
-        productsRef.orderByChild("sellerId").equalTo(userId)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        List<Product> products = new ArrayList<>();
-                        for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                            Product product = snapshot.getValue(Product.class);
-                            if (product != null) {
-                                product.setId(snapshot.getKey());
-                                products.add(product);
-                            }
-                        }
-                        callback.onSuccess(products);
-                    }
+        // Match condition
+        if (condition != null && !condition.isEmpty() && !condition.equals("Tất cả")) {
+            if (!product.getCondition().equals(condition)) {
+                return false;
+            }
+        }
 
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                        callback.onFailure(databaseError.getMessage());
-                    }
-                });
+        // Match price range
+        if (minPrice > 0 && product.getPrice() < minPrice) {
+            return false;
+        }
+        if (maxPrice > 0 && product.getPrice() > maxPrice) {
+            return false;
+        }
+
+        return true;
     }
 
-    public void updateProductStatus(String productId, String status, OnCompleteListener<Void> listener) {
-        DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
-        productRef.child("status").setValue(status)
-                .addOnCompleteListener(listener);
+    // Message methods
+    public void sendMessage(Message message, OnCompleteListener<Void> listener) {
+        DatabaseReference messagesRef = database.getReference(MESSAGES_NODE);
+        String key = messagesRef.push().getKey();
+        if (key != null) {
+            message.setId(key);
+            messagesRef.child(key).setValue(message).addOnCompleteListener(listener);
+        }
+    }
+
+    // Conversation methods
+    public void getConversations(ConversationCallback callback) {
+        String userId = getCurrentUserId();
+        if (userId == null) {
+            callback.onError("User not logged in");
+            return;
+        }
+
+        database.getReference(CONVERSATIONS_NODE)
+            .orderByChild("participantsMap/" + userId)
+            .equalTo(true)
+            .get()
+            .addOnSuccessListener(snapshot -> {
+                List<Conversation> conversations = new java.util.ArrayList<>();
+                for (com.google.firebase.database.DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                    Conversation conversation = dataSnapshot.getValue(Conversation.class);
+                    if (conversation != null) {
+                        conversation.setId(dataSnapshot.getKey());
+                        conversations.add(conversation);
+                    }
+                }
+                callback.onConversationsLoaded(conversations);
+            })
+            .addOnFailureListener(e -> callback.onError(e.getMessage()));
     }
 
     public void incrementProductViews(String productId) {
         DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
-        productRef.child("viewCount").addListenerForSingleValueEvent(new ValueEventListener() {
+        productRef.runTransaction(new com.google.firebase.database.Transaction.Handler() {
             @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                Long currentViews = dataSnapshot.getValue(Long.class);
-                int newViews = (currentViews != null ? currentViews.intValue() : 0) + 1;
-                productRef.child("viewCount").setValue(newViews);
+            public com.google.firebase.database.Transaction.Result doTransaction(com.google.firebase.database.MutableData mutableData) {
+                Product product = mutableData.getValue(Product.class);
+                if (product != null) {
+                    product.setViewCount(product.getViewCount() + 1);
+                    mutableData.setValue(product);
+                }
+                return com.google.firebase.database.Transaction.success(mutableData);
             }
 
             @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Ignore error for view count increment
+            public void onComplete(com.google.firebase.database.DatabaseError databaseError, boolean committed, com.google.firebase.database.DataSnapshot dataSnapshot) {
+                // Optional: handle completion
             }
         });
-    }
-
-    // Message Operations
-    public interface MessageCallback {
-        void onSuccess(List<Message> messages);
-        void onFailure(String error);
-    }
-
-    public interface ConversationCallback {
-        void onSuccess(List<Conversation> conversations);
-        void onFailure(String error);
-    }
-
-    public void sendMessage(Message message, OnCompleteListener<Void> listener) {
-        DatabaseReference messagesRef = database.getReference(MESSAGES_NODE);
-        String messageKey = messagesRef.push().getKey();
-
-        if (messageKey != null) {
-            message.setId(messageKey);
-            messagesRef.child(messageKey).setValue(message)
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            updateConversationLastMessage(message);
-                        }
-                        if (listener != null) listener.onComplete(task);
-                    });
-        } else {
-            if (listener != null) listener.onComplete(null);
-        }
-    }
-
-    private void updateConversationLastMessage(Message message) {
-        DatabaseReference conversationRef = database.getReference(CONVERSATIONS_NODE).child(message.getConversationId());
-
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("lastMessage", message.getContent());
-        updates.put("lastMessageTime", message.getTimestamp());
-
-        conversationRef.updateChildren(updates);
-    }
-
-    public void getConversations(ConversationCallback callback) {
-        String userId = getCurrentUserId();
-        if (userId == null) {
-            callback.onFailure("User not logged in");
-            return;
-        }
-
-        DatabaseReference conversationsRef = database.getReference(CONVERSATIONS_NODE);
-        conversationsRef.orderByChild("buyerId").equalTo(userId)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        List<Conversation> conversations = new ArrayList<>();
-                        for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                            Conversation conversation = snapshot.getValue(Conversation.class);
-                            if (conversation != null) {
-                                conversation.setId(snapshot.getKey());
-                                conversations.add(conversation);
-                            }
-                        }
-                        callback.onSuccess(conversations);
-                    }
-
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                        callback.onFailure(databaseError.getMessage());
-                    }
-                });
-    }
-
-    // Utility methods
-    public String getCurrentUserId() {
-        return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
-    }
-
-    public FirebaseDatabase getDatabase() {
-        return database;
     }
 }

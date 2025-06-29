@@ -65,23 +65,19 @@ public class MessagesFragment extends Fragment {
     private void loadConversations() {
         firebaseManager.getConversations(new FirebaseManager.ConversationCallback() {
             @Override
-            public void onSuccess(List<Conversation> conversations) {
-                if (getActivity() != null) {
-                    if (conversations.isEmpty()) {
-                        showEmptyState();
-                    } else {
-                        hideEmptyState();
-                        conversationAdapter.updateConversations(conversations);
-                    }
-                }
+            public void onConversationsLoaded(List<Conversation> conversations) {
+                conversationAdapter.updateConversations(conversations);
+
+                // Update empty state visibility
+                updateEmptyState();
             }
 
             @Override
-            public void onFailure(String error) {
-                if (getActivity() != null) {
-                    Toast.makeText(getContext(), "Lỗi tải tin nhắn: " + error, Toast.LENGTH_SHORT).show();
-                    showEmptyState();
+            public void onError(String error) {
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "Lỗi: " + error, Toast.LENGTH_SHORT).show();
                 }
+                updateEmptyState();
             }
         });
     }
@@ -94,6 +90,14 @@ public class MessagesFragment extends Fragment {
     private void hideEmptyState() {
         conversationsRecyclerView.setVisibility(View.VISIBLE);
         emptyStateLayout.setVisibility(View.GONE);
+    }
+
+    private void updateEmptyState() {
+        if (conversationAdapter.getItemCount() == 0) {
+            showEmptyState();
+        } else {
+            hideEmptyState();
+        }
     }
 
     @Override

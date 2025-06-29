@@ -31,13 +31,14 @@ import java.util.List;
 
 public class SearchFragment extends Fragment {
 
-    private EditText searchEditText;
+    private EditText searchEditText, minPriceEditText, maxPriceEditText;
     private Spinner categorySpinner, conditionSpinner, sortSpinner;
-    private RangeSlider priceRangeSlider;
     private RecyclerView searchResultsRecyclerView;
+    private View progressBar;
 
-    private ProductAdapter searchAdapter;
+    private ProductAdapter productAdapter;
     private FirebaseManager firebaseManager;
+    private List<Product> productList = new ArrayList<>();
 
     @Nullable
     @Override
@@ -56,11 +57,13 @@ public class SearchFragment extends Fragment {
 
     private void initViews(View view) {
         searchEditText = view.findViewById(R.id.search_edit_text);
+        minPriceEditText = view.findViewById(R.id.min_price_edit_text);
+        maxPriceEditText = view.findViewById(R.id.max_price_edit_text);
         categorySpinner = view.findViewById(R.id.category_spinner);
         conditionSpinner = view.findViewById(R.id.condition_spinner);
         sortSpinner = view.findViewById(R.id.sort_spinner);
-        priceRangeSlider = view.findViewById(R.id.price_range_slider);
         searchResultsRecyclerView = view.findViewById(R.id.search_results_recycler);
+        progressBar = view.findViewById(R.id.progress_bar);
 
         firebaseManager = FirebaseManager.getInstance();
     }
@@ -110,11 +113,11 @@ public class SearchFragment extends Fragment {
     };
 
     private void setupRecyclerView() {
-        searchAdapter = new ProductAdapter(getContext(), new ArrayList<>());
+        productAdapter = new ProductAdapter(getContext(), productList);
         searchResultsRecyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
-        searchResultsRecyclerView.setAdapter(searchAdapter);
+        searchResultsRecyclerView.setAdapter(productAdapter);
 
-        searchAdapter.setOnProductClickListener(new ProductAdapter.OnProductClickListener() {
+        productAdapter.setOnProductClickListener(new ProductAdapter.OnProductClickListener() {
             @Override
             public void onProductClick(Product product) {
                 openProductChat(product);
@@ -128,19 +131,6 @@ public class SearchFragment extends Fragment {
     }
 
     private void setupFilters() {
-        // Setup price range slider
-        priceRangeSlider.setValues(0f, 10000000f);
-        priceRangeSlider.addOnChangeListener(new RangeSlider.OnChangeListener() {
-            @Override
-            public void onValueChange(@NonNull RangeSlider slider, float value, boolean fromUser) {
-                if (fromUser) {
-                    // Delay search to avoid too many calls
-                    searchEditText.removeCallbacks(searchRunnable);
-                    searchEditText.postDelayed(searchRunnable, 500);
-                }
-            }
-        });
-
         // Setup spinner listeners
         AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener() {
             @Override
@@ -155,22 +145,44 @@ public class SearchFragment extends Fragment {
         categorySpinner.setOnItemSelectedListener(spinnerListener);
         conditionSpinner.setOnItemSelectedListener(spinnerListener);
         sortSpinner.setOnItemSelectedListener(spinnerListener);
+
+        // Setup price range input listeners
+        TextWatcher priceWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                // Delay search to avoid too many calls while typing
+                searchEditText.removeCallbacks(searchRunnable);
+                searchEditText.postDelayed(searchRunnable, 500);
+            }
+        };
+
+        minPriceEditText.addTextChangedListener(priceWatcher);
+        maxPriceEditText.addTextChangedListener(priceWatcher);
     }
 
     private void performInitialSearch() {
-        // Load all products initially
         firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
             @Override
-            public void onSuccess(List<Product> products) {
+            public void onProductsLoaded(List<Product> products) {
                 if (getActivity() != null) {
-                    searchAdapter.updateProducts(products);
+                    productList.clear();
+                    productList.addAll(products);
+                    productAdapter.notifyDataSetChanged();
+                    updateEmptyState();
                 }
             }
 
             @Override
-            public void onFailure(String error) {
+            public void onError(String error) {
                 if (getActivity() != null) {
                     Toast.makeText(getContext(), "Lỗi tải sản phẩm: " + error, Toast.LENGTH_SHORT).show();
+                    updateEmptyState();
                 }
             }
         });
@@ -178,30 +190,83 @@ public class SearchFragment extends Fragment {
 
     private void performSearch() {
         String query = searchEditText.getText().toString().trim();
-        String category = categorySpinner.getSelectedItem().toString();
-        String condition = conditionSpinner.getSelectedItem().toString();
-        String sortBy = sortSpinner.getSelectedItem().toString();
-        List<Float> priceRange = priceRangeSlider.getValues();
+        String category = categorySpinner.getSelectedItemPosition() == 0 ? "" :
+                        categorySpinner.getSelectedItem().toString();
+        String condition = conditionSpinner.getSelectedItemPosition() == 0 ? "" :
+                         conditionSpinner.getSelectedItem().toString();
+        double minPrice = 0, maxPrice = 0;
 
-        double minPrice = priceRange.get(0);
-        double maxPrice = priceRange.get(1);
+        try {
+            if (!minPriceEditText.getText().toString().isEmpty()) {
+                minPrice = Double.parseDouble(minPriceEditText.getText().toString());
+            }
+            if (!maxPriceEditText.getText().toString().isEmpty()) {
+                maxPrice = Double.parseDouble(maxPriceEditText.getText().toString());
+            }
+        } catch (NumberFormatException e) {
+            Toast.makeText(getContext(), "Giá không hợp lệ", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String sortBy = getSortByValue();
+        showProgressBar();
 
         firebaseManager.searchProducts(query, category, condition, minPrice, maxPrice, sortBy,
             new FirebaseManager.ProductCallback() {
                 @Override
-                public void onSuccess(List<Product> products) {
-                    if (getActivity() != null) {
-                        searchAdapter.updateProducts(products);
-                    }
+                public void onProductsLoaded(List<Product> products) {
+                    hideProgressBar();
+                    productList.clear();
+                    productList.addAll(products);
+                    productAdapter.notifyDataSetChanged();
+                    updateEmptyState();
                 }
 
                 @Override
-                public void onFailure(String error) {
-                    if (getActivity() != null) {
-                        Toast.makeText(getContext(), "Lỗi tìm kiếm: " + error, Toast.LENGTH_SHORT).show();
-                    }
+                public void onError(String error) {
+                    hideProgressBar();
+                    Toast.makeText(getContext(), "Lỗi tìm kiếm: " + error, Toast.LENGTH_SHORT).show();
+                    updateEmptyState();
                 }
             });
+    }
+
+    private String getSortByValue() {
+        if (sortSpinner.getSelectedItemPosition() == 0) return null;
+
+        String selected = sortSpinner.getSelectedItem().toString();
+        switch (selected) {
+            case "Giá thấp đến cao":
+                return "price_asc";
+            case "Giá cao đến thấp":
+                return "price_desc";
+            case "Mới nhất":
+                return "date";
+            default:
+                return null;
+        }
+    }
+
+    private void showProgressBar() {
+        if (progressBar != null) {
+            progressBar.setVisibility(View.VISIBLE);
+            searchResultsRecyclerView.setVisibility(View.GONE);
+        }
+    }
+
+    private void hideProgressBar() {
+        if (progressBar != null) {
+            progressBar.setVisibility(View.GONE);
+            searchResultsRecyclerView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void updateEmptyState() {
+        View emptyState = getView().findViewById(R.id.empty_state);
+        if (emptyState != null) {
+            emptyState.setVisibility(productList.isEmpty() ? View.VISIBLE : View.GONE);
+            searchResultsRecyclerView.setVisibility(productList.isEmpty() ? View.GONE : View.VISIBLE);
+        }
     }
 
     private void openProductChat(Product product) {

@@ -24,6 +24,10 @@ public class Product {
     private int likeCount;
     private double latitude;
     private double longitude;
+    private String itemBehavior;
+    private int interactionCount;
+    private Date lastViewedAt;
+    private List<String> interactionHistory;
 
     public Product() {
         this.imageUrls = new ArrayList<>();
@@ -33,6 +37,8 @@ public class Product {
         this.status = "Available";
         this.viewCount = 0;
         this.likeCount = 0;
+        this.interactionCount = 0;
+        this.interactionHistory = new ArrayList<>();
     }
 
     public Product(String title, String description, double price, String category, String condition, String location, String sellerId) {
@@ -103,4 +109,16 @@ public class Product {
 
     public double getLongitude() { return longitude; }
     public void setLongitude(double longitude) { this.longitude = longitude; }
+
+    public String getItemBehavior() { return itemBehavior; }
+    public void setItemBehavior(String itemBehavior) { this.itemBehavior = itemBehavior; }
+
+    public int getInteractionCount() { return interactionCount; }
+    public void setInteractionCount(int interactionCount) { this.interactionCount = interactionCount; }
+
+    public Date getLastViewedAt() { return lastViewedAt; }
+    public void setLastViewedAt(Date lastViewedAt) { this.lastViewedAt = lastViewedAt; }
+
+    public List<String> getInteractionHistory() { return interactionHistory; }
+    public void setInteractionHistory(List<String> interactionHistory) { this.interactionHistory = interactionHistory; }
 }

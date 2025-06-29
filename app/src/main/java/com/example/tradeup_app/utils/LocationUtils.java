@@ -3,108 +3,95 @@ package com.example.tradeup_app.utils;
 import android.content.Context;
 import android.location.Address;
 import android.location.Geocoder;
-import android.location.Location;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
 public class LocationUtils {
+    private static final String TAG = "LocationUtils";
 
     public interface LocationCallback {
-        void onLocationResult(String address);
-        void onLocationError(String error);
+        void onAddressReceived(String address);
     }
 
     public static void getAddressFromLocation(Context context, double latitude, double longitude, LocationCallback callback) {
-        try {
-            // Check if Geocoder is available
-            if (!Geocoder.isPresent()) {
-                callback.onLocationError("Geocoder không khả dụng trên thiết bị này");
-                return;
-            }
+        new Thread(() -> {
+            Geocoder geocoder = new Geocoder(context, new Locale("vi"));
+            try {
+                List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+                if (addresses != null && !addresses.isEmpty()) {
+                    Address address = addresses.get(0);
+                    StringBuilder addressString = new StringBuilder();
 
-            Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+                    // Get detailed address components
+                    String streetNumber = address.getSubThoroughfare();
+                    String street = address.getThoroughfare();
+                    String ward = address.getSubLocality();
+                    String district = address.getLocality();
+                    String city = address.getAdminArea();
 
-            // Run in background thread to avoid blocking UI
-            new Thread(() -> {
-                try {
-                    List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+                    // Build address string
+                    if (streetNumber != null) addressString.append(streetNumber).append(" ");
+                    if (street != null) addressString.append(street).append(", ");
+                    if (ward != null) addressString.append(ward).append(", ");
+                    if (district != null) addressString.append(district).append(", ");
+                    if (city != null) addressString.append(city);
 
-                    if (addresses != null && !addresses.isEmpty()) {
-                        Address address = addresses.get(0);
-                        String addressText = formatAddress(address);
-
-                        // Return to main thread using Handler
-                        android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-                        mainHandler.post(() -> callback.onLocationResult(addressText));
-                    } else {
-                        android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-                        mainHandler.post(() -> callback.onLocationError("Không tìm thấy địa chỉ"));
+                    String finalAddress = addressString.toString().trim();
+                    if (finalAddress.endsWith(",")) {
+                        finalAddress = finalAddress.substring(0, finalAddress.length() - 1);
                     }
-                } catch (IOException e) {
-                    android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-                    mainHandler.post(() -> callback.onLocationError("Lỗi geocoding: " + e.getMessage()));
-                } catch (Exception e) {
-                    android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-                    mainHandler.post(() -> callback.onLocationError("Lỗi không xác định: " + e.getMessage()));
+
+                    String addressToReturn = finalAddress;
+                    new Handler(Looper.getMainLooper()).post(() ->
+                        callback.onAddressReceived(addressToReturn)
+                    );
+                } else {
+                    Log.w(TAG, "No address found for location: " + latitude + ", " + longitude);
+                    new Handler(Looper.getMainLooper()).post(() ->
+                        callback.onAddressReceived("")
+                    );
                 }
-            }).start();
-
-        } catch (Exception e) {
-            callback.onLocationError("Lỗi: " + e.getMessage());
-        }
+            } catch (IOException e) {
+                Log.e(TAG, "Error getting address: " + e.getMessage());
+                new Handler(Looper.getMainLooper()).post(() ->
+                    callback.onAddressReceived("")
+                );
+            }
+        }).start();
     }
 
-    private static String formatAddress(Address address) {
-        StringBuilder addressText = new StringBuilder();
+    public static void getLocationFromAddress(Context context, String addressString, LocationCallback callback) {
+        new Thread(() -> {
+            Geocoder geocoder = new Geocoder(context, new Locale("vi"));
+            try {
+                List<Address> addresses = geocoder.getFromLocationName(addressString, 1);
+                if (addresses != null && !addresses.isEmpty()) {
+                    Address address = addresses.get(0);
+                    String formattedAddress = String.format("%s, %s, %s",
+                        address.getAddressLine(0),
+                        address.getLocality(),
+                        address.getAdminArea());
 
-        if (address.getSubThoroughfare() != null) {
-            addressText.append(address.getSubThoroughfare()).append(" ");
-        }
-
-        if (address.getThoroughfare() != null) {
-            addressText.append(address.getThoroughfare()).append(", ");
-        }
-
-        if (address.getSubLocality() != null) {
-            addressText.append(address.getSubLocality()).append(", ");
-        }
-
-        if (address.getLocality() != null) {
-            addressText.append(address.getLocality()).append(", ");
-        }
-
-        if (address.getSubAdminArea() != null) {
-            addressText.append(address.getSubAdminArea()).append(", ");
-        }
-
-        if (address.getAdminArea() != null) {
-            addressText.append(address.getAdminArea());
-        }
-
-        return addressText.toString().trim();
-    }
-
-    public static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371; // Radius of the earth in km
-
-        double latDistance = Math.toRadians(lat2 - lat1);
-        double lonDistance = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        double distance = R * c; // convert to km
-
-        return distance;
-    }
-
-    public static String formatDistance(double distance) {
-        if (distance < 1) {
-            return String.format("%.0f m", distance * 1000);
-        } else {
-            return String.format("%.1f km", distance);
-        }
+                    new Handler(Looper.getMainLooper()).post(() ->
+                        callback.onAddressReceived(formattedAddress)
+                    );
+                } else {
+                    Log.w(TAG, "No location found for address: " + addressString);
+                    new Handler(Looper.getMainLooper()).post(() ->
+                        callback.onAddressReceived("")
+                    );
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Error getting location: " + e.getMessage());
+                new Handler(Looper.getMainLooper()).post(() ->
+                    callback.onAddressReceived("")
+                );
+            }
+        }).start();
     }
 }

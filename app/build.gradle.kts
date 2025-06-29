@@ -92,10 +92,39 @@ dependencies {
     implementation ("com.squareup.okhttp3:okhttp:4.12.0")
     implementation ("com.evernote:android-job:1.4.3")
     implementation ("com.github.bumptech.glide:glide:4.16.0")
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
     implementation ("com.google.firebase:firebase-auth:22.3.0")
     implementation ("com.google.android.gms:play-services-auth:21.1.0")
     implementation ("com.cloudinary:cloudinary-android:2.2.0")
     implementation ("com.google.code.gson:gson:2.10.1")
     // CircleImageView for profile pictures
     implementation ("de.hdodenhof:circleimageview:3.1.0")
+
+    // ViewPager2 for image sliding
+    implementation("androidx.viewpager2:viewpager2:1.0.0")
+
+    // PhotoView from JitPack
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
+
+    // uCrop from JitPack
+    implementation("com.github.Yalantis:uCrop:2.2.8-native")
+
+    // Image Compressor
+    implementation("id.zelory:compressor:3.0.1")
+
+    // Firebase Realtime Database
+    implementation("com.google.firebase:firebase-database-ktx")
+
+    // Firebase Storage và UI components
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.firebaseui:firebase-ui-storage:8.0.2")
+
+    // Image Loading and Processing
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
+    implementation("id.zelory:compressor:3.0.1")
+
+    // UI Components
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.viewpager2:viewpager2:1.0.0")
 }

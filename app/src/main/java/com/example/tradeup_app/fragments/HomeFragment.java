@@ -91,7 +91,7 @@ public class HomeFragment extends Fragment {
     private void loadFeaturedItems() {
         firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
             @Override
-            public void onSuccess(List<Product> products) {
+            public void onProductsLoaded(List<Product> products) {
                 if (getActivity() != null) {
                     // Get featured products (e.g., top 10 most viewed)
                     List<Product> featuredProducts = products.size() > 10 ?
@@ -101,7 +101,7 @@ public class HomeFragment extends Fragment {
             }
 
             @Override
-            public void onFailure(String error) {
+            public void onError(String error) {
                 if (getActivity() != null) {
                     Toast.makeText(getContext(), "Lỗi tải sản phẩm nổi bật: " + error, Toast.LENGTH_SHORT).show();
                 }
@@ -112,17 +112,13 @@ public class HomeFragment extends Fragment {
     private void loadRecentItems() {
         firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
             @Override
-            public void onSuccess(List<Product> products) {
-                if (getActivity() != null) {
-                    recentAdapter.updateProducts(products);
-                }
+            public void onProductsLoaded(List<Product> products) {
+                recentAdapter.updateProducts(products);
             }
 
             @Override
-            public void onFailure(String error) {
-                if (getActivity() != null) {
-                    Toast.makeText(getContext(), "Lỗi tải sản phẩm mới: " + error, Toast.LENGTH_SHORT).show();
-                }
+            public void onError(String error) {
+                Toast.makeText(getContext(), "Lỗi: " + error, Toast.LENGTH_SHORT).show();
             }
         });
     }

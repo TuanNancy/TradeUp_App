@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -16,22 +17,27 @@ import com.example.tradeup_app.R;
 import java.util.List;
 
 public class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapter.ImageViewHolder> {
-
-    private List<Uri> imageUris;
-    private Context context;
-    private OnImageRemoveListener listener;
+    private final Context context;
+    private List<Uri> images;
+    private final OnImageRemoveListener onImageRemoveListener;
+    private OnImageRemoveClickListener imageRemoveClickListener;
 
     public interface OnImageRemoveListener {
+        void onImageRemove(Uri uri);
+    }
+
+    public interface OnImageRemoveClickListener {
         void onImageRemove(int position);
     }
 
-    public ImagePreviewAdapter(Context context, List<Uri> imageUris) {
+    public ImagePreviewAdapter(Context context, List<Uri> images, OnImageRemoveListener listener) {
         this.context = context;
-        this.imageUris = imageUris;
+        this.images = images;
+        this.onImageRemoveListener = listener;
     }
 
-    public void setOnImageRemoveListener(OnImageRemoveListener listener) {
-        this.listener = listener;
+    public void setOnImageRemoveListener(OnImageRemoveClickListener listener) {
+        this.imageRemoveClickListener = listener;
     }
 
     @NonNull
@@ -43,39 +49,41 @@ public class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapte
 
     @Override
     public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
-        Uri imageUri = imageUris.get(position);
+        Uri imageUri = images.get(position);
 
         Glide.with(context)
-                .load(imageUri)
-                .centerCrop()
-                .placeholder(R.drawable.ic_launcher_background)
-                .into(holder.imageView);
+            .load(imageUri)
+            .centerCrop()
+            .into(holder.imageView);
 
         holder.removeButton.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onImageRemove(position);
+            if (imageRemoveClickListener != null) {
+                imageRemoveClickListener.onImageRemove(position);
+            }
+            if (onImageRemoveListener != null) {
+                onImageRemoveListener.onImageRemove(imageUri);
             }
         });
     }
 
     @Override
     public int getItemCount() {
-        return imageUris.size();
+        return images.size();
     }
 
     public void updateImages(List<Uri> newImages) {
-        this.imageUris = newImages;
+        this.images = newImages;
         notifyDataSetChanged();
     }
 
     static class ImageViewHolder extends RecyclerView.ViewHolder {
         ImageView imageView;
-        ImageView removeButton;
+        ImageButton removeButton;
 
-        public ImageViewHolder(@NonNull View itemView) {
+        ImageViewHolder(@NonNull View itemView) {
             super(itemView);
             imageView = itemView.findViewById(R.id.image_preview);
-            removeButton = itemView.findViewById(R.id.remove_button);
+            removeButton = itemView.findViewById(R.id.remove_image_button);
         }
     }
 }
