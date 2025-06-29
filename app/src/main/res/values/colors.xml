@@ -1,44 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Primary Colors -->
-    <color name="primary">#FF6B35</color>
-    <color name="primary_dark">#E55A2B</color>
-    <color name="primary_light">#FF8A65</color>
+    <color name="primary">#2196F3</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="primary_light">#BBDEFB</color>
+    <color name="primary_color">#2196F3</color>
 
     <!-- Secondary Colors -->
-    <color name="secondary">#2196F3</color>
-    <color name="secondary_dark">#1976D2</color>
-    <color name="secondary_light">#64B5F6</color>
+    <color name="secondary">#FF9800</color>
+    <color name="secondary_dark">#F57C00</color>
+    <color name="secondary_light">#FFE0B2</color>
+
+    <!-- Accent Colors -->
+    <color name="accent">#4CAF50</color>
+    <color name="accent_light">#81C784</color>
+
+    <!-- Status Colors -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FF9800</color>
+    <color name="warning_light">#FFF3E0</color>
+    <color name="error">#F44336</color>
+    <color name="error_color">#F44336</color>
+    <color name="info">#2196F3</color>
 
     <!-- Background Colors -->
+    <color name="background_light">#F5F5F5</color>
+    <color name="background_white">#FFFFFF</color>
     <color name="background_primary">#FFFFFF</color>
-    <color name="background_secondary">#F5F5F5</color>
+    <color name="background_secondary">#F8F9FA</color>
     <color name="surface">#FFFFFF</color>
 
     <!-- Text Colors -->
     <color name="text_primary">#212121</color>
     <color name="text_secondary">#757575</color>
     <color name="text_hint">#BDBDBD</color>
+    <color name="text_disabled">#E0E0E0</color>
+    <color name="primary_text">#212121</color>
+    <color name="secondary_text">#757575</color>
 
-    <!-- Status Colors -->
-    <color name="success">#4CAF50</color>
-    <color name="warning">#FF9800</color>
-    <color name="error">#F44336</color>
-
-    <!-- Other Colors -->
+    <!-- Border and Divider -->
     <color name="divider">#E0E0E0</color>
+    <color name="border_light">#EEEEEE</color>
     <color name="overlay">#80000000</color>
-    <color name="transparent">#00000000</color>
 
-    <!-- Legacy colors -->
-    <color name="orange">#FF6B35</color>
+    <!-- Card and Surface -->
+    <color name="card_background">#FFFFFF</color>
+    <color name="ripple_light">#E3F2FD</color>
 
-    <!-- Missing Colors - Add these to fix the build error -->
+    <!-- Status Specific -->
+    <color name="online">#4CAF50</color>
+    <color name="offline">#9E9E9E</color>
+    <color name="sold">#FF5722</color>
+    <color name="available">#4CAF50</color>
+
+    <!-- Message Colors -->
+    <color name="message_sent">#2196F3</color>
+    <color name="message_received">#E0E0E0</color>
+
+    <!-- Rating Colors -->
+    <color name="rating_excellent">#4CAF50</color>
+    <color name="rating_good">#8BC34A</color>
+    <color name="rating_average">#FF9800</color>
+    <color name="rating_poor">#FF5722</color>
+
+    <!-- Offer Status Colors -->
+    <color name="offer_pending">#FF9800</color>
+    <color name="offer_accepted">#4CAF50</color>
+    <color name="offer_rejected">#F44336</color>
+    <color name="offer_countered">#9C27B0</color>
+
+    <!-- Star Colors -->
+    <color name="star_filled">#FFD700</color>
+    <color name="star_empty">#E0E0E0</color>
+
+    <!-- Additional Colors -->
+    <color name="orange">#FF9800</color>
+    <color name="brown">#8D6E63</color>
+
+    <!-- Legacy Colors for Compatibility -->
     <color name="cream">#FFF8E1</color>
     <color name="darkBrown">#3E2723</color>
     <color name="grey">#9E9E9E</color>
-    <color name="lightGrey">#F5F5F5</color>
+    <color name="lightGrey">#EEEEEE</color>
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
-    <color name="brown">#795548</color>
 </resources>

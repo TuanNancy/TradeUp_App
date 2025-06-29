@@ -47,4 +47,10 @@ public class UserModel {
 
     public boolean isDeactivated() { return deactivated; }
     public void setDeactivated(boolean deactivated) { this.deactivated = deactivated; }
+
+    // Add admin functionality
+    private boolean isAdmin = false;
+
+    public boolean getIsAdmin() { return isAdmin; }
+    public void setIsAdmin(boolean isAdmin) { this.isAdmin = isAdmin; }
 }

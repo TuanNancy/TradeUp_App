@@ -43,7 +43,7 @@ public class ProfileFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_profile, container, false);
 
         initViews(view);
-        setupListeners();
+        setupListeners(view);
         loadUserData();
 
         return view;
@@ -71,7 +71,7 @@ public class ProfileFragment extends Fragment {
         logoutButton = view.findViewById(R.id.logout_button);
     }
 
-    private void setupListeners() {
+    private void setupListeners(View view) {
         // FR-1.2.2: Users can update profile and profile photo
         editProfileButton.setOnClickListener(v -> {
             Intent intent = new Intent(getContext(), UserProfileActivity.class);
@@ -80,29 +80,44 @@ public class ProfileFragment extends Fragment {
 
         // My Listings - Show user's active listings
         myListingsButton.setOnClickListener(v -> {
-            // TODO: Navigate to user's listings activity
-            Toast.makeText(getContext(), "My Listings - Coming soon", Toast.LENGTH_SHORT).show();
+            // TODO: Navigate to user's listings
+            Toast.makeText(getContext(), "My Listings feature coming soon", Toast.LENGTH_SHORT).show();
         });
 
-        // Purchase History - Show user's purchase history
+        // Purchase History - Show transaction history (NEW FEATURE)
         purchaseHistoryButton.setOnClickListener(v -> {
-            // TODO: Navigate to purchase history activity
-            Toast.makeText(getContext(), "Purchase History - Coming soon", Toast.LENGTH_SHORT).show();
+            // Navigate to TransactionsFragment
+            if (getActivity() != null) {
+                getActivity().getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, new com.example.tradeup_app.fragments.TransactionsFragment())
+                    .addToBackStack(null)
+                    .commit();
+            }
         });
 
         // Saved Items - Show user's saved/favorite items
         savedItemsButton.setOnClickListener(v -> {
-            // TODO: Navigate to saved items activity
-            Toast.makeText(getContext(), "Saved Items - Coming soon", Toast.LENGTH_SHORT).show();
+            // TODO: Navigate to saved items
+            Toast.makeText(getContext(), "Saved Items feature coming soon", Toast.LENGTH_SHORT).show();
         });
 
-        // FR-1.2.3: Option to deactivate or permanently delete account
+        // Account Settings
         accountSettingsButton.setOnClickListener(v -> {
             Intent intent = new Intent(getContext(), AccountSettingsActivity.class);
             startActivity(intent);
         });
 
-        // FR-1.1.5: Logout option must be accessible via profile/settings
+        // Admin Dashboard (NEW FEATURE) - Only show for admin users
+        LinearLayout adminDashboardButton = view.findViewById(R.id.admin_dashboard_button);
+        if (adminDashboardButton != null && isAdminUser()) {
+            adminDashboardButton.setVisibility(View.VISIBLE);
+            adminDashboardButton.setOnClickListener(v -> {
+                Intent intent = new Intent(getContext(), com.example.tradeup_app.activities.AdminDashboardActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Logout
         logoutButton.setOnClickListener(v -> showLogoutDialog());
     }
 
@@ -229,5 +244,10 @@ public class ProfileFragment extends Fragment {
         if (getActivity() != null) {
             getActivity().finish();
         }
+    }
+
+    private boolean isAdminUser() {
+        // Check if the current user is an admin
+        return currentUser != null && currentUser.getIsAdmin();
     }
 }

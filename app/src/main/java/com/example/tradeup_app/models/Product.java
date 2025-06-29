@@ -1,9 +1,12 @@
 package com.example.tradeup_app.models;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Product {
+public class Product implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String id;
     private String title;
     private String description;

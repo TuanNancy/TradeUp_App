@@ -84,6 +84,20 @@
             android:exported="false"
             android:parentActivityName=".auth.MainActivity" />
 
+        <!-- NEW ACTIVITIES - Offers & Transactions System -->
+        <activity
+            android:name=".activities.OffersActivity"
+            android:exported="false"
+            android:parentActivityName=".auth.MainActivity"
+            android:label="Offers" />
+
+        <!-- Admin Dashboard -->
+        <activity
+            android:name=".activities.AdminDashboardActivity"
+            android:exported="false"
+            android:parentActivityName=".auth.MainActivity"
+            android:label="Admin Dashboard" />
+
         <!-- Login Activity as Launcher -->
         <activity
             android:name=".auth.LoginActivity"

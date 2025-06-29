@@ -6,9 +6,12 @@ import android.app.Dialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Looper;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,6 +27,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -36,6 +40,9 @@ import com.example.tradeup_app.dialogs.ProductPreviewDialog;
 import com.example.tradeup_app.auth.Helper.CurrentUser;
 import com.example.tradeup_app.auth.Domain.UserModel;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -65,6 +72,7 @@ public class SellFragment extends Fragment {
     private FusedLocationProviderClient fusedLocationClient;
     private FirebaseManager firebaseManager;
     private ImagePreviewAdapter imagePreviewAdapter;
+    private LocationCallback locationCallback;
 
     private boolean locationPermissionGranted = false;
     private static final int MAX_IMAGES = 10;
@@ -155,20 +163,91 @@ public class SellFragment extends Fragment {
 
     private void getLocation() {
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            // Check if GPS is enabled
+            LocationManager locationManager = (LocationManager) requireContext().getSystemService(requireContext().LOCATION_SERVICE);
+            if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                showGPSEnableDialog();
+                return;
+            }
+
+            // Show loading state
+            locationGpsButton.setEnabled(false);
+            Toast.makeText(requireContext(), "Đang lấy vị trí...", Toast.LENGTH_SHORT).show();
+
             fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(location -> {
                     if (location != null) {
-                        // Use Geocoder to get address
-                        LocationUtils.getAddressFromLocation(requireContext(), location.getLatitude(), location.getLongitude(),
-                            address -> {
-                                locationEditText.setText(address);
-                                // Save coordinates for the product
-                                latitude = location.getLatitude();
-                                longitude = location.getLongitude();
-                            });
+                        // Successfully got location
+                        handleLocationSuccess(location);
+                    } else {
+                        // Last location is null, request fresh location
+                        requestFreshLocation();
                     }
+                })
+                .addOnFailureListener(e -> {
+                    locationGpsButton.setEnabled(true);
+                    Toast.makeText(requireContext(), "Lỗi lấy vị trí: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
         }
+    }
+
+    private void handleLocationSuccess(Location location) {
+        LocationUtils.getAddressFromLocation(requireContext(), location.getLatitude(), location.getLongitude(),
+            address -> {
+                locationEditText.setText(address);
+                latitude = location.getLatitude();
+                longitude = location.getLongitude();
+                locationGpsButton.setEnabled(true);
+                Toast.makeText(requireContext(), "Đã lấy vị trí thành công", Toast.LENGTH_SHORT).show();
+            });
+    }
+
+    private void requestFreshLocation() {
+        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        LocationRequest locationRequest = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(5000)
+                .setFastestInterval(2000)
+                .setNumUpdates(1);
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult != null && !locationResult.getLocations().isEmpty()) {
+                    Location location = locationResult.getLastLocation();
+                    handleLocationSuccess(location);
+                    // Stop location updates
+                    fusedLocationClient.removeLocationUpdates(this);
+                } else {
+                    locationGpsButton.setEnabled(true);
+                    Toast.makeText(requireContext(), "Không thể lấy vị trí. Vui lòng thử lại sau.", Toast.LENGTH_LONG).show();
+                }
+            }
+        };
+
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+                .addOnFailureListener(e -> {
+                    locationGpsButton.setEnabled(true);
+                    Toast.makeText(requireContext(), "Lỗi yêu cầu vị trí: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void showGPSEnableDialog() {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Bật GPS")
+                .setMessage("Để sử dụng chức năng lấy vị trí, bạn cần bật GPS. Bạn có muốn mở cài đặt GPS không?")
+                .setPositiveButton("Mở cài đặt", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    startActivity(intent);
+                })
+                .setNegativeButton("Hủy", (dialog, which) -> {
+                    dialog.dismiss();
+                    Toast.makeText(requireContext(), "Bạn có thể nhập địa chỉ thủ công", Toast.LENGTH_SHORT).show();
+                })
+                .show();
     }
 
     private void setupImageUpload() {
@@ -401,10 +480,42 @@ public class SellFragment extends Fragment {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LOCATION_PERMISSION_REQUEST) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                locationPermissionGranted = true;
                 getLocation();
+            } else {
+                locationPermissionGranted = false;
+                showLocationPermissionDeniedDialog();
             }
+        }
+    }
+
+    private void showLocationPermissionDeniedDialog() {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Quyền truy cập vị trí")
+                .setMessage("Để sử dụng chức năng lấy vị trí tự động, bạn cần cấp quyền truy cập vị trí. Bạn có thể:\n\n1. Cấp quyền trong cài đặt ứng dụng\n2. Hoặc nhập địa chỉ thủ công")
+                .setPositiveButton("Mở cài đặt", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                    Uri uri = Uri.fromParts("package", requireContext().getPackageName(), null);
+                    intent.setData(uri);
+                    startActivity(intent);
+                })
+                .setNegativeButton("Nhập thủ công", (dialog, which) -> {
+                    dialog.dismiss();
+                    locationEditText.requestFocus();
+                    Toast.makeText(requireContext(), "Vui lòng nhập địa chỉ thủ công", Toast.LENGTH_SHORT).show();
+                })
+                .show();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Clean up location callback to prevent memory leaks
+        if (locationCallback != null && fusedLocationClient != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
         }
     }
 }

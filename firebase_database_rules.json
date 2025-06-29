@@ -1,0 +1,200 @@
+{
+  "rules": {
+    // ULTRA SIMPLE DEV RULES WITH NECESSARY INDEXING
+    // ⚠️ FOR DEVELOPMENT ONLY - NOT FOR PRODUCTION! ⚠️
+
+    ".read": true,
+    ".write": true,
+
+    "users": {
+      ".read": true,
+      ".write": true,
+      "$uid": {
+        ".read": true,
+        ".write": true
+      }
+    },
+
+    "products": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["createdAt", "category", "sellerId", "price", "status"],
+      "$productId": {
+        ".read": true,
+        ".write": true,
+        "views": {
+          ".read": true,
+          ".write": true
+        },
+        "status": {
+          ".read": true,
+          ".write": true
+        },
+        "images": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    },
+
+    "offers": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["productId", "sellerId", "buyerId", "status", "createdAt"],
+      "$offerId": {
+        ".read": true,
+        ".write": true,
+        "status": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    },
+
+    "chats": {
+      ".read": true,
+      ".write": true,
+      "$chatId": {
+        ".read": true,
+        ".write": true,
+        "messages": {
+          ".read": true,
+          ".write": true,
+          ".indexOn": ["timestamp", "senderId"],
+          "$messageId": {
+            ".read": true,
+            ".write": true
+          }
+        },
+        "participants": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    },
+
+    "conversations": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["lastMessageTime"],
+      "$conversationId": {
+        ".read": true,
+        ".write": true,
+        "participantsMap": {
+          ".read": true,
+          ".write": true,
+          ".indexOn": [".value"],
+          "$userId": {
+            ".indexOn": [".value"]
+          }
+        }
+      }
+    },
+
+    "messages": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp", "senderId", "conversationId"],
+      "$messageId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+
+    "transactions": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["buyerId", "sellerId", "productId", "timestamp", "status"],
+      "$transactionId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+
+    "reports": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["status", "reporterId", "reportedUserId", "timestamp", "type"],
+      "$reportId": {
+        ".read": true,
+        ".write": true,
+        "status": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    },
+
+    "ratings": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["ratedUserId", "raterId", "timestamp"],
+      "$ratingId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+
+    "notifications": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["timestamp", "read"],
+      "$userId": {
+        ".read": true,
+        ".write": true,
+        ".indexOn": ["timestamp", "read"],
+        "$notificationId": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    },
+
+    "categories": {
+      ".read": true,
+      ".write": true
+    },
+
+    "app_settings": {
+      ".read": true,
+      ".write": true
+    },
+
+    "admin": {
+      ".read": true,
+      ".write": true
+    },
+
+    // Development and testing nodes
+    "test_data": {
+      ".read": true,
+      ".write": true
+    },
+
+    "debug": {
+      ".read": true,
+      ".write": true
+    },
+
+    "temp": {
+      ".read": true,
+      ".write": true
+    },
+
+    // Image storage references
+    "images": {
+      ".read": true,
+      ".write": true
+    },
+
+    // FCM tokens for push notifications
+    "fcm_tokens": {
+      ".read": true,
+      ".write": true,
+      "$userId": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}

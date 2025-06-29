@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:background="@drawable/dialog_background">
+
+        <!-- Header -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Report Issue"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary_text"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Report Type -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="What are you reporting?"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary_text"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/reportTypeGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <RadioButton
+                android:id="@+id/reportScamRadio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Scam/Fraud"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/reportInappropriateRadio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Inappropriate Content"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/reportSpamRadio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Spam"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/reportHarassmentRadio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Harassment"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/reportFakeListingRadio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Fake Listing"
+                android:textSize="14sp" />
+
+        </RadioGroup>
+
+        <!-- Description -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/reportDescriptionInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:boxStrokeColor="@color/primary_color"
+            app:hintTextColor="@color/primary_color"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/reportDescriptionEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Please describe the issue"
+                android:inputType="textMultiLine"
+                android:maxLines="5"
+                android:textSize="14sp" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/cancelReportButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cancel"
+                android:textColor="@color/secondary_text"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_marginEnd="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/submitReportButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Submit Report"
+                android:backgroundTint="@color/error_color"
+                android:textColor="@android:color/white"
+                style="@style/Widget.MaterialComponents.Button" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
