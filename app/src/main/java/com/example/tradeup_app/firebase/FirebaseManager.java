@@ -63,8 +63,8 @@ public class FirebaseManager {
         }
 
         product.setSellerId(userId);
-        product.setCreatedAt(new java.util.Date());
-        product.setUpdatedAt(new java.util.Date());
+        product.setCreatedAt(System.currentTimeMillis());
+        product.setUpdatedAt(System.currentTimeMillis());
         product.setStatus("Available");
         product.setViewCount(0);
 
@@ -132,7 +132,7 @@ public class FirebaseManager {
                         results.sort((a, b) -> Double.compare(b.getPrice(), a.getPrice()));
                         break;
                     case "date":
-                        results.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+                        results.sort((a, b) -> Long.compare(b.getCreatedAt(), a.getCreatedAt()));
                         break;
                 }
             }

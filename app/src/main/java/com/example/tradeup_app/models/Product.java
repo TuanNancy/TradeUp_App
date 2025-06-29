@@ -1,7 +1,6 @@
 package com.example.tradeup_app.models;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 public class Product {
@@ -17,8 +16,8 @@ public class Product {
     private String sellerName;
     private List<String> imageUrls;
     private List<String> tags;
-    private Date createdAt;
-    private Date updatedAt;
+    private long createdAt;
+    private long updatedAt;
     private String status; // Available, Sold, Paused
     private int viewCount;
     private int likeCount;
@@ -26,19 +25,20 @@ public class Product {
     private double longitude;
     private String itemBehavior;
     private int interactionCount;
-    private Date lastViewedAt;
+    private long lastViewedAt;
     private List<String> interactionHistory;
 
     public Product() {
         this.imageUrls = new ArrayList<>();
         this.tags = new ArrayList<>();
-        this.createdAt = new Date();
-        this.updatedAt = new Date();
+        this.createdAt = System.currentTimeMillis();
+        this.updatedAt = System.currentTimeMillis();
         this.status = "Available";
         this.viewCount = 0;
         this.likeCount = 0;
         this.interactionCount = 0;
         this.interactionHistory = new ArrayList<>();
+        this.lastViewedAt = 0L;
     }
 
     public Product(String title, String description, double price, String category, String condition, String location, String sellerId) {
@@ -89,11 +89,11 @@ public class Product {
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }
 
-    public Date getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
+    public long getCreatedAt() { return createdAt; }
+    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
 
-    public Date getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Date updatedAt) { this.updatedAt = updatedAt; }
+    public long getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(long updatedAt) { this.updatedAt = updatedAt; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -116,8 +116,8 @@ public class Product {
     public int getInteractionCount() { return interactionCount; }
     public void setInteractionCount(int interactionCount) { this.interactionCount = interactionCount; }
 
-    public Date getLastViewedAt() { return lastViewedAt; }
-    public void setLastViewedAt(Date lastViewedAt) { this.lastViewedAt = lastViewedAt; }
+    public long getLastViewedAt() { return lastViewedAt; }
+    public void setLastViewedAt(long lastViewedAt) { this.lastViewedAt = lastViewedAt; }
 
     public List<String> getInteractionHistory() { return interactionHistory; }
     public void setInteractionHistory(List<String> interactionHistory) { this.interactionHistory = interactionHistory; }
