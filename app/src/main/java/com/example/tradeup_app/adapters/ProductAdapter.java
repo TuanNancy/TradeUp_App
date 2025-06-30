@@ -33,7 +33,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         void onProductLongClick(Product product);
         void onMakeOffer(Product product);
         void onReportProduct(Product product);
-        void onViewSellerProfile(String sellerId); // New method for viewing seller profile
+        void onViewSellerProfile(String sellerId);
     }
 
     public ProductAdapter(Context context, List<Product> products) {
@@ -55,7 +55,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     @Override
     public void onBindViewHolder(@NonNull ProductViewHolder holder, int position) {
         Product product = products.get(position);
-        holder.bind(product, context);
+        holder.bind(product);
     }
 
     @Override
@@ -64,14 +64,11 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     }
 
     public void updateProducts(List<Product> newProducts) {
-        int oldSize = this.products.size();
         this.products.clear();
-        notifyItemRangeRemoved(0, oldSize);
-
         if (newProducts != null) {
             this.products.addAll(newProducts);
-            notifyItemRangeInserted(0, newProducts.size());
         }
+        notifyDataSetChanged();
     }
 
     public void addProduct(Product product) {
@@ -94,13 +91,14 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         private final TextView sellerName, sellerRating, viewCount, timePosted;
         private final Chip statusChip, categoryChip, conditionChip;
         private final CircleImageView sellerAvatar;
-        private final ProductAdapter adapter; // Add adapter reference
+        private final MaterialButton btnChat, btnMakeOffer;
+        private final ProductAdapter adapter;
 
         public ProductViewHolder(@NonNull View itemView, ProductAdapter adapter) {
             super(itemView);
-            this.adapter = adapter; // Store adapter reference
+            this.adapter = adapter;
 
-            // Initialize views according to the new layout
+            // Initialize views
             productImage = itemView.findViewById(R.id.product_image);
             productTitle = itemView.findViewById(R.id.product_title);
             productPrice = itemView.findViewById(R.id.product_price);
@@ -113,154 +111,97 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             categoryChip = itemView.findViewById(R.id.category_chip);
             conditionChip = itemView.findViewById(R.id.condition_chip);
             sellerAvatar = itemView.findViewById(R.id.seller_avatar);
+            btnChat = itemView.findViewById(R.id.btn_chat);
+            btnMakeOffer = itemView.findViewById(R.id.btn_make_offer);
+        }
 
-            // Initialize buttons locally since they're only used in constructor
-            MaterialButton chatButton = itemView.findViewById(R.id.chat_button);
-            MaterialButton offerButton = itemView.findViewById(R.id.offer_button);
-            ImageButton favoriteButton = itemView.findViewById(R.id.favorite_button);
+        public void bind(Product product) {
+            // Set product data
+            productTitle.setText(product.getTitle());
+            productPrice.setText(formatPrice(product.getPrice()));
+            productDescription.setText(product.getDescription());
+            sellerName.setText(product.getSellerName());
+            viewCount.setText(product.getViewCount() + " views");
+
+            // Set chips
+            statusChip.setText(product.getStatus());
+            categoryChip.setText(product.getCategory());
+            conditionChip.setText(product.getCondition());
+
+            // Set time posted
+            timePosted.setText(formatTimeAgo(product.getCreatedAt()));
+
+            // Load product image
+            if (product.getImageUrls() != null && !product.getImageUrls().isEmpty()) {
+                com.bumptech.glide.Glide.with(itemView.getContext())
+                    .load(product.getImageUrls().get(0))
+                    .placeholder(android.R.drawable.ic_menu_gallery)
+                    .error(android.R.drawable.ic_menu_gallery)
+                    .into(productImage);
+            } else {
+                productImage.setImageResource(android.R.drawable.ic_menu_gallery);
+            }
 
             // Set click listeners
             itemView.setOnClickListener(v -> {
-                if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
-                    adapter.listener.onProductClick(adapter.products.get(getAdapterPosition()));
+                if (adapter.listener != null) {
+                    // Navigate to ProductDetailActivity instead of ChatActivity
+                    com.example.tradeup_app.activities.ProductDetailActivity.startActivity(
+                        itemView.getContext(), product.getId());
                 }
             });
 
             itemView.setOnLongClickListener(v -> {
-                if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
-                    adapter.listener.onProductLongClick(adapter.products.get(getAdapterPosition()));
-                    return true;
+                if (adapter.listener != null) {
+                    adapter.listener.onProductLongClick(product);
                 }
-                return false;
+                return true;
             });
 
-            if (chatButton != null) {
-                chatButton.setOnClickListener(v -> {
-                    if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
-                        adapter.listener.onProductClick(adapter.products.get(getAdapterPosition()));
-                    }
-                });
-            }
-
-            if (offerButton != null) {
-                offerButton.setOnClickListener(v -> {
-                    if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
-                        adapter.listener.onMakeOffer(adapter.products.get(getAdapterPosition()));
-                    }
-                });
-            }
-
-            if (favoriteButton != null) {
-                favoriteButton.setOnClickListener(v ->
-                    android.widget.Toast.makeText(itemView.getContext(), R.string.added_to_favorites, android.widget.Toast.LENGTH_SHORT).show()
-                );
-            }
-
-            // Add click listeners for seller info to view profile
-            sellerName.setOnClickListener(v -> {
-                if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
-                    String sellerId = adapter.products.get(getAdapterPosition()).getSellerId();
-                    if (sellerId != null) {
-                        adapter.listener.onViewSellerProfile(sellerId);
-                    }
-                }
-            });
-
+            // Seller avatar click
             sellerAvatar.setOnClickListener(v -> {
-                if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
-                    String sellerId = adapter.products.get(getAdapterPosition()).getSellerId();
-                    if (sellerId != null) {
-                        adapter.listener.onViewSellerProfile(sellerId);
-                    }
+                if (adapter.listener != null) {
+                    adapter.listener.onViewSellerProfile(product.getSellerId());
+                }
+            });
+
+            // Chat button click
+            btnChat.setOnClickListener(v -> {
+                if (adapter.listener != null) {
+                    adapter.listener.onProductClick(product);
+                }
+            });
+
+            // Make offer button click
+            btnMakeOffer.setOnClickListener(v -> {
+                if (adapter.listener != null) {
+                    adapter.listener.onMakeOffer(product);
                 }
             });
         }
 
-        public void bind(Product product, Context context) {
-            // Set product title
-            productTitle.setText(product.getTitle());
-
-            // Format and set price
+        private String formatPrice(double price) {
             NumberFormat formatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
-            productPrice.setText(formatter.format(product.getPrice()));
-
-            // Set description
-            productDescription.setText(product.getDescription());
-
-            // Set seller info
-            sellerName.setText(product.getSellerName());
-
-            // Handle seller rating - using a default value since getSellerRating() doesn't exist
-            sellerRating.setText("4.5"); // TODO: Implement proper seller rating system
-
-            // Set view count with string resource
-            viewCount.setText(context.getString(R.string.view_count_format, product.getViewCount()));
-
-            // Set time posted
-            timePosted.setText(getTimeAgo(product.getCreatedAt()));
-
-            // Set status chip
-            statusChip.setText(product.getStatus());
-            setStatusChipColor(statusChip, product.getStatus());
-
-            // Set category chip
-            categoryChip.setText(product.getCategory());
-
-            // Set condition chip
-            conditionChip.setText(product.getCondition());
-
-            // Load product image
-            loadProductImage(product, context);
-
-            // Load seller avatar (placeholder for now)
-            sellerAvatar.setImageResource(R.drawable.ic_user_placeholder);
+            return formatter.format(price);
         }
 
-        private void loadProductImage(Product product, Context context) {
-            if (product.getImageUrls() != null && !product.getImageUrls().isEmpty()) {
-                String firstImageUrl = product.getImageUrls().get(0);
-                // Use Glide to load image
-                com.bumptech.glide.Glide.with(context)
-                    .load(firstImageUrl)
-                    .placeholder(R.drawable.ic_image_placeholder)
-                    .error(R.drawable.ic_image_placeholder)
-                    .centerCrop()
-                    .into(productImage);
-            } else {
-                productImage.setImageResource(R.drawable.ic_image_placeholder);
-            }
-        }
-
-        private void setStatusChipColor(Chip chip, String status) {
-            int colorRes;
-            switch (status.toLowerCase()) {
-                case "available":
-                case "có sẵn":
-                    colorRes = R.color.success;
-                    break;
-                case "sold":
-                case "đã bán":
-                    colorRes = R.color.sold;
-                    break;
-                default:
-                    colorRes = R.color.text_secondary;
-                    break;
-            }
-            chip.setChipBackgroundColorResource(colorRes);
-        }
-
-        private String getTimeAgo(long timestamp) {
+        private String formatTimeAgo(long timestamp) {
             long now = System.currentTimeMillis();
             long diff = now - timestamp;
 
-            if (diff < 60000) { // Less than 1 minute
-                return "Vừa xong";
-            } else if (diff < 3600000) { // Less than 1 hour
-                return (diff / 60000) + " phút trước";
-            } else if (diff < 86400000) { // Less than 1 day
-                return (diff / 3600000) + " giờ trước";
-            } else { // More than 1 day
-                return (diff / 86400000) + " ngày trước";
+            long seconds = diff / 1000;
+            long minutes = seconds / 60;
+            long hours = minutes / 60;
+            long days = hours / 24;
+
+            if (days > 0) {
+                return days + " day" + (days > 1 ? "s" : "") + " ago";
+            } else if (hours > 0) {
+                return hours + " hour" + (hours > 1 ? "s" : "") + " ago";
+            } else if (minutes > 0) {
+                return minutes + " minute" + (minutes > 1 ? "s" : "") + " ago";
+            } else {
+                return "Just now";
             }
         }
     }

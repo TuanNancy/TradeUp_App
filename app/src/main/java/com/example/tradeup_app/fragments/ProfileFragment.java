@@ -23,7 +23,6 @@ import com.example.tradeup_app.auth.UserProfileActivity;
 import com.example.tradeup_app.auth.Helper.CurrentUser;
 import com.example.tradeup_app.auth.Domain.UserModel;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.FirebaseDatabase;
@@ -109,7 +108,8 @@ public class ProfileFragment extends Fragment {
         });
 
         // Admin Dashboard (NEW FEATURE) - Only show for admin users
-        MaterialCardView adminDashboardButton = view.findViewById(R.id.admin_dashboard_button);
+        // Fixed: Use proper view type instead of casting MaterialCardView to LinearLayout
+        View adminDashboardButton = view.findViewById(R.id.admin_dashboard_button);
         if (adminDashboardButton != null && isAdminUser()) {
             adminDashboardButton.setVisibility(View.VISIBLE);
             adminDashboardButton.setOnClickListener(v -> {

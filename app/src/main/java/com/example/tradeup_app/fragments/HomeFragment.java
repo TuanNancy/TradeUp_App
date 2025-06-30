@@ -167,13 +167,61 @@ public class HomeFragment extends Fragment {
     }
 
     private void openProductChat(Product product) {
-        Intent intent = new Intent(getContext(), ChatActivity.class);
-        intent.putExtra("productId", product.getId());
-        intent.putExtra("sellerId", product.getSellerId());
-        startActivity(intent);
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) {
+            Toast.makeText(getContext(), "Vui lòng đăng nhập để chat", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        // Increment view count
-        firebaseManager.incrementProductViews(product.getId());
+        // Không thể chat với chính mình
+        if (currentUserId.equals(product.getSellerId())) {
+            Toast.makeText(getContext(), "Bạn không thể chat với chính mình", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Tạo hoặc lấy conversation trước khi mở ChatActivity
+        com.example.tradeup_app.services.MessagingService messagingService =
+            new com.example.tradeup_app.services.MessagingService();
+
+        String productImageUrl = (product.getImageUrls() != null && !product.getImageUrls().isEmpty())
+            ? product.getImageUrls().get(0) : "";
+
+        messagingService.createOrGetConversation(
+            product.getId(),
+            currentUserId, // buyerId
+            product.getSellerId(), // sellerId
+            product.getTitle(),
+            productImageUrl,
+            new com.example.tradeup_app.services.MessagingService.ConversationCallback() {
+                @Override
+                public void onConversationCreated(String conversationId) {
+                    if (getActivity() != null) {
+                        // Mở ChatActivity với đầy đủ thông tin
+                        Intent intent = new Intent(getContext(), ChatActivity.class);
+                        intent.putExtra("conversationId", conversationId);
+                        intent.putExtra("receiverId", product.getSellerId());
+                        intent.putExtra("receiverName", product.getSellerName());
+                        intent.putExtra("productTitle", product.getTitle());
+                        startActivity(intent);
+
+                        // Increment view count
+                        firebaseManager.incrementProductViewCount(product.getId());
+                    }
+                }
+
+                @Override
+                public void onConversationsLoaded(List<com.example.tradeup_app.models.Conversation> conversations) {
+                    // Not used in this context
+                }
+
+                @Override
+                public void onError(String error) {
+                    if (getActivity() != null) {
+                        Toast.makeText(getContext(), "Lỗi tạo cuộc trò chuyện: " + error, Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        );
     }
 
     @Override

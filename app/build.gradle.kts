@@ -66,6 +66,9 @@ dependencies {
     // Firebase Cloud Messaging for push notifications
     implementation("com.google.firebase:firebase-messaging")
 
+    // Add Firebase Storage for image uploads in messaging
+    implementation("com.google.firebase:firebase-storage")
+
     // Google Play Services Auth (kiểm tra phiên bản mới nhất tương thích)
     implementation("com.google.android.gms:play-services-auth:20.7.0")
 
@@ -120,4 +123,7 @@ dependencies {
     // UI Components
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
+
+    // Add SwipeRefreshLayout for conversations activity
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 }

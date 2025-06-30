@@ -1,23 +1,34 @@
 package com.example.tradeup_app.models;
 
-import java.util.Date;
-
 public class Message {
     private String id;
     private String conversationId;
     private String senderId;
     private String receiverId;
     private String content;
-    private String messageType; // text, image, offer
-    private Date timestamp;
+    private String messageType; // text, image, emoji, offer
+    private long timestamp;
     private boolean isRead;
-    private String productId; // For offer messages
-    private double offerAmount; // For offer messages
+    private String productId;
+    private double offerAmount;
+    private String senderName;
+
+    // New fields for enhanced messaging
+    private String imageUrl; // For image messages
+    private String imageFileName; // For image file reference
+    private boolean isDeleted; // For message deletion
+    private String deletedBy; // Who deleted the message
+    private boolean isReported; // If message was reported
+    private String reportReason; // Reason for reporting
+    private boolean isEncrypted; // For future encryption support
 
     public Message() {
-        this.timestamp = new Date();
+        this.timestamp = System.currentTimeMillis();
         this.isRead = false;
         this.messageType = "text";
+        this.isDeleted = false;
+        this.isReported = false;
+        this.isEncrypted = false;
     }
 
     public Message(String conversationId, String senderId, String receiverId, String content) {
@@ -26,6 +37,18 @@ public class Message {
         this.senderId = senderId;
         this.receiverId = receiverId;
         this.content = content;
+    }
+
+    // Constructor for image messages
+    public Message(String conversationId, String senderId, String receiverId, String imageUrl, String imageFileName) {
+        this();
+        this.conversationId = conversationId;
+        this.senderId = senderId;
+        this.receiverId = receiverId;
+        this.imageUrl = imageUrl;
+        this.imageFileName = imageFileName;
+        this.messageType = "image";
+        this.content = "[Image]";
     }
 
     // Getters and Setters
@@ -47,8 +70,8 @@ public class Message {
     public String getMessageType() { return messageType; }
     public void setMessageType(String messageType) { this.messageType = messageType; }
 
-    public Date getTimestamp() { return timestamp; }
-    public void setTimestamp(Date timestamp) { this.timestamp = timestamp; }
+    public long getTimestamp() { return timestamp; }
+    public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 
     public boolean isRead() { return isRead; }
     public void setRead(boolean read) { isRead = read; }
@@ -58,4 +81,29 @@ public class Message {
 
     public double getOfferAmount() { return offerAmount; }
     public void setOfferAmount(double offerAmount) { this.offerAmount = offerAmount; }
+
+    public String getSenderName() { return senderName; }
+    public void setSenderName(String senderName) { this.senderName = senderName; }
+
+    // New getters and setters
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public String getImageFileName() { return imageFileName; }
+    public void setImageFileName(String imageFileName) { this.imageFileName = imageFileName; }
+
+    public boolean isDeleted() { return isDeleted; }
+    public void setDeleted(boolean deleted) { isDeleted = deleted; }
+
+    public String getDeletedBy() { return deletedBy; }
+    public void setDeletedBy(String deletedBy) { this.deletedBy = deletedBy; }
+
+    public boolean isReported() { return isReported; }
+    public void setReported(boolean reported) { isReported = reported; }
+
+    public String getReportReason() { return reportReason; }
+    public void setReportReason(String reportReason) { this.reportReason = reportReason; }
+
+    public boolean isEncrypted() { return isEncrypted; }
+    public void setEncrypted(boolean encrypted) { isEncrypted = encrypted; }
 }

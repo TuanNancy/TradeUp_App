@@ -29,6 +29,7 @@ public class MessagesFragment extends Fragment {
     private LinearLayout emptyStateLayout;
     private ConversationAdapter conversationAdapter;
     private FirebaseManager firebaseManager;
+    private List<Conversation> conversationList;
 
     @Nullable
     @Override
@@ -46,64 +47,125 @@ public class MessagesFragment extends Fragment {
         conversationsRecyclerView = view.findViewById(R.id.conversations_recycler_view);
         emptyStateLayout = view.findViewById(R.id.empty_state_layout);
         firebaseManager = FirebaseManager.getInstance();
+        conversationList = new ArrayList<>();
     }
 
     private void setupRecyclerView() {
-        conversationAdapter = new ConversationAdapter(getContext(), new ArrayList<>());
+        // Create adapter with the correct constructor signature
+        conversationAdapter = new ConversationAdapter(getContext(), conversationList, new ConversationAdapter.OnConversationClickListener() {
+            @Override
+            public void onConversationClick(Conversation conversation) {
+                String currentUserId = firebaseManager.getCurrentUserId();
+                String otherUserId = conversation.getOtherParticipantId(currentUserId);
+                String otherUserName = conversation.getOtherParticipantName(currentUserId);
+
+                Intent intent = new Intent(getContext(), ChatActivity.class);
+                intent.putExtra("conversationId", conversation.getId());
+                intent.putExtra("receiverId", otherUserId);
+                intent.putExtra("receiverName", otherUserName);
+                intent.putExtra("productTitle", conversation.getProductTitle());
+                startActivity(intent);
+            }
+
+            @Override
+            public void onConversationLongClick(Conversation conversation) {
+                // Handle long click if needed (e.g., show options)
+            }
+        });
+
         conversationsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         conversationsRecyclerView.setAdapter(conversationAdapter);
-
-        conversationAdapter.setOnConversationClickListener(conversation -> {
-            Intent intent = new Intent(getContext(), ChatActivity.class);
-            intent.putExtra("conversationId", conversation.getId());
-            intent.putExtra("productId", conversation.getProductId());
-            intent.putExtra("sellerId", conversation.getSellerId());
-            startActivity(intent);
-        });
     }
 
     private void loadConversations() {
-        firebaseManager.getConversations(new FirebaseManager.ConversationCallback() {
-            @Override
-            public void onConversationsLoaded(List<Conversation> conversations) {
-                conversationAdapter.updateConversations(conversations);
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) {
+            android.util.Log.w("MessagesFragment", "User not authenticated, cannot load conversations");
+            return;
+        }
+
+        android.util.Log.d("MessagesFragment", "Loading conversations for user: " + currentUserId);
+
+        // Load conversations from Firebase
+        firebaseManager.getDatabase()
+                .getReference(FirebaseManager.CONVERSATIONS_NODE)
+                .addValueEventListener(new com.google.firebase.database.ValueEventListener() {
+                    @Override
+                    public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                        android.util.Log.d("MessagesFragment", "Received " + dataSnapshot.getChildrenCount() + " conversation snapshots");
+
+                        List<Conversation> conversations = new ArrayList<>();
+
+                        for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                            try {
+                                Conversation conversation = snapshot.getValue(Conversation.class);
+                                if (conversation != null) {
+                                    conversation.setId(snapshot.getKey());
+
+                                    // Only include conversations where current user is a participant
+                                    if (conversation.getBuyerId().equals(currentUserId) ||
+                                            conversation.getSellerId().equals(currentUserId)) {
+
+                                        // Check if user is not blocked
+                                        if (!conversation.isUserBlocked(currentUserId)) {
+                                            conversations.add(conversation);
+                                            android.util.Log.d("MessagesFragment", "Added conversation: " + conversation.getId());
+                                        } else {
+                                            android.util.Log.d("MessagesFragment", "User blocked in conversation: " + conversation.getId());
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                android.util.Log.e("MessagesFragment", "Error parsing conversation", e);
+                            }
+                        }
+
+                        android.util.Log.d("MessagesFragment", "Final conversation count: " + conversations.size());
+                        updateConversations(conversations);
+                    }
+
+                    @Override
+                    public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                        android.util.Log.e("MessagesFragment", "Firebase error: " + databaseError.getMessage());
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(), "Error loading conversations: " + databaseError.getMessage(),
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+    }
+
+    private void updateConversations(List<Conversation> conversations) {
+        if (getActivity() != null) {
+            getActivity().runOnUiThread(() -> {
+                conversationList.clear();
+                conversationList.addAll(conversations);
+                conversationAdapter.notifyDataSetChanged();
 
                 // Update empty state visibility
                 updateEmptyState();
-            }
-
-            @Override
-            public void onError(String error) {
-                if (getContext() != null) {
-                    Toast.makeText(getContext(), "Lỗi: " + error, Toast.LENGTH_SHORT).show();
-                }
-                updateEmptyState();
-            }
-        });
-    }
-
-    private void showEmptyState() {
-        conversationsRecyclerView.setVisibility(View.GONE);
-        emptyStateLayout.setVisibility(View.VISIBLE);
-    }
-
-    private void hideEmptyState() {
-        conversationsRecyclerView.setVisibility(View.VISIBLE);
-        emptyStateLayout.setVisibility(View.GONE);
+            });
+        }
     }
 
     private void updateEmptyState() {
-        if (conversationAdapter.getItemCount() == 0) {
-            showEmptyState();
+        if (conversationList.isEmpty()) {
+            conversationsRecyclerView.setVisibility(View.GONE);
+            if (emptyStateLayout != null) {
+                emptyStateLayout.setVisibility(View.VISIBLE);
+            }
         } else {
-            hideEmptyState();
+            conversationsRecyclerView.setVisibility(View.VISIBLE);
+            if (emptyStateLayout != null) {
+                emptyStateLayout.setVisibility(View.GONE);
+            }
         }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        // Refresh conversations when fragment resumes
+        // Refresh conversations when fragment becomes visible
         loadConversations();
     }
 }
