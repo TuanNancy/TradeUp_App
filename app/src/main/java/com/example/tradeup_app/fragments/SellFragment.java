@@ -348,6 +348,13 @@ public class SellFragment extends Fragment {
         product.setLatitude(latitude);
         product.setLongitude(longitude);
 
+        // Set seller information
+        UserModel currentUser = CurrentUser.getUser();
+        if (currentUser != null) {
+            product.setSellerId(currentUser.getUid());
+            product.setSellerName(currentUser.getUsername());
+        }
+
         // Get tags
         List<String> tags = new ArrayList<>();
         for (int i = 0; i < tagsChipGroup.getChildCount(); i++) {
