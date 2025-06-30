@@ -92,6 +92,10 @@ public class Product implements Serializable {
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }
 
+    // Alias method for custom tags (same as getTags)
+    public List<String> getCustomTags() { return tags; }
+    public void setCustomTags(List<String> customTags) { this.tags = customTags; }
+
     public long getCreatedAt() { return createdAt; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
 

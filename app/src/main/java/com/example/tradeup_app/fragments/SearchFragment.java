@@ -118,7 +118,7 @@ public class SearchFragment extends Fragment {
         productAdapter.setOnProductClickListener(new ProductAdapter.OnProductClickListener() {
             @Override
             public void onProductClick(Product product) {
-                openProductChat(product);
+                openProductDetail(product);
             }
 
             @Override
@@ -291,13 +291,12 @@ public class SearchFragment extends Fragment {
         }
     }
 
-    private void openProductChat(Product product) {
-        Intent intent = new Intent(getContext(), ChatActivity.class);
-        intent.putExtra("productId", product.getId());
-        intent.putExtra("sellerId", product.getSellerId());
-        startActivity(intent);
+    private void openProductDetail(Product product) {
+        // Navigate to ProductDetailActivity instead of ChatActivity
+        com.example.tradeup_app.activities.ProductDetailActivity.startActivity(
+            getContext(), product.getId());
 
-        // Increment view count - Fixed: use correct method name
+        // Increment view count
         firebaseManager.incrementProductViewCount(product.getId());
     }
 

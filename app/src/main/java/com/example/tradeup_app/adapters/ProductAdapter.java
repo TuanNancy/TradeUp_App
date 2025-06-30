@@ -91,6 +91,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         private final TextView sellerName, sellerRating, viewCount, timePosted;
         private final Chip statusChip, categoryChip, conditionChip;
         private final CircleImageView sellerAvatar;
+        private final com.google.android.material.chip.ChipGroup customTagsGroup;
         private final ProductAdapter adapter;
 
         public ProductViewHolder(@NonNull View itemView, ProductAdapter adapter) {
@@ -110,6 +111,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             categoryChip = itemView.findViewById(R.id.category_chip);
             conditionChip = itemView.findViewById(R.id.condition_chip);
             sellerAvatar = itemView.findViewById(R.id.seller_avatar);
+            customTagsGroup = itemView.findViewById(R.id.custom_tags_group);
         }
 
         public void bind(Product product) {
@@ -124,6 +126,9 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             statusChip.setText(product.getStatus());
             categoryChip.setText(product.getCategory());
             conditionChip.setText(product.getCondition());
+
+            // Handle custom tags
+            setupCustomTags(product);
 
             // Set time posted
             timePosted.setText(formatTimeAgo(product.getCreatedAt()));
@@ -143,9 +148,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             // Set click listeners
             itemView.setOnClickListener(v -> {
                 if (adapter.listener != null) {
-                    // Navigate to ProductDetailActivity instead of ChatActivity
-                    com.example.tradeup_app.activities.ProductDetailActivity.startActivity(
-                        itemView.getContext(), product.getId());
+                    adapter.listener.onProductClick(product);
                 }
             });
 
@@ -162,6 +165,32 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                     adapter.listener.onViewSellerProfile(product.getSellerId());
                 }
             });
+        }
+
+        private void setupCustomTags(Product product) {
+            // Clear existing tags
+            customTagsGroup.removeAllViews();
+
+            // Check if product has custom tags
+            if (product.getCustomTags() != null && !product.getCustomTags().isEmpty()) {
+                customTagsGroup.setVisibility(View.VISIBLE);
+
+                // Add each custom tag as a chip
+                for (String tag : product.getCustomTags()) {
+                    Chip chip = new Chip(itemView.getContext());
+                    chip.setText(tag);
+                    chip.setTextSize(12);
+                    chip.setChipBackgroundColorResource(R.color.accent_light);
+                    chip.setChipCornerRadius(8);
+                    chip.setChipMinHeight(28);
+                    chip.setClickable(false);
+                    chip.setCheckable(false);
+
+                    customTagsGroup.addView(chip);
+                }
+            } else {
+                customTagsGroup.setVisibility(View.GONE);
+            }
         }
 
         private String formatPrice(double price) {
