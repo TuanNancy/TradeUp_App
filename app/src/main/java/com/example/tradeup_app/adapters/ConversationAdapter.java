@@ -16,6 +16,7 @@ import com.example.tradeup_app.models.Conversation;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -90,10 +91,10 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
             userName.setText(conversation.getBuyerName());
             lastMessage.setText(conversation.getLastMessage());
 
-            // Format time
-            if (conversation.getLastMessageTime() != null) {
+            // Format time - Fixed: check for timestamp > 0 instead of null
+            if (conversation.getLastMessageTime() > 0) {
                 SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-                timeText.setText(sdf.format(conversation.getLastMessageTime()));
+                timeText.setText(sdf.format(new Date(conversation.getLastMessageTime())));
             }
 
             // Show unread badge

@@ -63,7 +63,10 @@ public class MessagesFragment extends Fragment {
     }
 
     private void loadConversations() {
-        firebaseManager.getConversations(new FirebaseManager.ConversationCallback() {
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) return;
+
+        firebaseManager.getConversationsForUser(currentUserId, new FirebaseManager.ConversationCallback() {
             @Override
             public void onConversationsLoaded(List<Conversation> conversations) {
                 conversationAdapter.updateConversations(conversations);

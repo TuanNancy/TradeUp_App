@@ -193,7 +193,7 @@ public class ChatActivity extends AppCompatActivity {
         message.setSenderId(firebaseManager.getCurrentUserId());
         message.setReceiverId(sellerId);
         message.setContent(content);
-        message.setTimestamp(new Date());
+        message.setTimestamp(System.currentTimeMillis()); // Fixed: use long timestamp instead of Date
         message.setMessageType("text");
 
         firebaseManager.sendMessage(message, task -> {
@@ -237,7 +237,7 @@ public class ChatActivity extends AppCompatActivity {
         message.setSenderId(firebaseManager.getCurrentUserId());
         message.setReceiverId(sellerId);
         message.setContent("Đề xuất giá: " + String.format("%.0f VNĐ", offerAmount));
-        message.setTimestamp(new Date());
+        message.setTimestamp(System.currentTimeMillis()); // Fixed: use long timestamp instead of Date
         message.setMessageType("offer");
         message.setProductId(productId);
         message.setOfferAmount(offerAmount);

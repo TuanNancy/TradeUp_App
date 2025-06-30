@@ -13,6 +13,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.List;
 
@@ -200,59 +201,203 @@ public class FirebaseManager {
         return true;
     }
 
-    // Message methods
+    // ==================== MESSAGES AND CONVERSATIONS METHODS ====================
+
     public void sendMessage(Message message, OnCompleteListener<Void> listener) {
-        DatabaseReference messagesRef = database.getReference(MESSAGES_NODE);
-        String key = messagesRef.push().getKey();
+        String key = database.getReference(MESSAGES_NODE).push().getKey();
         if (key != null) {
             message.setId(key);
-            messagesRef.child(key).setValue(message).addOnCompleteListener(listener);
+            message.setTimestamp(System.currentTimeMillis());
+
+            database.getReference(MESSAGES_NODE)
+                .child(key)
+                .setValue(message)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        // Update conversation with last message
+                        updateConversationLastMessage(message);
+                    }
+                    listener.onComplete(task);
+                });
         }
     }
 
-    // Conversation methods
-    public void getConversations(ConversationCallback callback) {
-        String userId = getCurrentUserId();
-        if (userId == null) {
-            callback.onError("User not logged in");
-            return;
-        }
+    public void getMessagesForConversation(String conversationId, ValueEventListener listener) {
+        database.getReference(MESSAGES_NODE)
+            .orderByChild("conversationId")
+            .equalTo(conversationId)
+            .addValueEventListener(listener);
+    }
+
+    public void createOrGetConversation(String productId, String buyerId, String sellerId,
+                                      String productTitle, String productImageUrl,
+                                      OnCompleteListener<String> listener) {
+        // Check if conversation already exists
+        String conversationId = generateConversationId(productId, buyerId, sellerId);
 
         database.getReference(CONVERSATIONS_NODE)
-            .orderByChild("participantsMap/" + userId)
-            .equalTo(true)
+            .child(conversationId)
+            .get()
+            .addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    if (task.getResult().exists()) {
+                        // Conversation exists
+                        listener.onComplete(com.google.android.gms.tasks.Tasks.forResult(conversationId));
+                    } else {
+                        // Create new conversation
+                        Conversation conversation = new Conversation();
+                        conversation.setId(conversationId);
+                        conversation.setProductId(productId);
+                        conversation.setProductTitle(productTitle);
+                        conversation.setProductImageUrl(productImageUrl);
+                        conversation.setBuyerId(buyerId);
+                        conversation.setSellerId(sellerId);
+
+                        // Get user names
+                        getUserName(buyerId, buyerName -> {
+                            conversation.setBuyerName(buyerName);
+                            getUserName(sellerId, sellerName -> {
+                                conversation.setSellerName(sellerName);
+
+                                database.getReference(CONVERSATIONS_NODE)
+                                    .child(conversationId)
+                                    .setValue(conversation)
+                                    .addOnCompleteListener(createTask -> {
+                                        if (createTask.isSuccessful()) {
+                                            listener.onComplete(com.google.android.gms.tasks.Tasks.forResult(conversationId));
+                                        } else {
+                                            listener.onComplete(com.google.android.gms.tasks.Tasks.forException(createTask.getException()));
+                                        }
+                                    });
+                            });
+                        });
+                    }
+                } else {
+                    listener.onComplete(com.google.android.gms.tasks.Tasks.forException(task.getException()));
+                }
+            });
+    }
+
+    private String generateConversationId(String productId, String buyerId, String sellerId) {
+        return productId + "_" + buyerId + "_" + sellerId;
+    }
+
+    private void updateConversationLastMessage(Message message) {
+        String conversationId = message.getConversationId();
+        if (conversationId != null) {
+            DatabaseReference conversationRef = database.getReference(CONVERSATIONS_NODE).child(conversationId);
+            conversationRef.child("lastMessage").setValue(message.getContent());
+            conversationRef.child("lastMessageTime").setValue(message.getTimestamp());
+            conversationRef.child("updatedAt").setValue(System.currentTimeMillis());
+
+            // Increment unread count for receiver
+            conversationRef.child("unreadCount").get().addOnSuccessListener(snapshot -> {
+                int currentCount = snapshot.exists() ? snapshot.getValue(Integer.class) : 0;
+                conversationRef.child("unreadCount").setValue(currentCount + 1);
+            });
+        }
+    }
+
+    public void markConversationAsRead(String conversationId, OnCompleteListener<Void> listener) {
+        database.getReference(CONVERSATIONS_NODE)
+            .child(conversationId)
+            .child("unreadCount")
+            .setValue(0)
+            .addOnCompleteListener(listener);
+    }
+
+    public void getConversationsForUser(String userId, ConversationCallback callback) {
+        database.getReference(CONVERSATIONS_NODE)
+            .orderByChild("updatedAt")
             .get()
             .addOnSuccessListener(snapshot -> {
                 List<Conversation> conversations = new java.util.ArrayList<>();
                 for (com.google.firebase.database.DataSnapshot dataSnapshot : snapshot.getChildren()) {
                     Conversation conversation = dataSnapshot.getValue(Conversation.class);
-                    if (conversation != null) {
+                    if (conversation != null &&
+                        (userId.equals(conversation.getBuyerId()) || userId.equals(conversation.getSellerId()))) {
                         conversation.setId(dataSnapshot.getKey());
                         conversations.add(conversation);
                     }
                 }
+                // Sort by most recent
+                conversations.sort((a, b) -> Long.compare(b.getUpdatedAt(), a.getUpdatedAt()));
                 callback.onConversationsLoaded(conversations);
             })
             .addOnFailureListener(e -> callback.onError(e.getMessage()));
     }
 
-    public void incrementProductViews(String productId) {
-        DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
-        productRef.runTransaction(new com.google.firebase.database.Transaction.Handler() {
-            @Override
-            public com.google.firebase.database.Transaction.Result doTransaction(com.google.firebase.database.MutableData mutableData) {
-                Product product = mutableData.getValue(Product.class);
-                if (product != null) {
-                    product.setViewCount(product.getViewCount() + 1);
-                    mutableData.setValue(product);
-                }
-                return com.google.firebase.database.Transaction.success(mutableData);
-            }
+    private void getUserName(String userId, UserNameCallback callback) {
+        database.getReference(USERS_NODE)
+            .child(userId)
+            .child("name")
+            .get()
+            .addOnSuccessListener(snapshot -> {
+                String name = snapshot.exists() ? snapshot.getValue(String.class) : "Unknown User";
+                callback.onUserNameRetrieved(name);
+            })
+            .addOnFailureListener(e -> callback.onUserNameRetrieved("Unknown User"));
+    }
 
-            @Override
-            public void onComplete(com.google.firebase.database.DatabaseError databaseError, boolean committed, com.google.firebase.database.DataSnapshot dataSnapshot) {
-                // Optional: handle completion
+    public interface UserNameCallback {
+        void onUserNameRetrieved(String name);
+    }
+
+    // ==================== UTILITY METHODS ====================
+
+    public void updateProductStatus(String productId, String status, OnCompleteListener<Void> listener) {
+        DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
+        productRef.child("status").setValue(status);
+        productRef.child("updatedAt").setValue(System.currentTimeMillis())
+            .addOnCompleteListener(listener);
+    }
+
+    public void incrementProductViewCount(String productId) {
+        DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
+        productRef.child("viewCount").get().addOnSuccessListener(snapshot -> {
+            int currentCount = snapshot.exists() ? snapshot.getValue(Integer.class) : 0;
+            productRef.child("viewCount").setValue(currentCount + 1);
+            productRef.child("lastViewedAt").setValue(System.currentTimeMillis());
+        });
+    }
+
+    public void toggleProductLike(String productId, String userId, OnCompleteListener<Boolean> listener) {
+        DatabaseReference likesRef = database.getReference("product_likes").child(productId).child(userId);
+        likesRef.get().addOnSuccessListener(snapshot -> {
+            boolean isLiked = snapshot.exists();
+            if (isLiked) {
+                // Unlike
+                likesRef.removeValue().addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        decrementLikeCount(productId);
+                        listener.onComplete(com.google.android.gms.tasks.Tasks.forResult(false));
+                    }
+                });
+            } else {
+                // Like
+                likesRef.setValue(System.currentTimeMillis()).addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        incrementLikeCount(productId);
+                        listener.onComplete(com.google.android.gms.tasks.Tasks.forResult(true));
+                    }
+                });
             }
+        });
+    }
+
+    private void incrementLikeCount(String productId) {
+        DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
+        productRef.child("likeCount").get().addOnSuccessListener(snapshot -> {
+            int currentCount = snapshot.exists() ? snapshot.getValue(Integer.class) : 0;
+            productRef.child("likeCount").setValue(currentCount + 1);
+        });
+    }
+
+    private void decrementLikeCount(String productId) {
+        DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
+        productRef.child("likeCount").get().addOnSuccessListener(snapshot -> {
+            int currentCount = snapshot.exists() ? snapshot.getValue(Integer.class) : 0;
+            productRef.child("likeCount").setValue(Math.max(0, currentCount - 1));
         });
     }
 

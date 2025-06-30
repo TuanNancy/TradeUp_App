@@ -172,8 +172,8 @@ public class HomeFragment extends Fragment {
         intent.putExtra("sellerId", product.getSellerId());
         startActivity(intent);
 
-        // Increment view count
-        firebaseManager.incrementProductViews(product.getId());
+        // Increment view count - Fixed: use correct method name
+        firebaseManager.incrementProductViewCount(product.getId());
     }
 
     @Override

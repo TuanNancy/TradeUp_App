@@ -13,6 +13,7 @@ import com.example.tradeup_app.R;
 import com.example.tradeup_app.models.Message;
 
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -90,10 +91,10 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
         public void bind(Message message) {
             messageText.setText(message.getContent());
 
-            // Format time
-            if (message.getTimestamp() != null) {
+            // Format time - Fixed: check for timestamp > 0 instead of null
+            if (message.getTimestamp() > 0) {
                 SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-                timeText.setText(sdf.format(message.getTimestamp()));
+                timeText.setText(sdf.format(new Date(message.getTimestamp())));
             }
 
             // Handle offer messages

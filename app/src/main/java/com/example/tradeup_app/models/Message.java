@@ -1,7 +1,5 @@
 package com.example.tradeup_app.models;
 
-import java.util.Date;
-
 public class Message {
     private String id;
     private String conversationId;
@@ -9,13 +7,14 @@ public class Message {
     private String receiverId;
     private String content;
     private String messageType; // text, image, offer
-    private Date timestamp;
+    private long timestamp; // Changed from Date to long for Firebase compatibility
     private boolean isRead;
     private String productId; // For offer messages
     private double offerAmount; // For offer messages
+    private String senderName; // Added for better UI display
 
     public Message() {
-        this.timestamp = new Date();
+        this.timestamp = System.currentTimeMillis();
         this.isRead = false;
         this.messageType = "text";
     }
@@ -47,8 +46,8 @@ public class Message {
     public String getMessageType() { return messageType; }
     public void setMessageType(String messageType) { this.messageType = messageType; }
 
-    public Date getTimestamp() { return timestamp; }
-    public void setTimestamp(Date timestamp) { this.timestamp = timestamp; }
+    public long getTimestamp() { return timestamp; }
+    public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 
     public boolean isRead() { return isRead; }
     public void setRead(boolean read) { isRead = read; }
@@ -58,4 +57,7 @@ public class Message {
 
     public double getOfferAmount() { return offerAmount; }
     public void setOfferAmount(double offerAmount) { this.offerAmount = offerAmount; }
+
+    public String getSenderName() { return senderName; }
+    public void setSenderName(String senderName) { this.senderName = senderName; }
 }

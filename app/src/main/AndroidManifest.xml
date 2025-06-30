@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.tradeup_app">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature
         android:name="android.hardware.camera"
@@ -33,7 +32,7 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_app_logo"
         android:label="@string/app_name"
-        android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar"
+        android:theme="@style/Theme.TradeUp_App"
         android:usesCleartextTraffic="true">
 
         <!-- Firebase Messaging Service -->
@@ -83,6 +82,14 @@
             android:name=".activities.ChatActivity"
             android:exported="false"
             android:parentActivityName=".auth.MainActivity" />
+
+        <!-- Product Detail Activity - NEW -->
+        <activity
+            android:name=".activities.ProductDetailActivity"
+            android:exported="false"
+            android:parentActivityName=".auth.MainActivity"
+            android:label="Product Details"
+            android:theme="@style/Theme.TradeUp_App" />
 
         <!-- NEW ACTIVITIES - Offers & Transactions System -->
         <activity

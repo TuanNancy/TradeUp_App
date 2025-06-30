@@ -297,8 +297,8 @@ public class SearchFragment extends Fragment {
         intent.putExtra("sellerId", product.getSellerId());
         startActivity(intent);
 
-        // Increment view count
-        firebaseManager.incrementProductViews(product.getId());
+        // Increment view count - Fixed: use correct method name
+        firebaseManager.incrementProductViewCount(product.getId());
     }
 
     // NEW METHODS for handling offers and reports

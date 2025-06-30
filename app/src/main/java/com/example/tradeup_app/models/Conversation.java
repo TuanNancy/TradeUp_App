@@ -1,6 +1,5 @@
 package com.example.tradeup_app.models;
 
-import java.util.Date;
 import java.util.List;
 
 public class Conversation {
@@ -13,13 +12,17 @@ public class Conversation {
     private String buyerName;
     private String sellerName;
     private String lastMessage;
-    private Date lastMessageTime;
+    private long lastMessageTime; // Changed from Date to long for Firebase compatibility
     private int unreadCount;
     private boolean isActive;
+    private long createdAt; // Added for better tracking
+    private long updatedAt; // Added for better tracking
 
     public Conversation() {
         this.isActive = true;
         this.unreadCount = 0;
+        this.createdAt = System.currentTimeMillis();
+        this.updatedAt = System.currentTimeMillis();
     }
 
     // Getters and Setters
@@ -48,14 +51,23 @@ public class Conversation {
     public void setSellerName(String sellerName) { this.sellerName = sellerName; }
 
     public String getLastMessage() { return lastMessage; }
-    public void setLastMessage(String lastMessage) { this.lastMessage = lastMessage; }
+    public void setLastMessage(String lastMessage) {
+        this.lastMessage = lastMessage;
+        this.updatedAt = System.currentTimeMillis(); // Auto-update timestamp
+    }
 
-    public Date getLastMessageTime() { return lastMessageTime; }
-    public void setLastMessageTime(Date lastMessageTime) { this.lastMessageTime = lastMessageTime; }
+    public long getLastMessageTime() { return lastMessageTime; }
+    public void setLastMessageTime(long lastMessageTime) { this.lastMessageTime = lastMessageTime; }
 
     public int getUnreadCount() { return unreadCount; }
     public void setUnreadCount(int unreadCount) { this.unreadCount = unreadCount; }
 
     public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { isActive = active; }
+    public void setActive(boolean active) { this.isActive = active; }
+
+    public long getCreatedAt() { return createdAt; }
+    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
+
+    public long getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(long updatedAt) { this.updatedAt = updatedAt; }
 }
