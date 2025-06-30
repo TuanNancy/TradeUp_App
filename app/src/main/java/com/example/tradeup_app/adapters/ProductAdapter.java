@@ -33,6 +33,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         void onProductLongClick(Product product);
         void onMakeOffer(Product product);
         void onReportProduct(Product product);
+        void onViewSellerProfile(String sellerId); // New method for viewing seller profile
     }
 
     public ProductAdapter(Context context, List<Product> products) {
@@ -48,7 +49,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     @Override
     public ProductViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(context).inflate(R.layout.item_product, parent, false);
-        return new ProductViewHolder(view);
+        return new ProductViewHolder(view, this);
     }
 
     @Override
@@ -93,9 +94,12 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         private final TextView sellerName, sellerRating, viewCount, timePosted;
         private final Chip statusChip, categoryChip, conditionChip;
         private final CircleImageView sellerAvatar;
+        private final ProductAdapter adapter; // Add adapter reference
 
-        public ProductViewHolder(@NonNull View itemView) {
+        public ProductViewHolder(@NonNull View itemView, ProductAdapter adapter) {
             super(itemView);
+            this.adapter = adapter; // Store adapter reference
+
             // Initialize views according to the new layout
             productImage = itemView.findViewById(R.id.product_image);
             productTitle = itemView.findViewById(R.id.product_title);
@@ -117,15 +121,13 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
             // Set click listeners
             itemView.setOnClickListener(v -> {
-                ProductAdapter adapter = getAdapterFromContext(itemView.getContext());
-                if (adapter != null && adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
+                if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
                     adapter.listener.onProductClick(adapter.products.get(getAdapterPosition()));
                 }
             });
 
             itemView.setOnLongClickListener(v -> {
-                ProductAdapter adapter = getAdapterFromContext(itemView.getContext());
-                if (adapter != null && adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
+                if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
                     adapter.listener.onProductLongClick(adapter.products.get(getAdapterPosition()));
                     return true;
                 }
@@ -134,8 +136,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
             if (chatButton != null) {
                 chatButton.setOnClickListener(v -> {
-                    ProductAdapter adapter = getAdapterFromContext(itemView.getContext());
-                    if (adapter != null && adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
+                    if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
                         adapter.listener.onProductClick(adapter.products.get(getAdapterPosition()));
                     }
                 });
@@ -143,8 +144,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
             if (offerButton != null) {
                 offerButton.setOnClickListener(v -> {
-                    ProductAdapter adapter = getAdapterFromContext(itemView.getContext());
-                    if (adapter != null && adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
+                    if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
                         adapter.listener.onMakeOffer(adapter.products.get(getAdapterPosition()));
                     }
                 });
@@ -155,12 +155,25 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                     android.widget.Toast.makeText(itemView.getContext(), R.string.added_to_favorites, android.widget.Toast.LENGTH_SHORT).show()
                 );
             }
-        }
 
-        private ProductAdapter getAdapterFromContext(Context context) {
-            // This is a workaround since we can't access the adapter directly from ViewHolder
-            // In a real implementation, you might want to pass the adapter reference or use a different approach
-            return null; // TODO: Implement proper adapter reference
+            // Add click listeners for seller info to view profile
+            sellerName.setOnClickListener(v -> {
+                if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
+                    String sellerId = adapter.products.get(getAdapterPosition()).getSellerId();
+                    if (sellerId != null) {
+                        adapter.listener.onViewSellerProfile(sellerId);
+                    }
+                }
+            });
+
+            sellerAvatar.setOnClickListener(v -> {
+                if (adapter.listener != null && getAdapterPosition() != RecyclerView.NO_POSITION) {
+                    String sellerId = adapter.products.get(getAdapterPosition()).getSellerId();
+                    if (sellerId != null) {
+                        adapter.listener.onViewSellerProfile(sellerId);
+                    }
+                }
+            });
         }
 
         public void bind(Product product, Context context) {

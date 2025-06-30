@@ -135,6 +135,11 @@ public class SearchFragment extends Fragment {
             public void onReportProduct(Product product) {
                 showReportDialog(product);
             }
+
+            @Override
+            public void onViewSellerProfile(String sellerId) {
+                openSellerProfile(sellerId);
+            }
         });
     }
 
@@ -501,5 +506,16 @@ public class SearchFragment extends Fragment {
             )
             .setNegativeButton("Cancel", null)
             .show();
+    }
+
+    private void openSellerProfile(String sellerId) {
+        if (sellerId != null && getContext() != null) {
+            // Use the static method from UserProfileViewActivity to start the activity
+            com.example.tradeup_app.auth.UserProfileViewActivity.startActivity(getContext(), sellerId);
+        } else {
+            if (getContext() != null) {
+                Toast.makeText(getContext(), "Cannot open seller profile", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 }
