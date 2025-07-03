@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -15,20 +17,36 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.tradeup_app.R;
 import com.example.tradeup_app.adapters.ProductAdapter;
+import com.example.tradeup_app.adapters.CategoryAdapter;
 import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Product;
 import com.example.tradeup_app.activities.ChatActivity;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.card.MaterialCardView;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.bumptech.glide.Glide;
+import de.hdodenhof.circleimageview.CircleImageView;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class HomeFragment extends Fragment {
 
-    private RecyclerView recyclerViewFeatured, recyclerViewRecent;
+    private RecyclerView recyclerViewFeatured, recyclerViewRecent, recyclerViewCategories;
     private TextInputEditText searchBar;
     private ProductAdapter featuredAdapter, recentAdapter;
+    private CategoryAdapter categoryAdapter;
     private FirebaseManager firebaseManager;
+
+    // User profile views
+    private CircleImageView userProfileImage;
+    private TextView greetingText, userNameText;
+    private TextView totalProductsCount;
+
+    // Quick action cards
+    private MaterialCardView quickSellCard, quickChatCard;
 
     @Nullable
     @Override
@@ -37,6 +55,9 @@ public class HomeFragment extends Fragment {
 
         initViews(view);
         setupRecyclerViews();
+        setupClickListeners();
+        loadUserProfile();
+        loadCategories();
         loadFeaturedItems();
         loadRecentItems();
         setupSearchBar();
@@ -45,13 +66,33 @@ public class HomeFragment extends Fragment {
     }
 
     private void initViews(View view) {
+        // RecyclerViews
         recyclerViewFeatured = view.findViewById(R.id.featured_products_recycler);
         recyclerViewRecent = view.findViewById(R.id.recent_products_recycler);
+        recyclerViewCategories = view.findViewById(R.id.categories_recycler);
+
+        // Search bar
         searchBar = view.findViewById(R.id.search_bar);
+
+        // User profile views
+        userProfileImage = view.findViewById(R.id.user_profile_image);
+        greetingText = view.findViewById(R.id.greeting_text);
+        userNameText = view.findViewById(R.id.user_name_text);
+        totalProductsCount = view.findViewById(R.id.total_products_count);
+
+        // Quick action cards
+        quickSellCard = view.findViewById(R.id.quick_sell_card);
+        quickChatCard = view.findViewById(R.id.quick_chat_card);
+
         firebaseManager = FirebaseManager.getInstance();
     }
 
     private void setupRecyclerViews() {
+        // Categories (horizontal)
+        categoryAdapter = new CategoryAdapter(getContext(), new ArrayList<>());
+        recyclerViewCategories.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+        recyclerViewCategories.setAdapter(categoryAdapter);
+
         // Featured products (horizontal)
         featuredAdapter = new ProductAdapter(getContext(), new ArrayList<>());
         recyclerViewFeatured.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
@@ -63,7 +104,104 @@ public class HomeFragment extends Fragment {
         recyclerViewRecent.setAdapter(recentAdapter);
 
         // Set click listeners
-        featuredAdapter.setOnProductClickListener(new ProductAdapter.OnProductClickListener() {
+        setupProductClickListeners();
+        setupCategoryClickListener();
+    }
+
+    private void setupClickListeners() {
+        // Quick sell card
+        quickSellCard.setOnClickListener(v -> {
+            if (getActivity() != null) {
+                ((androidx.fragment.app.FragmentActivity) getActivity()).getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, new com.example.tradeup_app.fragments.SellFragment())
+                    .addToBackStack(null)
+                    .commit();
+            }
+        });
+
+        // Quick chat card
+        quickChatCard.setOnClickListener(v -> {
+            if (getActivity() != null) {
+                ((androidx.fragment.app.FragmentActivity) getActivity()).getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, new com.example.tradeup_app.fragments.MessagesFragment())
+                    .addToBackStack(null)
+                    .commit();
+            }
+        });
+    }
+
+    private void loadUserProfile() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            // Load user profile image
+            if (currentUser.getPhotoUrl() != null) {
+                Glide.with(this)
+                    .load(currentUser.getPhotoUrl())
+                    .placeholder(R.drawable.ic_user_placeholder)
+                    .error(R.drawable.ic_user_placeholder)
+                    .into(userProfileImage);
+            }
+
+            // Set user name
+            String displayName = currentUser.getDisplayName();
+            if (displayName != null && !displayName.isEmpty()) {
+                userNameText.setText(displayName);
+            } else {
+                userNameText.setText("Người dùng");
+            }
+
+            // Set greeting based on time of day
+            java.util.Calendar calendar = java.util.Calendar.getInstance();
+            int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+            String greeting;
+            if (hour < 12) {
+                greeting = "Chào buổi sáng!";
+            } else if (hour < 18) {
+                greeting = "Chào buổi chiều!";
+            } else {
+                greeting = "Chào buổi tối!";
+            }
+            greetingText.setText(greeting);
+        }
+    }
+
+    private void loadCategories() {
+        // Cập nhật tên danh mục để khớp với SearchFragment
+        List<CategoryAdapter.CategoryItem> categories = Arrays.asList(
+            new CategoryAdapter.CategoryItem("Điện tử", R.drawable.ic_category),
+            new CategoryAdapter.CategoryItem("Thời trang", R.drawable.ic_category),
+            new CategoryAdapter.CategoryItem("Xe cộ", R.drawable.ic_category),
+            new CategoryAdapter.CategoryItem("Nhà cửa", R.drawable.ic_category),
+            new CategoryAdapter.CategoryItem("Sách", R.drawable.ic_category),
+            new CategoryAdapter.CategoryItem("Thể thao", R.drawable.ic_category),
+            new CategoryAdapter.CategoryItem("Khác", R.drawable.ic_category)
+        );
+        categoryAdapter.updateCategories(categories);
+    }
+
+    private void setupCategoryClickListener() {
+        categoryAdapter.setOnCategoryClickListener(categoryName -> {
+            if (getActivity() != null) {
+                // Tạo SearchFragment với Bundle chứa category
+                SearchFragment searchFragment = new SearchFragment();
+                Bundle bundle = new Bundle();
+                bundle.putString("category", categoryName);
+                searchFragment.setArguments(bundle);
+
+                // Chuyển sang SearchFragment
+                getActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, searchFragment)
+                    .addToBackStack(null)
+                    .commit();
+            }
+        });
+    }
+
+    private void setupProductClickListeners() {
+        ProductAdapter.OnProductClickListener clickListener = new ProductAdapter.OnProductClickListener() {
             @Override
             public void onProductClick(Product product) {
                 openProductChat(product);
@@ -88,34 +226,10 @@ public class HomeFragment extends Fragment {
             public void onViewSellerProfile(String sellerId) {
                 openSellerProfile(sellerId);
             }
-        });
+        };
 
-        recentAdapter.setOnProductClickListener(new ProductAdapter.OnProductClickListener() {
-            @Override
-            public void onProductClick(Product product) {
-                openProductChat(product);
-            }
-
-            @Override
-            public void onProductLongClick(Product product) {
-                showProductOptionsMenu(product);
-            }
-
-            @Override
-            public void onMakeOffer(Product product) {
-                showMakeOfferDialog(product);
-            }
-
-            @Override
-            public void onReportProduct(Product product) {
-                showReportDialog(product);
-            }
-
-            @Override
-            public void onViewSellerProfile(String sellerId) {
-                openSellerProfile(sellerId);
-            }
-        });
+        featuredAdapter.setOnProductClickListener(clickListener);
+        recentAdapter.setOnProductClickListener(clickListener);
     }
 
     private void loadFeaturedItems() {

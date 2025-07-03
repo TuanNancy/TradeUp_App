@@ -64,11 +64,30 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     }
 
     public void updateProducts(List<Product> newProducts) {
-        this.products.clear();
-        if (newProducts != null) {
-            this.products.addAll(newProducts);
+        // Đảm bảo cập nhật được thực hiện trên UI thread
+        if (context instanceof android.app.Activity) {
+            ((android.app.Activity) context).runOnUiThread(() -> {
+                updateProductsInternal(newProducts);
+            });
+        } else {
+            updateProductsInternal(newProducts);
         }
-        notifyDataSetChanged();
+    }
+
+    private void updateProductsInternal(List<Product> newProducts) {
+        int oldSize = products.size();
+        products.clear();
+
+        // Thông báo về việc xóa dữ liệu cũ
+        if (oldSize > 0) {
+            notifyItemRangeRemoved(0, oldSize);
+        }
+
+        // Thêm dữ liệu mới
+        if (newProducts != null && !newProducts.isEmpty()) {
+            products.addAll(newProducts);
+            notifyItemRangeInserted(0, newProducts.size());
+        }
     }
 
     public void addProduct(Product product) {
@@ -82,6 +101,16 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         if (position >= 0 && position < products.size()) {
             products.remove(position);
             notifyItemRemoved(position);
+            notifyItemRangeChanged(position, products.size() - position);
+        }
+    }
+
+    // Thêm phương thức clearProducts để xóa an toàn
+    public void clearProducts() {
+        int oldSize = products.size();
+        products.clear();
+        if (oldSize > 0) {
+            notifyItemRangeRemoved(0, oldSize);
         }
     }
 

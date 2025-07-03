@@ -49,6 +49,10 @@ public class SearchFragment extends Fragment {
         setupSearchListener();
         setupRecyclerView();
         setupFilters();
+
+        // Check if category is passed from HomeFragment
+        handleCategoryFromBundle();
+
         performInitialSearch();
 
         return view;
@@ -183,18 +187,17 @@ public class SearchFragment extends Fragment {
         firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
             @Override
             public void onProductsLoaded(List<Product> products) {
-                if (getActivity() != null) {
-                    productList.clear();
-                    productList.addAll(products);
-                    productAdapter.notifyItemRangeInserted(0, products.size());
+                if (getActivity() != null && isAdded()) {
+                    productAdapter.updateProducts(products);
                     updateEmptyState();
                 }
             }
 
             @Override
             public void onError(String error) {
-                if (getActivity() != null) {
+                if (getActivity() != null && isAdded()) {
                     Toast.makeText(getContext(), "Lỗi tải sản phẩm: " + error, Toast.LENGTH_SHORT).show();
+                    productAdapter.clearProducts();
                     updateEmptyState();
                 }
             }
@@ -230,22 +233,22 @@ public class SearchFragment extends Fragment {
             new FirebaseManager.ProductCallback() {
                 @Override
                 public void onProductsLoaded(List<Product> products) {
-                    hideProgressBar();
-                    int oldSize = productList.size();
-                    productList.clear();
-                    productAdapter.notifyItemRangeRemoved(0, oldSize);
-                    productList.addAll(products);
-                    productAdapter.notifyItemRangeInserted(0, products.size());
-                    updateEmptyState();
+                    if (getActivity() != null && isAdded()) {
+                        hideProgressBar();
+                        // Sử dụng phương thức mới để cập nhật adapter an toàn
+                        productAdapter.updateProducts(products);
+                        updateEmptyState();
+                    }
                 }
 
                 @Override
                 public void onError(String error) {
-                    hideProgressBar();
-                    if (getContext() != null) {
-                        Toast.makeText(getContext(), "Lỗi tìm kiếm: " + error, Toast.LENGTH_SHORT).show();
+                    if (getActivity() != null && isAdded()) {
+                        hideProgressBar();
+                        Toast.makeText(getContext(), "Lỗi tìm ki���m: " + error, Toast.LENGTH_SHORT).show();
+                        productAdapter.clearProducts();
+                        updateEmptyState();
                     }
-                    updateEmptyState();
                 }
             });
     }
@@ -514,6 +517,32 @@ public class SearchFragment extends Fragment {
         } else {
             if (getContext() != null) {
                 Toast.makeText(getContext(), "Cannot open seller profile", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void handleCategoryFromBundle() {
+        Bundle args = getArguments();
+        if (args != null && args.containsKey("category")) {
+            String categoryFromHome = args.getString("category");
+            if (categoryFromHome != null) {
+                setCategoryFilter(categoryFromHome);
+            }
+        }
+    }
+
+    private void setCategoryFilter(String category) {
+        if (getContext() == null) return;
+
+        // Map category names to spinner positions
+        String[] categories = {"Tất cả", "Điện tử", "Thời trang", "Xe cộ", "Nhà cửa", "Sách", "Thể thao", "Khác"};
+
+        for (int i = 0; i < categories.length; i++) {
+            if (categories[i].equals(category)) {
+                categorySpinner.setSelection(i);
+                // Trigger search with this category
+                performSearch();
+                break;
             }
         }
     }
