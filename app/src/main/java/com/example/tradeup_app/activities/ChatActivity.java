@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.tradeup_app.R;
 import com.example.tradeup_app.adapters.MessageAdapter;
+import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Message;
 import com.example.tradeup_app.services.MessagingService;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -81,6 +82,9 @@ public class ChatActivity extends AppCompatActivity {
 
         // Load messages
         loadMessages();
+
+        // Check if user is blocked when opening chat
+        checkIfUserIsBlocked();
     }
 
     private void getIntentData() {
@@ -352,13 +356,17 @@ public class ChatActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         if (id == android.R.id.home) {
-            onBackPressed();
+            finish();
+            return true;
+        } else if (id == R.id.action_blocked_users) {
+            Intent intent = new Intent(this, BlockedUsersActivity.class);
+            startActivity(intent);
             return true;
         } else if (id == R.id.action_block_user) {
             showBlockUserDialog();
             return true;
-        } else if (id == R.id.action_report_user) {
-            showReportUserDialog();
+        } else if (id == R.id.action_report_conversation) {
+            showReportConversationDialog();
             return true;
         }
 
@@ -366,35 +374,58 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void showBlockUserDialog() {
+        if (receiverName == null) receiverName = "this user";
+
         new AlertDialog.Builder(this)
             .setTitle("Block User")
-            .setMessage("Are you sure you want to block this user? You won't receive messages from them.")
+            .setMessage("Are you sure you want to block " + receiverName + "? You will no longer receive messages from this user.")
             .setPositiveButton("Block", (dialog, which) -> {
-                blockUser();
+                blockCurrentUser();
             })
             .setNegativeButton("Cancel", null)
             .show();
     }
 
-    private void showReportUserDialog() {
+    private void showReportConversationDialog() {
+        String[] reasons = {
+            "Spam or unwanted messages",
+            "Inappropriate content",
+            "Harassment or bullying",
+            "Scam or fraud",
+            "Other"
+        };
+
         new AlertDialog.Builder(this)
-            .setTitle("Report User")
-            .setMessage("Report this user for inappropriate behavior?")
+            .setTitle("Report Conversation")
+            .setMessage("Why are you reporting this conversation?")
+            .setSingleChoiceItems(reasons, -1, null)
             .setPositiveButton("Report", (dialog, which) -> {
-                reportUser();
+                int selectedIndex = ((AlertDialog) dialog).getListView().getCheckedItemPosition();
+                if (selectedIndex >= 0) {
+                    String reason = reasons[selectedIndex];
+                    reportCurrentConversation(reason);
+                } else {
+                    Toast.makeText(this, "Please select a reason", Toast.LENGTH_SHORT).show();
+                }
             })
             .setNegativeButton("Cancel", null)
             .show();
     }
 
-    private void blockUser() {
+    private void blockCurrentUser() {
+        if (conversationId == null || receiverId == null) {
+            Toast.makeText(this, "Cannot block user: missing conversation data", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         messagingService.blockUser(conversationId, receiverId, new MessagingService.BlockCallback() {
             @Override
             public void onUserBlocked(boolean success) {
                 runOnUiThread(() -> {
                     if (success) {
-                        Toast.makeText(ChatActivity.this, "User blocked", Toast.LENGTH_SHORT).show();
-                        finish();
+                        Toast.makeText(ChatActivity.this, receiverName + " has been blocked", Toast.LENGTH_SHORT).show();
+                        // Update UI to show blocked state
+                        updateUIForBlockedUser(true);
                     } else {
                         Toast.makeText(ChatActivity.this, "Failed to block user", Toast.LENGTH_SHORT).show();
                     }
@@ -407,15 +438,127 @@ public class ChatActivity extends AppCompatActivity {
             @Override
             public void onError(String error) {
                 runOnUiThread(() -> {
-                    Toast.makeText(ChatActivity.this, "Error: " + error, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ChatActivity.this, "Failed to block user: " + error, Toast.LENGTH_LONG).show();
                 });
             }
         });
     }
 
-    private void reportUser() {
-        // Simple reporting mechanism - you can enhance this
-        Toast.makeText(this, "User reported. Thank you for keeping our community safe.", Toast.LENGTH_LONG).show();
+    private void updateUIForBlockedUser(boolean isBlocked) {
+        if (isBlocked) {
+            // Disable message input
+            editTextMessage.setEnabled(false);
+            editTextMessage.setHint("User is blocked");
+            buttonSend.setEnabled(false);
+            buttonAttach.setEnabled(false);
+
+            // Change toolbar subtitle to show blocked status
+            getSupportActionBar().setSubtitle("🚫 BLOCKED - " + (productTitle != null ? "About: " + productTitle : ""));
+
+            // Show prominent unblock option
+            showBlockedUserBar();
+        } else {
+            // Re-enable message input
+            editTextMessage.setEnabled(true);
+            editTextMessage.setHint("Type a message...");
+            buttonSend.setEnabled(true);
+            buttonAttach.setEnabled(true);
+
+            // Restore normal subtitle
+            if (productTitle != null) {
+                getSupportActionBar().setSubtitle("About: " + productTitle);
+            } else {
+                getSupportActionBar().setSubtitle(null);
+            }
+
+            // Hide blocked user bar
+            hideBlockedUserBar();
+        }
+    }
+
+    private void showBlockedUserBar() {
+        // Create a prominent bar at top showing block status with easy unblock button
+        View blockedBar = findViewById(R.id.blockedUserBar);
+        if (blockedBar == null) {
+            // If the bar doesn't exist in layout, create it dynamically
+            android.widget.LinearLayout mainLayout = findViewById(R.id.mainChatLayout);
+            if (mainLayout != null) {
+                View barView = getLayoutInflater().inflate(R.layout.blocked_user_bar, mainLayout, false);
+                mainLayout.addView(barView, 1); // Add after toolbar
+
+                // Set up unblock button
+                android.widget.Button unblockBtn = barView.findViewById(R.id.btnQuickUnblock);
+                unblockBtn.setOnClickListener(v -> showQuickUnblockDialog());
+            }
+        } else {
+            blockedBar.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideBlockedUserBar() {
+        View blockedBar = findViewById(R.id.blockedUserBar);
+        if (blockedBar != null) {
+            blockedBar.setVisibility(View.GONE);
+        }
+    }
+
+    private void showQuickUnblockDialog() {
+        new AlertDialog.Builder(this)
+            .setTitle("Unblock User")
+            .setMessage("Unblock " + receiverName + "? You will be able to send and receive messages again.")
+            .setPositiveButton("Unblock", (dialog, which) -> {
+                quickUnblockUser();
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void quickUnblockUser() {
+        if (conversationId == null || receiverId == null) {
+            Toast.makeText(this, "Cannot unblock user: missing data", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        messagingService.unblockUser(conversationId, receiverId, new MessagingService.BlockCallback() {
+            @Override
+            public void onUserBlocked(boolean success) {}
+
+            @Override
+            public void onUserUnblocked(boolean success) {
+                runOnUiThread(() -> {
+                    if (success) {
+                        Toast.makeText(ChatActivity.this, receiverName + " has been unblocked", Toast.LENGTH_SHORT).show();
+                        updateUIForBlockedUser(false);
+                    } else {
+                        Toast.makeText(ChatActivity.this, "Failed to unblock user", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String error) {
+                runOnUiThread(() -> {
+                    Toast.makeText(ChatActivity.this, "Failed to unblock user: " + error, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void reportCurrentConversation(String reason) {
+        if (conversationId == null) {
+            Toast.makeText(this, "Cannot report: missing conversation data", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        messagingService.reportConversation(conversationId, reason, task -> {
+            runOnUiThread(() -> {
+                if (task.isSuccessful()) {
+                    Toast.makeText(ChatActivity.this, "Conversation reported successfully. Thank you for keeping our community safe.", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(ChatActivity.this, "Failed to report conversation", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
     }
 
     @Override
@@ -425,5 +568,16 @@ public class ChatActivity extends AppCompatActivity {
         if (messagingService != null) {
             messagingService.cleanup();
         }
+    }
+
+    // Check if user is blocked when opening chat
+    private void checkIfUserIsBlocked() {
+        if (receiverId == null) return;
+
+        messagingService.checkIfUserBlocked(
+            FirebaseManager.getInstance().getCurrentUserId(),
+            receiverId,
+            isBlocked -> runOnUiThread(() -> updateUIForBlockedUser(isBlocked))
+        );
     }
 }

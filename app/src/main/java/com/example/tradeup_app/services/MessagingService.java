@@ -154,10 +154,10 @@ public class MessagingService {
             return;
         }
 
-        // Check if user is blocked
-        checkIfBlocked(conversationId, currentUserId, (isBlocked) -> {
+        // Check if current user is blocked by receiver or if receiver is blocked by current user
+        checkIfUserBlocked(currentUserId, receiverId, (isBlocked) -> {
             if (isBlocked) {
-                callback.onError("Cannot send message. User may have blocked you.");
+                callback.onError("Cannot send message. This user has been blocked.");
                 return;
             }
 
@@ -175,10 +175,10 @@ public class MessagingService {
             return;
         }
 
-        // Check if user is blocked
-        checkIfBlocked(conversationId, currentUserId, (isBlocked) -> {
+        // Check if current user is blocked by receiver or if receiver is blocked by current user
+        checkIfUserBlocked(currentUserId, receiverId, (isBlocked) -> {
             if (isBlocked) {
-                callback.onError("Cannot send message. User may have blocked you.");
+                callback.onError("Cannot send message. This user has been blocked.");
                 return;
             }
 
@@ -256,7 +256,7 @@ public class MessagingService {
         });
     }
 
-    // Block user
+    // Block user - Enhanced version
     public void blockUser(String conversationId, String userIdToBlock, BlockCallback callback) {
         String currentUserId = firebaseManager.getCurrentUserId();
         if (currentUserId == null) {
@@ -264,24 +264,40 @@ public class MessagingService {
             return;
         }
 
-        DatabaseReference conversationRef = firebaseManager.getDatabase()
-                .getReference(FirebaseManager.CONVERSATIONS_NODE)
-                .child(conversationId);
+        // Store block information in current user's profile
+        DatabaseReference userRef = firebaseManager.getDatabase()
+                .getReference(FirebaseManager.USERS_NODE)
+                .child(currentUserId)
+                .child("blockedUsers")
+                .child(userIdToBlock);
 
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("blockedUsers/" + userIdToBlock, true);
-
-        conversationRef.updateChildren(updates)
+        userRef.setValue(true)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        callback.onUserBlocked(true);
+                        // Also update conversation to maintain compatibility
+                        DatabaseReference conversationRef = firebaseManager.getDatabase()
+                                .getReference(FirebaseManager.CONVERSATIONS_NODE)
+                                .child(conversationId);
+
+                        Map<String, Object> conversationUpdates = new HashMap<>();
+                        conversationUpdates.put("blockedUsers/" + userIdToBlock, true);
+
+                        conversationRef.updateChildren(conversationUpdates)
+                                .addOnCompleteListener(task2 -> {
+                                    if (task2.isSuccessful()) {
+                                        callback.onUserBlocked(true);
+                                    } else {
+                                        // Even if conversation update fails, user is still blocked
+                                        callback.onUserBlocked(true);
+                                    }
+                                });
                     } else {
                         callback.onError("Failed to block user: " + task.getException().getMessage());
                     }
                 });
     }
 
-    // Unblock user
+    // Unblock user - Enhanced version
     public void unblockUser(String conversationId, String userIdToUnblock, BlockCallback callback) {
         String currentUserId = firebaseManager.getCurrentUserId();
         if (currentUserId == null) {
@@ -289,16 +305,27 @@ public class MessagingService {
             return;
         }
 
-        DatabaseReference conversationRef = firebaseManager.getDatabase()
-                .getReference(FirebaseManager.CONVERSATIONS_NODE)
-                .child(conversationId);
+        // Remove from current user's blocked list
+        DatabaseReference userRef = firebaseManager.getDatabase()
+                .getReference(FirebaseManager.USERS_NODE)
+                .child(currentUserId)
+                .child("blockedUsers")
+                .child(userIdToUnblock);
 
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("blockedUsers/" + userIdToUnblock, null);
-
-        conversationRef.updateChildren(updates)
+        userRef.removeValue()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
+                        // Also update conversation to maintain compatibility
+                        if (conversationId != null) {
+                            DatabaseReference conversationRef = firebaseManager.getDatabase()
+                                    .getReference(FirebaseManager.CONVERSATIONS_NODE)
+                                    .child(conversationId);
+
+                            Map<String, Object> conversationUpdates = new HashMap<>();
+                            conversationUpdates.put("blockedUsers/" + userIdToUnblock, null);
+
+                            conversationRef.updateChildren(conversationUpdates);
+                        }
                         callback.onUserUnblocked(true);
                     } else {
                         callback.onError("Failed to unblock user: " + task.getException().getMessage());
@@ -502,7 +529,7 @@ public class MessagingService {
     }
 
     // Interface for block checking
-    private interface BlockCheckCallback {
+    public interface BlockCheckCallback {
         void onBlockCheckComplete(boolean isBlocked);
     }
 
@@ -886,5 +913,49 @@ public class MessagingService {
         long sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L;
         long currentTime = System.currentTimeMillis();
         return currentTime - message.getTimestamp() <= sevenDaysInMillis;
+    }
+
+    // Enhanced block checking - checks both users' blocked lists
+    public void checkIfUserBlocked(String senderId, String receiverId, BlockCheckCallback callback) {
+        // Check if sender is blocked by receiver
+        firebaseManager.getDatabase()
+                .getReference(FirebaseManager.USERS_NODE)
+                .child(receiverId)
+                .child("blockedUsers")
+                .child(senderId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        Boolean isBlockedByReceiver = dataSnapshot.getValue(Boolean.class);
+                        if (isBlockedByReceiver != null && isBlockedByReceiver) {
+                            callback.onBlockCheckComplete(true);
+                            return;
+                        }
+
+                        // Check if receiver is blocked by sender
+                        firebaseManager.getDatabase()
+                                .getReference(FirebaseManager.USERS_NODE)
+                                .child(senderId)
+                                .child("blockedUsers")
+                                .child(receiverId)
+                                .addListenerForSingleValueEvent(new ValueEventListener() {
+                                    @Override
+                                    public void onDataChange(DataSnapshot dataSnapshot) {
+                                        Boolean isBlockedBySender = dataSnapshot.getValue(Boolean.class);
+                                        callback.onBlockCheckComplete(isBlockedBySender != null && isBlockedBySender);
+                                    }
+
+                                    @Override
+                                    public void onCancelled(DatabaseError databaseError) {
+                                        callback.onBlockCheckComplete(false);
+                                    }
+                                });
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+                        callback.onBlockCheckComplete(false);
+                    }
+                });
     }
 }

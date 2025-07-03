@@ -9,15 +9,15 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/action_block_user"
-        android:icon="@drawable/ic_block"
-        android:title="Block User"
+        android:id="@+id/action_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="Settings"
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/action_report_conversation"
-        android:icon="@drawable/ic_report"
-        android:title="Report Conversation"
+        android:id="@+id/action_logout"
+        android:icon="@drawable/ic_logout"
+        android:title="Logout"
         app:showAsAction="never" />
 
 </menu>

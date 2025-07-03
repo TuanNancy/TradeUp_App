@@ -135,5 +135,15 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MaterialComponents.Light.NoActionBar" />
 
+        <!-- Blocked Users Activity -->
+        <activity
+            android:name=".activities.BlockedUsersActivity"
+            android:parentActivityName=".activities.ChatActivity"
+            android:theme="@style/Theme.TradeUp_App">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".activities.ChatActivity" />
+        </activity>
+
     </application>
 </manifest>

@@ -133,4 +133,29 @@ public class Conversation {
 
     public int getMessageCount() { return messageCount; }
     public void setMessageCount(int messageCount) { this.messageCount = messageCount; }
+
+    // Additional utility methods for blocking functionality
+    public void blockUser(String userId) {
+        if (blockedUsers == null) {
+            blockedUsers = new java.util.HashMap<>();
+        }
+        blockedUsers.put(userId, true);
+        this.updatedAt = System.currentTimeMillis();
+    }
+
+    public void unblockUser(String userId) {
+        if (blockedUsers != null) {
+            blockedUsers.remove(userId);
+            this.updatedAt = System.currentTimeMillis();
+        }
+    }
+
+    public boolean isBlocked() {
+        return blockedUsers != null && !blockedUsers.isEmpty();
+    }
+
+    public void setBlocked(boolean blocked) {
+        // This is a convenience method for UI updates
+        // The actual blocking logic should use blockUser/unblockUser methods
+    }
 }

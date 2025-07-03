@@ -69,7 +69,34 @@ public class MessagesFragment extends Fragment {
 
             @Override
             public void onConversationLongClick(Conversation conversation) {
-                // Handle long click if needed (e.g., show options)
+                // Handle long click if needed (handled by adapter now)
+            }
+
+            @Override
+            public void onConversationDeleted(Conversation conversation) {
+                // Refresh the conversation list after deletion
+                loadConversations();
+                android.util.Log.d("MessagesFragment", "Conversation deleted: " + conversation.getId());
+            }
+
+            @Override
+            public void onConversationBlocked(Conversation conversation) {
+                // Optionally refresh or show a message
+                String otherUserName = conversation.getOtherParticipantName(firebaseManager.getCurrentUserId());
+                android.util.Log.d("MessagesFragment", "User blocked: " + otherUserName);
+
+                // You might want to filter out blocked conversations or mark them differently
+                // For now, we'll just refresh the list
+                loadConversations();
+            }
+
+            @Override
+            public void onConversationReported(Conversation conversation) {
+                // Log the report and optionally refresh
+                android.util.Log.d("MessagesFragment", "Conversation reported: " + conversation.getId());
+
+                // Refresh to show visual indication of reported conversation
+                conversationAdapter.notifyDataSetChanged();
             }
         });
 

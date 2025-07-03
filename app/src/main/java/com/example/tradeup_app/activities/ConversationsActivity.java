@@ -85,7 +85,30 @@ public class ConversationsActivity extends AppCompatActivity {
 
             @Override
             public void onConversationLongClick(Conversation conversation) {
-                // Could implement conversation options (delete, mute, etc.)
+                // Handled by adapter internally now
+            }
+
+            @Override
+            public void onConversationDeleted(Conversation conversation) {
+                // Refresh the conversation list after deletion
+                loadConversations();
+                Toast.makeText(ConversationsActivity.this, "Conversation deleted", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onConversationBlocked(Conversation conversation) {
+                // Refresh conversations after blocking user
+                loadConversations();
+                String otherUserName = conversation.getOtherParticipantName(firebaseManager.getCurrentUserId());
+                Toast.makeText(ConversationsActivity.this, otherUserName + " has been blocked", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onConversationReported(Conversation conversation) {
+                // Show confirmation and optionally refresh
+                Toast.makeText(ConversationsActivity.this, "Conversation reported successfully", Toast.LENGTH_SHORT).show();
+                // Refresh to show visual indication
+                conversationAdapter.notifyDataSetChanged();
             }
         });
 
