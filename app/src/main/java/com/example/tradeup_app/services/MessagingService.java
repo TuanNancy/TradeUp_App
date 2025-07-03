@@ -9,6 +9,7 @@ import com.example.tradeup_app.models.Conversation;
 import com.example.tradeup_app.models.Message;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -337,6 +338,10 @@ public class MessagingService {
     public void reportConversation(String conversationId, String reason, OnCompleteListener<Void> callback) {
         String currentUserId = firebaseManager.getCurrentUserId();
         if (currentUserId == null) {
+            // Create a failed task to pass to the callback
+            Exception exception = new Exception("User not authenticated");
+            Task<Void> failedTask = com.google.android.gms.tasks.Tasks.forException(exception);
+            callback.onComplete(failedTask);
             return;
         }
 

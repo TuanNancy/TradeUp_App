@@ -31,6 +31,7 @@ import com.example.tradeup_app.models.Product;
 import com.example.tradeup_app.models.Report;
 import com.example.tradeup_app.utils.Constants;
 import com.example.tradeup_app.utils.DataValidator;
+import com.example.tradeup_app.utils.ReportUtils;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
@@ -681,36 +682,14 @@ public class ProductDetailActivity extends AppCompatActivity {
             return;
         }
 
-        ReportDialog dialog = new ReportDialog(this, (reason, description) -> {
-            submitReport(product, reason, description);
-        });
-        dialog.show();
-    }
-
-    private void submitReport(Product product, String reason, String description) {
-        String currentUserName = CurrentUser.getUser() != null ?
-            CurrentUser.getUser().getUsername() : "Anonymous";
-
-        Report report = new Report(
-            currentUserId,
-            currentUserName,
-            product.getSellerId(),
-            product.getSellerName(),
+        // Use the new comprehensive reporting system
+        ReportUtils.reportProduct(
+            this,
             product.getId(),
-            Constants.REPORT_TYPE_PRODUCT,
-            reason,
-            description
+            product.getTitle(),
+            product.getSellerId(),
+            product.getSellerName()
         );
-
-        report.setReportedItemTitle(product.getTitle());
-
-        firebaseManager.submitReport(report, task -> {
-            if (task.isSuccessful()) {
-                Toast.makeText(this, "Report submitted successfully", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, Constants.ERROR_NETWORK, Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 
     private void openSellerProfile(String sellerId) {

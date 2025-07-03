@@ -19,18 +19,15 @@ import com.example.tradeup_app.R;
 import com.example.tradeup_app.adapters.ProductAdapter;
 import com.example.tradeup_app.auth.Domain.UserModel;
 import com.example.tradeup_app.models.Product;
+import com.example.tradeup_app.utils.ReportUtils;
 import com.google.android.material.button.MaterialButton;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class UserProfileViewActivity extends AppCompatActivity {
 
@@ -200,56 +197,17 @@ public class UserProfileViewActivity extends AppCompatActivity {
     }
 
     private void showReportDialog() {
-        String[] reportOptions = {
-                "Spam or misleading content",
-                "Inappropriate behavior",
-                "Scam or fraud",
-                "Fake profile",
-                "Other"
-        };
-
-        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
-        builder.setTitle(R.string.report_user)
-                .setItems(reportOptions, (dialog, which) -> {
-                    String reason = reportOptions[which];
-                    submitReport(reason);
-                })
-                .setNegativeButton(R.string.cancel, null)
-                .show();
-    }
-
-    private void submitReport(String reason) {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) {
-            Toast.makeText(this, "Please login to report", Toast.LENGTH_SHORT).show();
+        if (targetUser == null) {
+            Toast.makeText(this, "User information not loaded", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Create report data
-        String reportId = FirebaseDatabase.getInstance().getReference("Reports").push().getKey();
-        if (reportId == null) return;
-
-        long timestamp = System.currentTimeMillis();
-
-        // Create report object
-        Map<String, Object> report = new HashMap<>();
-        report.put("reportId", reportId);
-        report.put("reportedUserId", targetUserId);
-        report.put("reportedUsername", targetUser.getUsername());
-        report.put("reporterUserId", currentUser.getUid());
-        report.put("reason", reason);
-        report.put("timestamp", timestamp);
-        report.put("status", "pending");
-
-        // Submit report to Firebase
-        FirebaseDatabase.getInstance().getReference("Reports")
-                .child(reportId)
-                .setValue(report)
-                .addOnSuccessListener(aVoid ->
-                    Toast.makeText(this, R.string.report_submitted_success, Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e ->
-                    Toast.makeText(this, getString(R.string.failed_submit_report) + e.getMessage(),
-                                 Toast.LENGTH_SHORT).show());
+        // Use the new comprehensive reporting system
+        ReportUtils.reportUser(
+            this,
+            targetUserId,
+            targetUser.getUsername() != null ? targetUser.getUsername() : "Unknown User"
+        );
     }
 
     // Static method to start this activity

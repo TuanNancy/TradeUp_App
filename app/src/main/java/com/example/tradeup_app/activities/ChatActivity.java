@@ -387,29 +387,13 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void showReportConversationDialog() {
-        String[] reasons = {
-            "Spam or unwanted messages",
-            "Inappropriate content",
-            "Harassment or bullying",
-            "Scam or fraud",
-            "Other"
-        };
-
-        new AlertDialog.Builder(this)
-            .setTitle("Report Conversation")
-            .setMessage("Why are you reporting this conversation?")
-            .setSingleChoiceItems(reasons, -1, null)
-            .setPositiveButton("Report", (dialog, which) -> {
-                int selectedIndex = ((AlertDialog) dialog).getListView().getCheckedItemPosition();
-                if (selectedIndex >= 0) {
-                    String reason = reasons[selectedIndex];
-                    reportCurrentConversation(reason);
-                } else {
-                    Toast.makeText(this, "Please select a reason", Toast.LENGTH_SHORT).show();
-                }
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
+        // Use the new comprehensive reporting system
+        com.example.tradeup_app.utils.ReportUtils.reportConversation(
+            this,
+            conversationId,
+            receiverId,
+            receiverName != null ? receiverName : "Unknown User"
+        );
     }
 
     private void blockCurrentUser() {
