@@ -52,9 +52,20 @@ public class MessagingService {
         void onError(String error);
     }
 
+    public interface UserProfileCallback {
+        void onSuccess(String userName, String userAvatar);
+        void onError(String error);
+    }
+
     public interface BlockCallback {
         void onUserBlocked(boolean success);
         void onUserUnblocked(boolean success);
+        void onError(String error);
+    }
+
+    // Enhanced Message Deletion Interface
+    public interface MessageDeletionCallback {
+        void onMessageDeleted(String messageId);
         void onError(String error);
     }
 
@@ -150,8 +161,8 @@ public class MessagingService {
                 return;
             }
 
-            Message message = new Message(conversationId, currentUserId, receiverId, content);
-            sendMessage(message, callback);
+            // Load sender name first, then create message
+            loadSenderNameAndCreateMessage(conversationId, currentUserId, receiverId, content, null, null, callback);
         });
     }
 
@@ -544,5 +555,336 @@ public class MessagingService {
                 }
             });
         });
+    }
+
+    // Get user profile information
+    public void getUserProfile(String userId, UserProfileCallback callback) {
+        if (userId == null) {
+            callback.onError("User ID is null");
+            return;
+        }
+
+        DatabaseReference userRef = firebaseManager.getDatabase()
+                .getReference(FirebaseManager.USERS_NODE)
+                .child(userId);
+
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String userName = dataSnapshot.child("name").getValue(String.class);
+                    String userAvatar = dataSnapshot.child("profileImageUrl").getValue(String.class);
+
+                    if (userName == null) {
+                        userName = dataSnapshot.child("fullName").getValue(String.class);
+                    }
+                    if (userName == null) {
+                        userName = dataSnapshot.child("username").getValue(String.class);
+                    }
+                    if (userName == null) {
+                        userName = "User";
+                    }
+
+                    callback.onSuccess(userName, userAvatar);
+                } else {
+                    callback.onError("User not found");
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                callback.onError("Database error: " + databaseError.getMessage());
+            }
+        });
+    }
+
+    // Load sender name and create message
+    private void loadSenderNameAndCreateMessage(String conversationId, String senderId, String receiverId,
+                                               String content, Uri imageUri, ImageUploadCallback imageCallback,
+                                               MessageCallback callback) {
+        // First, get the sender's name
+        getUserProfile(senderId, new UserProfileCallback() {
+            @Override
+            public void onSuccess(String userName, String userAvatar) {
+                // Create the message with the sender's name
+                Message message = new Message(conversationId, senderId, receiverId, content);
+                message.setSenderName(userName);
+
+                // If there's an image, upload it
+                if (imageUri != null) {
+                    uploadImage(imageUri, new ImageUploadCallback() {
+                        @Override
+                        public void onImageUploaded(String imageUrl) {
+                            String fileName = "image_" + System.currentTimeMillis() + ".jpg";
+                            message.setContent(imageUrl);
+                            message.setImageFileName(fileName);
+                            message.setMessageType("image");
+                            sendMessage(message, callback);
+                        }
+
+                        @Override
+                        public void onUploadProgress(int progress) {
+                            // Could show progress to user if needed
+                        }
+
+                        @Override
+                        public void onError(String error) {
+                            callback.onError("Failed to upload image: " + error);
+                        }
+                    });
+                } else {
+                    // No image, just send the message
+                    sendMessage(message, callback);
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                callback.onError("Failed to load sender profile: " + error);
+            }
+        });
+    }
+
+    // Delete message for current user only (soft delete)
+    public void deleteMessageForMe(String messageId, MessageDeletionCallback callback) {
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) {
+            callback.onError("User not authenticated");
+            return;
+        }
+
+        DatabaseReference messageRef = firebaseManager.getDatabase()
+                .getReference(FirebaseManager.MESSAGES_NODE)
+                .child(messageId);
+
+        // First get the message to check ownership and update appropriately
+        messageRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (!dataSnapshot.exists()) {
+                    callback.onError("Message not found");
+                    return;
+                }
+
+                Message message = dataSnapshot.getValue(Message.class);
+                if (message == null) {
+                    callback.onError("Failed to load message data");
+                    return;
+                }
+
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("isDeleted", true);
+                updates.put("deletedBy", currentUserId);
+                updates.put("deletedAt", System.currentTimeMillis());
+
+                // If it's a text message, replace content
+                if ("text".equals(message.getMessageType()) || "emoji".equals(message.getMessageType())) {
+                    updates.put("content", "This message was deleted");
+                }
+
+                messageRef.updateChildren(updates)
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                callback.onMessageDeleted(messageId);
+                            } else {
+                                callback.onError("Failed to delete message: " +
+                                    (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
+                            }
+                        });
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                callback.onError("Database error: " + databaseError.getMessage());
+            }
+        });
+    }
+
+    // Delete message for everyone (only if sent within last 7 days and user is sender)
+    public void deleteMessageForEveryone(String messageId, MessageDeletionCallback callback) {
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) {
+            callback.onError("User not authenticated");
+            return;
+        }
+
+        DatabaseReference messageRef = firebaseManager.getDatabase()
+                .getReference(FirebaseManager.MESSAGES_NODE)
+                .child(messageId);
+
+        messageRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (!dataSnapshot.exists()) {
+                    callback.onError("Message not found");
+                    return;
+                }
+
+                Message message = dataSnapshot.getValue(Message.class);
+                if (message == null) {
+                    callback.onError("Failed to load message data");
+                    return;
+                }
+
+                // Check if user is the sender
+                if (!currentUserId.equals(message.getSenderId())) {
+                    callback.onError("You can only delete your own messages for everyone");
+                    return;
+                }
+
+                // Check if message is within 7 days (7 * 24 * 60 * 60 * 1000 milliseconds)
+                long sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L;
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - message.getTimestamp() > sevenDaysInMillis) {
+                    callback.onError("Messages older than 7 days cannot be deleted for everyone");
+                    return;
+                }
+
+                // If it's an image message, delete from storage first
+                if ("image".equals(message.getMessageType()) && message.getImageUrl() != null) {
+                    deleteImageFromStorage(message.getImageUrl(), new ImageDeletionCallback() {
+                        @Override
+                        public void onImageDeleted() {
+                            performCompleteMessageDeletion(messageId, message, callback);
+                        }
+
+                        @Override
+                        public void onError(String error) {
+                            Log.w(TAG, "Failed to delete image from storage: " + error);
+                            // Continue with message deletion even if image deletion fails
+                            performCompleteMessageDeletion(messageId, message, callback);
+                        }
+                    });
+                } else {
+                    performCompleteMessageDeletion(messageId, message, callback);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                callback.onError("Database error: " + databaseError.getMessage());
+            }
+        });
+    }
+
+    // Helper method to perform complete message deletion
+    private void performCompleteMessageDeletion(String messageId, Message message, MessageDeletionCallback callback) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("isDeleted", true);
+        updates.put("deletedBy", message.getSenderId());
+        updates.put("deletedAt", System.currentTimeMillis());
+        updates.put("deletedForEveryone", true);
+        updates.put("content", "This message was deleted");
+
+        // Clear image data if it was an image message
+        if ("image".equals(message.getMessageType())) {
+            updates.put("imageUrl", null);
+            updates.put("imageFileName", null);
+        }
+
+        DatabaseReference messageRef = firebaseManager.getDatabase()
+                .getReference(FirebaseManager.MESSAGES_NODE)
+                .child(messageId);
+
+        messageRef.updateChildren(updates)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        callback.onMessageDeleted(messageId);
+                    } else {
+                        callback.onError("Failed to delete message: " +
+                            (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
+                    }
+                });
+    }
+
+    // Interface for image deletion callback
+    private interface ImageDeletionCallback {
+        void onImageDeleted();
+        void onError(String error);
+    }
+
+    // Delete image from Firebase Storage
+    private void deleteImageFromStorage(String imageUrl, ImageDeletionCallback callback) {
+        try {
+            StorageReference imageRef = storage.getReferenceFromUrl(imageUrl);
+            imageRef.delete()
+                    .addOnSuccessListener(aVoid -> callback.onImageDeleted())
+                    .addOnFailureListener(exception ->
+                        callback.onError("Failed to delete image: " + exception.getMessage()));
+        } catch (Exception e) {
+            callback.onError("Invalid image URL: " + e.getMessage());
+        }
+    }
+
+    // Delete multiple messages (bulk deletion)
+    public void deleteMultipleMessages(List<String> messageIds, boolean deleteForEveryone, MessageDeletionCallback callback) {
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) {
+            callback.onError("User not authenticated");
+            return;
+        }
+
+        if (messageIds.isEmpty()) {
+            callback.onError("No messages selected for deletion");
+            return;
+        }
+
+        // Track successful deletions
+        final int[] successCount = {0};
+        final int[] failureCount = {0};
+        final int totalMessages = messageIds.size();
+
+        for (String messageId : messageIds) {
+            MessageDeletionCallback individualCallback = new MessageDeletionCallback() {
+                @Override
+                public void onMessageDeleted(String deletedMessageId) {
+                    successCount[0]++;
+                    checkBulkDeletionComplete(successCount[0], failureCount[0], totalMessages, callback);
+                }
+
+                @Override
+                public void onError(String error) {
+                    failureCount[0]++;
+                    Log.w(TAG, "Failed to delete message " + messageId + ": " + error);
+                    checkBulkDeletionComplete(successCount[0], failureCount[0], totalMessages, callback);
+                }
+            };
+
+            if (deleteForEveryone) {
+                deleteMessageForEveryone(messageId, individualCallback);
+            } else {
+                deleteMessageForMe(messageId, individualCallback);
+            }
+        }
+    }
+
+    // Helper method to check if bulk deletion is complete
+    private void checkBulkDeletionComplete(int successCount, int failureCount, int totalMessages, MessageDeletionCallback callback) {
+        if (successCount + failureCount == totalMessages) {
+            if (successCount == totalMessages) {
+                callback.onMessageDeleted("All messages deleted successfully");
+            } else if (successCount > 0) {
+                callback.onError(successCount + " out of " + totalMessages + " messages deleted successfully");
+            } else {
+                callback.onError("Failed to delete all messages");
+            }
+        }
+    }
+
+    // Check if message can be deleted for everyone
+    public boolean canDeleteForEveryone(Message message, String currentUserId) {
+        if (message == null || currentUserId == null) {
+            return false;
+        }
+
+        // Must be sender
+        if (!currentUserId.equals(message.getSenderId())) {
+            return false;
+        }
+
+        // Must be within 7 days
+        long sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L;
+        long currentTime = System.currentTimeMillis();
+        return currentTime - message.getTimestamp() <= sevenDaysInMillis;
     }
 }

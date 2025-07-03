@@ -29,6 +29,13 @@
     <!-- Chat and messaging -->
     <string name="chat">Trò chuyện</string>
     <string name="send_message">Gửi tin nhắn</string>
+    <string name="message_deleted">Tin nhắn này đã bị xóa</string>
+    <string name="delete_message">Xóa tin nhắn</string>
+    <string name="delete_for_me">Xóa cho tôi</string>
+    <string name="delete_for_everyone">Xóa cho mọi người</string>
+    <string name="message_options">Tùy chọn tin nhắn</string>
+    <string name="copy_text">Sao chép văn bản</string>
+    <string name="report_message">Báo cáo tin nhắn</string>
 
     <!-- Product actions -->
     <string name="make_offer">Đề xuất giá</string>

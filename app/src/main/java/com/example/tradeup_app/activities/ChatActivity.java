@@ -96,7 +96,15 @@ public class ChatActivity extends AppCompatActivity {
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setTitle(receiverName != null ? receiverName : "Chat");
+
+        // Set initial title, load actual name if needed
+        if (receiverName != null && !receiverName.equals("Unknown")) {
+            getSupportActionBar().setTitle(receiverName);
+        } else {
+            getSupportActionBar().setTitle("Loading...");
+            // Load receiver name from Firebase if not provided
+            loadReceiverName();
+        }
 
         if (productTitle != null) {
             getSupportActionBar().setSubtitle("About: " + productTitle);
@@ -111,6 +119,28 @@ public class ChatActivity extends AppCompatActivity {
         textViewTyping = findViewById(R.id.textViewTyping);
 
         textViewTyping.setVisibility(View.GONE);
+    }
+
+    private void loadReceiverName() {
+        if (receiverId != null) {
+            // Load user profile from Firebase
+            messagingService.getUserProfile(receiverId, new MessagingService.UserProfileCallback() {
+                @Override
+                public void onSuccess(String userName, String userAvatar) {
+                    runOnUiThread(() -> {
+                        receiverName = userName;
+                        getSupportActionBar().setTitle(userName);
+                    });
+                }
+
+                @Override
+                public void onError(String error) {
+                    runOnUiThread(() -> {
+                        getSupportActionBar().setTitle("Chat");
+                    });
+                }
+            });
+        }
     }
 
     private void setupRecyclerView() {

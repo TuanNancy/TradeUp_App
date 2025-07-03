@@ -552,9 +552,66 @@ public class ProductDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // Direct navigation to MessagesFragment (conversations list)
-        Intent intent = new Intent(this, ConversationsActivity.class);
-        startActivity(intent);
+        // Get seller name first, then create conversation and open chat
+        firebaseManager.getDatabase().getReference(Constants.USERS_NODE)
+            .child(currentProduct.getSellerId())
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    String sellerName = "User";
+
+                    if (snapshot.exists()) {
+                        // Try different possible field names for user name
+                        sellerName = snapshot.child("name").getValue(String.class);
+                        if (sellerName == null) {
+                            sellerName = snapshot.child("fullName").getValue(String.class);
+                        }
+                        if (sellerName == null) {
+                            sellerName = snapshot.child("username").getValue(String.class);
+                        }
+                        if (sellerName == null) {
+                            sellerName = currentProduct.getSellerName();
+                        }
+                        if (sellerName == null) {
+                            sellerName = "User";
+                        }
+                    }
+
+                    // Create conversation with correct seller name
+                    createConversationAndOpenChat(sellerName);
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    // Use fallback name and continue
+                    String fallbackName = currentProduct.getSellerName() != null ?
+                                        currentProduct.getSellerName() : "User";
+                    createConversationAndOpenChat(fallbackName);
+                }
+            });
+    }
+
+    private void createConversationAndOpenChat(String sellerName) {
+        firebaseManager.createOrGetConversation(
+            productId,
+            currentUserId,
+            currentProduct.getSellerId(),
+            currentProduct.getTitle(),
+            currentProduct.getImageUrls() != null && !currentProduct.getImageUrls().isEmpty() ?
+                currentProduct.getImageUrls().get(0) : null,
+            task -> {
+                if (task.isSuccessful()) {
+                    String conversationId = task.getResult();
+                    Intent intent = new Intent(ProductDetailActivity.this, ChatActivity.class);
+                    intent.putExtra("conversationId", conversationId);
+                    intent.putExtra("receiverId", currentProduct.getSellerId());
+                    intent.putExtra("receiverName", sellerName);
+                    intent.putExtra("productTitle", currentProduct.getTitle());
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(ProductDetailActivity.this, "Failed to start conversation", Toast.LENGTH_SHORT).show();
+                }
+            });
     }
 
     private void showMakeOfferDialog(Product product) {

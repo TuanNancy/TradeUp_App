@@ -1,102 +1,147 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary Colors -->
-    <color name="primary">#2196F3</color>
-    <color name="primary_dark">#1976D2</color>
-    <color name="primary_light">#BBDEFB</color>
-    <color name="primary_color">#2196F3</color>
-    <color name="primary_container">#E3F2FD</color>
-    <color name="on_primary">#FFFFFF</color>
-    <color name="on_primary_container">#1565C0</color>
+    <!-- Màu cơ bản -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
 
-    <!-- Secondary Colors -->
-    <color name="secondary">#FF9800</color>
-    <color name="secondary_dark">#F57C00</color>
-    <color name="secondary_light">#FFE0B2</color>
-    <color name="secondary_container">#FFF3E0</color>
-    <color name="on_secondary_container">#E65100</color>
-
-    <!-- Surface Colors -->
-    <color name="surface">#FFFFFF</color>
-    <color name="surface_variant">#F5F5F5</color>
-    <color name="on_surface">#212121</color>
-    <color name="on_surface_variant">#757575</color>
-    <color name="outline">#E0E0E0</color>
-
-    <!-- Accent Colors -->
-    <color name="accent">#4CAF50</color>
-    <color name="accent_light">#81C784</color>
-
-    <!-- Status Colors -->
-    <color name="success">#4CAF50</color>
-    <color name="warning">#FF9800</color>
-    <color name="warning_light">#FFF3E0</color>
-    <color name="error">#F44336</color>
-    <color name="error_color">#F44336</color>
-    <color name="info">#2196F3</color>
-
-    <!-- Background Colors -->
-    <color name="background_light">#F8F9FA</color>
-    <color name="background_white">#FFFFFF</color>
+    <!-- Màu nền -->
     <color name="background_primary">#FFFFFF</color>
-    <color name="background_secondary">#F8F9FA</color>
+    <color name="background_secondary">#F5F5F5</color>
 
-    <!-- Text Colors -->
+    <!-- Màu xám -->
+    <color name="gray">#808080</color>
+    <color name="gray_light">#D3D3D3</color>
+
+    <!-- Màu viền và phân cách -->
+    <color name="divider">#E0E0E0</color>
+    <color name="outline">#CCCCCC</color>
+    <color name="overlay">#80000000</color>
+
+    <!-- Màu trạng thái -->
+    <color name="success">#4CAF50</color>
+    <color name="success_color">#4CAF50</color>
+    <color name="warning">#FF9800</color>
+    <color name="red">#F44336</color>
+    <color name="error_color">#F44336</color>
+
+    <!-- Màu chữ -->
+    <color name="primary_text">#212121</color>
+    <color name="secondary_text">#757575</color>
     <color name="text_primary">#212121</color>
     <color name="text_secondary">#757575</color>
     <color name="text_hint">#BDBDBD</color>
-    <color name="text_disabled">#E0E0E0</color>
-    <color name="primary_text">#212121</color>
-    <color name="secondary_text">#757575</color>
+    <color name="text_disabled">#9E9E9E</color>
 
-    <!-- Basic Colors (No Duplicates) -->
-    <color name="white">#FFFFFF</color>
-    <color name="black">#000000</color>
-    <color name="gray">#757575</color>
-    <color name="gray_light">#F5F5F5</color>
-    <color name="red">#F44336</color>
-    <color name="colorPrimary">#2196F3</color>
+    <!-- Màu chính và phụ -->
+    <color name="primary">#2196F3</color>
+    <color name="primary_color">#2196F3</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="primary_light">#BBDEFB</color>
+    <color name="primary_variant">#1976D2</color>
 
-    <!-- Border and Divider -->
-    <color name="divider">#E0E0E0</color>
-    <color name="border_light">#EEEEEE</color>
-    <color name="overlay">#80000000</color>
+    <color name="secondary">#FF4081</color>
+    <color name="secondary_dark">#C2185B</color>
+    <color name="secondary_light">#F8BBD0</color>
+    <color name="secondary_variant">#C2185B</color>
+    <color name="accent_color">#FF4081</color>
 
-    <!-- Card and Surface -->
+    <!-- Màu nền bổ sung -->
+    <color name="background">#FFFFFF</color>
+    <color name="background_white">#FFFFFF</color>
+    <color name="background_light">#FAFAFA</color>
+    <color name="background_dark">#303030</color>
+
+    <!-- Màu bề mặt Material Design -->
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F5F5F5</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="on_secondary">#FFFFFF</color>
+    <color name="on_background">#212121</color>
+    <color name="on_surface">#212121</color>
+    <color name="on_error">#FFFFFF</color>
+
+    <!-- Màu trạng thái bổ sung -->
+    <color name="error">#F44336</color>
+    <color name="info">#2196F3</color>
+    <color name="transparent">#00000000</color>
+
+    <!-- Màu chat interface -->
+    <color name="chat_background">#F5F5F5</color>
+    <color name="input_background">#FFFFFF</color>
+    <color name="message_input_background">#F8F9FA</color>
+    <color name="message_sent_background">#2196F3</color>
+    <color name="message_sent_text">#FFFFFF</color>
+    <color name="message_received_background">#FFFFFF</color>
+    <color name="message_received_text">#212121</color>
+    <color name="message_status_sent">#9E9E9E</color>
+    <color name="message_status_delivered">#2196F3</color>
+    <color name="message_status_read">#4CAF50</color>
+    <color name="message_read_color">#4CAF50</color>
+    <color name="sender_name_color">#2196F3</color>
+    <color name="message_time_color">#9E9E9E</color>
+    <color name="avatar_border_color">#E0E0E0</color>
+
+    <!-- Màu UI components -->
+    <color name="icon_color">#757575</color>
+    <color name="send_button_color">#2196F3</color>
+    <color name="divider_color">#E0E0E0</color>
+    <color name="light_gray">#E0E0E0</color>
+    <color name="medium_gray">#9E9E9E</color>
+    <color name="dark_gray">#424242</color>
+    <color name="button_primary">#2196F3</color>
+    <color name="button_secondary">#FF4081</color>
+    <color name="button_disabled">#E0E0E0</color>
+
+    <!-- Màu khác -->
+    <color name="status_bar_color">@color/primary_dark</color>
+    <color name="navigation_bar_color">@color/primary</color>
     <color name="card_background">#FFFFFF</color>
-    <color name="ripple_light">#E3F2FD</color>
+    <color name="elevation_overlay">#00000000</color>
+    <color name="selection_background">#E3F2FD</color>
+    <color name="highlight_color">#FFEB3B</color>
+    <color name="ripple_color">#1F000000</color>
+    <color name="price_color">#4CAF50</color>
+    <color name="discount_color">#F44336</color>
+    <color name="rating_color">#FF9800</color>
+    <color name="sold_out_color">#9E9E9E</color>
 
-    <!-- Status Specific -->
-    <color name="online">#4CAF50</color>
-    <color name="offline">#9E9E9E</color>
-
-    <!-- User Profile Colors -->
-    <color name="cream">#FFF8E1</color>
-    <color name="darkBrown">#5D4037</color>
-    <color name="grey">#9E9E9E</color>
-    <color name="lightGrey">#E0E0E0</color>
+    <!-- Màu bổ sung cho user profile và các layout khác -->
+    <color name="cream">#F5F5DC</color>
+    <color name="darkBrown">#5D4E37</color>
+    <color name="brown">#8B4513</color>
+    <color name="grey">#808080</color>
+    <color name="lightGrey">#D3D3D3</color>
     <color name="orange">#FF9800</color>
-    <color name="brown">#8D6E63</color>
-
-    <!-- Offer Status Colors -->
+    <color name="accent">#FF4081</color>
     <color name="offer_rejected">#F44336</color>
+    <color name="warning_light">#FFE0B2</color>
+
+    <!-- Material Design 3 Container Colors -->
+    <color name="primary_container">#E3F2FD</color>
+    <color name="on_primary_container">#0D47A1</color>
+    <color name="secondary_container">#FCE4EC</color>
+    <color name="on_secondary_container">#880E4F</color>
+    <color name="on_surface_variant">#757575</color>
+
+    <!-- Màu trạng thái offer -->
     <color name="offer_countered">#FF9800</color>
     <color name="offer_accepted">#4CAF50</color>
     <color name="offer_pending">#FFC107</color>
-
-    <!-- Star Rating Colors -->
     <color name="star_filled">#FFD700</color>
     <color name="star_empty">#E0E0E0</color>
-
-    <!-- Product Status Colors -->
-    <color name="sold">#9E9E9E</color>
-
-    <!-- Additional UI Colors -->
-    <color name="accent_color">#4CAF50</color>
-    <color name="success_color">#4CAF50</color>
-    <color name="divider_color">#E0E0E0</color>
     <color name="warning_color">#FF9800</color>
-    <color name="ripple_color">#1F000000</color>
-    <color name="shadow_color">#1F000000</color>
+
+    <!-- Màu danh mục sản phẩm -->
+    <color name="category_electronics">#2196F3</color>
+    <color name="category_fashion">#E91E63</color>
+    <color name="category_home">#FF9800</color>
+    <color name="category_books">#9C27B0</color>
+    <color name="category_sports">#4CAF50</color>
+
+    <!-- Màu thông báo -->
+    <color name="notification_success">#4CAF50</color>
+    <color name="notification_error">#F44336</color>
+    <color name="notification_warning">#FF9800</color>
+    <color name="notification_info">#2196F3</color>
 
 </resources>

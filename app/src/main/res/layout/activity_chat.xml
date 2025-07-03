@@ -1,92 +1,158 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="@color/chat_background"
+    tools:context=".activities.ChatActivity">
 
     <!-- Toolbar -->
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorPrimary"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
-
-    <!-- Messages RecyclerView -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerViewMessages"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:padding="8dp"
-        android:clipToPadding="false" />
-
-    <!-- Typing indicator -->
-    <TextView
-        android:id="@+id/textViewTyping"
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8dp"
-        android:text="User is typing..."
-        android:textStyle="italic"
-        android:textSize="12sp"
-        android:visibility="gone" />
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:elevation="4dp">
 
-    <!-- Message input area -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/primary_color"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+            app:titleTextColor="@android:color/white"
+            app:subtitleTextColor="@color/light_gray" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Messages Container -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- Messages RecyclerView -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewMessages"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp"
+            android:clipToPadding="false"
+            android:scrollbars="vertical"
+            tools:listitem="@layout/item_message_sent" />
+
+        <!-- Typing Indicator -->
+        <TextView
+            android:id="@+id/textViewTyping"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/typing_indicator_background"
+            android:padding="8dp"
+            android:text="Typing..."
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+    </RelativeLayout>
+
+    <!-- Input Container -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:background="@color/white"
-        android:elevation="4dp">
+        android:background="@color/input_background"
+        android:elevation="8dp"
+        android:orientation="vertical"
+        android:padding="8dp">
 
-        <!-- Attach button -->
-        <ImageButton
-            android:id="@+id/buttonAttach"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_gravity="center_vertical"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_attach"
-            android:contentDescription="Attach file" />
-
-        <!-- Emoji button -->
-        <ImageButton
-            android:id="@+id/buttonEmoji"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_gravity="center_vertical"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_emoji"
-            android:contentDescription="Add emoji" />
-
-        <!-- Message input -->
-        <EditText
-            android:id="@+id/editTextMessage"
-            android:layout_width="0dp"
+        <!-- Input Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:hint="Type a message..."
-            android:background="@drawable/bg_message_input"
-            android:padding="12dp"
-            android:maxLines="4"
-            android:inputType="textMultiLine|textCapSentences" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <!-- Send button -->
-        <ImageButton
-            android:id="@+id/buttonSend"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_gravity="center_vertical"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_send"
-            android:contentDescription="Send message"
-            android:enabled="false" />
+            <!-- Attach Button -->
+            <ImageButton
+                android:id="@+id/buttonAttach"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Attach file"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_attach"
+                android:tint="@color/icon_color" />
+
+            <!-- Message Input Container -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="4dp"
+                app:cardBackgroundColor="@color/message_input_background"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="4dp">
+
+                    <!-- Message EditText -->
+                    <EditText
+                        android:id="@+id/editTextMessage"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@android:color/transparent"
+                        android:hint="Type a message..."
+                        android:inputType="textCapSentences|textMultiLine"
+                        android:maxLines="5"
+                        android:minHeight="40dp"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="8dp"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_hint"
+                        android:textSize="16sp" />
+
+                    <!-- Emoji Button -->
+                    <ImageButton
+                        android:id="@+id/buttonEmoji"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Add emoji"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/ic_emoji"
+                        android:tint="@color/icon_color" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Send Button -->
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/buttonSend"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="Send message"
+                android:enabled="false"
+                android:src="@drawable/ic_send"
+                app:backgroundTint="@color/send_button_color"
+                app:elevation="4dp"
+                app:fabSize="mini"
+                app:tint="@android:color/white" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

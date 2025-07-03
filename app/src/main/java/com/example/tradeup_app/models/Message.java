@@ -18,6 +18,8 @@ public class Message {
     private String imageFileName; // For image file reference
     private boolean isDeleted; // For message deletion
     private String deletedBy; // Who deleted the message
+    private long deletedAt; // When the message was deleted
+    private boolean deletedForEveryone; // Whether message was deleted for all users
     private boolean isReported; // If message was reported
     private String reportReason; // Reason for reporting
     private boolean isEncrypted; // For future encryption support
@@ -27,8 +29,10 @@ public class Message {
         this.isRead = false;
         this.messageType = "text";
         this.isDeleted = false;
+        this.deletedForEveryone = false;
         this.isReported = false;
         this.isEncrypted = false;
+        this.deletedAt = 0;
     }
 
     public Message(String conversationId, String senderId, String receiverId, String content) {
@@ -97,6 +101,12 @@ public class Message {
 
     public String getDeletedBy() { return deletedBy; }
     public void setDeletedBy(String deletedBy) { this.deletedBy = deletedBy; }
+
+    public long getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(long deletedAt) { this.deletedAt = deletedAt; }
+
+    public boolean isDeletedForEveryone() { return deletedForEveryone; }
+    public void setDeletedForEveryone(boolean deletedForEveryone) { this.deletedForEveryone = deletedForEveryone; }
 
     public boolean isReported() { return isReported; }
     public void setReported(boolean reported) { isReported = reported; }

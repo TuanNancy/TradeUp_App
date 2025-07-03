@@ -10,6 +10,7 @@ import android.app.AlertDialog;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
@@ -104,10 +105,22 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     private void bindCommonMessageData(TextView textViewMessage, TextView textViewTime,
                                      ImageView imageViewMessage, Message message) {
+        // Check if message is deleted
+        if (message.isDeleted()) {
+            textViewMessage.setVisibility(View.VISIBLE);
+            textViewMessage.setText(context.getString(R.string.message_deleted));
+            textViewMessage.setTextColor(ContextCompat.getColor(context, R.color.text_secondary));
+            textViewMessage.setTypeface(null, android.graphics.Typeface.ITALIC);
+            if (imageViewMessage != null) {
+                imageViewMessage.setVisibility(View.GONE);
+            }
+        }
         // Handle text messages
-        if ("text".equals(message.getMessageType()) || "emoji".equals(message.getMessageType())) {
+        else if ("text".equals(message.getMessageType()) || "emoji".equals(message.getMessageType())) {
             textViewMessage.setVisibility(View.VISIBLE);
             textViewMessage.setText(message.getContent());
+            textViewMessage.setTextColor(ContextCompat.getColor(context, R.color.text_primary));
+            textViewMessage.setTypeface(android.graphics.Typeface.DEFAULT);
             if (imageViewMessage != null) {
                 imageViewMessage.setVisibility(View.GONE);
             }
@@ -128,10 +141,8 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     .into(imageViewMessage);
 
                 // Click to view full image
-                imageViewMessage.setOnClickListener(v -> {
-                    // You can implement full screen image viewer here
-                    Toast.makeText(context, "Image viewer not implemented yet", Toast.LENGTH_SHORT).show();
-                });
+                imageViewMessage.setOnClickListener(v ->
+                    Toast.makeText(context, "Image viewer not implemented yet", Toast.LENGTH_SHORT).show());
             }
         }
 
@@ -141,6 +152,12 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
 
     private void showMessageOptions(Message message, boolean isSentByMe) {
+        // Don't show options for deleted messages
+        if (message.isDeleted()) {
+            Toast.makeText(context, "This message was deleted", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String[] options;
         if (isSentByMe) {
             options = new String[]{"Delete Message", "Copy Text"};
@@ -175,25 +192,125 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
 
     private void deleteMessage(Message message) {
+        String currentUserId = FirebaseManager.getInstance().getCurrentUserId();
+        if (currentUserId == null) {
+            Toast.makeText(context, "User not authenticated", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        boolean isSender = currentUserId.equals(message.getSenderId());
+        boolean canDeleteForEveryone = messagingService.canDeleteForEveryone(message, currentUserId);
+
+        // Create options based on permissions
+        String[] options;
+        if (isSender && canDeleteForEveryone) {
+            options = new String[]{"Delete for me", "Delete for everyone"};
+        } else if (isSender) {
+            options = new String[]{"Delete for me"};
+        } else {
+            // Non-sender can only delete for themselves
+            options = new String[]{"Delete for me"};
+        }
+
         new AlertDialog.Builder(context)
             .setTitle("Delete Message")
-            .setMessage("Are you sure you want to delete this message?")
-            .setPositiveButton("Delete", (dialog, which) -> {
-                // Delete from Firebase
-                FirebaseManager.getInstance().getDatabase()
-                    .getReference(FirebaseManager.MESSAGES_NODE)
-                    .child(message.getId())
-                    .removeValue()
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            Toast.makeText(context, "Message deleted", Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(context, "Failed to delete message", Toast.LENGTH_SHORT).show();
-                        }
-                    });
+            .setItems(options, (dialog, which) -> {
+                if (isSender && canDeleteForEveryone && which == 1) {
+                    // Delete for everyone
+                    showDeleteConfirmationDialog(message, true);
+                } else {
+                    // Delete for me
+                    showDeleteConfirmationDialog(message, false);
+                }
             })
             .setNegativeButton("Cancel", null)
             .show();
+    }
+
+    private void showDeleteConfirmationDialog(Message message, boolean deleteForEveryone) {
+        String title = deleteForEveryone ? "Delete for Everyone" : "Delete for Me";
+        String messageText = deleteForEveryone ?
+            "This message will be deleted for everyone in this chat. This action cannot be undone." :
+            "This message will be deleted for you only. Other participants will still see it.";
+
+        new AlertDialog.Builder(context)
+            .setTitle(title)
+            .setMessage(messageText)
+            .setPositiveButton("Delete", (dialog, which) -> {
+                performMessageDeletion(message, deleteForEveryone);
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void performMessageDeletion(Message message, boolean deleteForEveryone) {
+        // Show loading indicator
+        showLoadingDialog();
+
+        MessagingService.MessageDeletionCallback callback = new MessagingService.MessageDeletionCallback() {
+            @Override
+            public void onMessageDeleted(String messageId) {
+                hideLoadingDialog();
+
+                // Update local message object for immediate UI update
+                message.setDeleted(true);
+                message.setDeletedBy(FirebaseManager.getInstance().getCurrentUserId());
+                message.setDeletedAt(System.currentTimeMillis());
+
+                if (deleteForEveryone) {
+                    message.setDeletedForEveryone(true);
+                    message.setContent("This message was deleted");
+                    // Clear image data for everyone
+                    if ("image".equals(message.getMessageType())) {
+                        message.setImageUrl(null);
+                        message.setImageFileName(null);
+                    }
+                } else {
+                    // For "delete for me", just mark as deleted locally
+                    message.setContent("You deleted this message");
+                }
+
+                // Notify adapter to refresh this specific item
+                int position = messageList.indexOf(message);
+                if (position != -1) {
+                    notifyItemChanged(position);
+                }
+
+                String successMessage = deleteForEveryone ?
+                    "Message deleted for everyone" : "Message deleted for you";
+                Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onError(String error) {
+                hideLoadingDialog();
+                Toast.makeText(context, "Failed to delete message: " + error, Toast.LENGTH_LONG).show();
+            }
+        };
+
+        if (deleteForEveryone) {
+            messagingService.deleteMessageForEveryone(message.getId(), callback);
+        } else {
+            messagingService.deleteMessageForMe(message.getId(), callback);
+        }
+    }
+
+    private AlertDialog loadingDialog;
+
+    private void showLoadingDialog() {
+        if (loadingDialog == null) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setMessage("Deleting message...")
+                   .setCancelable(false);
+            loadingDialog = builder.create();
+        }
+        loadingDialog.show();
+    }
+
+    private void hideLoadingDialog() {
+        if (loadingDialog != null && loadingDialog.isShowing()) {
+            loadingDialog.dismiss();
+        }
     }
 
     private void copyMessageText(Message message) {
