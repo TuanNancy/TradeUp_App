@@ -225,7 +225,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
             android:orientation="horizontal"
-            tools:listitem="@layout/item_category" />
+            tools:listitem="@layout/item_product" />
 
         <!-- Featured Products -->
         <LinearLayout

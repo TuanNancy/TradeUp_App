@@ -44,6 +44,13 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             loadFragment(new HomeFragment());
         }
+
+        // Add this for testing messaging system (remove after testing)
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+            android.util.Log.d("MainActivity", "User authenticated, ready for messaging");
+            // Uncomment below line to create test conversation
+            // createTestConversationIfNeeded();
+        }
     }
 
     private void initViews() {
@@ -99,5 +106,23 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    // Test method to create sample conversation data
+    private void createTestConversationIfNeeded() {
+        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        // Create test conversation with current user as buyer
+        com.example.tradeup_app.utils.MessagingTestHelper testHelper =
+                new com.example.tradeup_app.utils.MessagingTestHelper();
+
+        testHelper.createTestConversation(
+                "test_product_001",
+                "iPhone 15 Pro Max - Test Product",
+                currentUserId,  // current user as buyer
+                "test_seller_id"  // dummy seller ID
+        );
+
+        android.util.Log.d("MainActivity", "Test conversation creation initiated");
     }
 }

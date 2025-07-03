@@ -4,97 +4,100 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:padding="16dp"
-    android:background="?android:attr/selectableItemBackground">
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true">
 
-    <!-- Product Image -->
+    <!-- Product image -->
     <ImageView
-        android:id="@+id/product_image"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:id="@+id/imageViewProduct"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginEnd="16dp"
         android:scaleType="centerCrop"
-        android:src="@drawable/ic_launcher_background"
-        android:layout_marginEnd="12dp" />
+        android:background="@drawable/rounded_corner_8dp"
+        android:src="@drawable/ic_image_placeholder" />
 
-    <!-- Conversation Info -->
+    <!-- Content -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:orientation="vertical">
 
+        <!-- Product title and time -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/product_title"
+                android:id="@+id/textViewProductTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Tên sản phẩm"
-                android:textSize="14sp"
+                android:text="Product Title"
+                android:textSize="16sp"
                 android:textStyle="bold"
+                android:textColor="@color/text_primary"
                 android:maxLines="1"
                 android:ellipsize="end" />
 
             <TextView
-                android:id="@+id/time_text"
+                android:id="@+id/textViewTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="10:30"
+                android:text="12:30"
                 android:textSize="12sp"
-                android:textColor="@android:color/darker_gray" />
+                android:textColor="@color/text_secondary" />
 
         </LinearLayout>
 
+        <!-- Participant name -->
         <TextView
-            android:id="@+id/user_name"
+            android:id="@+id/textViewParticipantName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tên người dùng"
-            android:textSize="13sp"
-            android:textColor="@android:color/darker_gray"
-            android:layout_marginTop="2dp" />
+            android:layout_marginTop="4dp"
+            android:text="Participant Name"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
+        <!-- Last message and unread count -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="4dp">
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/last_message"
+                android:id="@+id/textViewLastMessage"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Tin nhắn cuối cùng..."
+                android:text="Last message content..."
                 android:textSize="14sp"
-                android:maxLines="1"
+                android:textColor="@color/text_secondary"
+                android:maxLines="2"
                 android:ellipsize="end" />
 
+            <!-- Unread count badge -->
             <TextView
-                android:id="@+id/unread_badge"
+                android:id="@+id/textViewUnreadCount"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
-                android:background="@drawable/chip_background"
-                android:text="3"
-                android:textSize="10sp"
-                android:textColor="@android:color/white"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/rounded_corner_primary"
                 android:gravity="center"
+                android:text="3"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
                 android:visibility="gone" />
 
         </LinearLayout>
 
     </LinearLayout>
-
-    <!-- User Avatar -->
-    <ImageView
-        android:id="@+id/user_avatar"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:src="@drawable/ic_user"
-        android:scaleType="centerCrop"
-        android:layout_marginStart="8dp" />
 
 </LinearLayout>

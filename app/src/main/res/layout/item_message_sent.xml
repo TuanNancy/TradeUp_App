@@ -1,46 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="horizontal"
-    android:padding="8dp"
-    android:gravity="end">
+    android:layout_gravity="end"
+    android:layout_marginStart="64dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="4dp"
+    android:orientation="vertical">
 
+    <!-- Message bubble -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_message_sent"
         android:orientation="vertical"
-        android:layout_marginStart="64dp">
+        android:padding="12dp">
 
-        <com.google.android.material.card.MaterialCardView
+        <!-- Text message -->
+        <TextView
+            android:id="@+id/textViewMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            app:cardBackgroundColor="@android:color/holo_blue_light"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:text="Hello, this is a sent message" />
 
-            <TextView
-                android:id="@+id/message_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Tin nhắn gửi đi"
-                android:textColor="@android:color/white"
-                android:padding="12dp"
-                android:maxWidth="250dp" />
+        <!-- Image message -->
+        <ImageView
+            android:id="@+id/imageViewMessage"
+            android:layout_width="200dp"
+            android:layout_height="150dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            android:background="@drawable/bg_image_message" />
 
-        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <!-- Time and status -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/time_text"
+            android:id="@+id/textViewTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="10:30"
-            android:textSize="10sp"
-            android:textColor="@android:color/darker_gray"
-            android:layout_gravity="end"
-            android:layout_marginTop="2dp" />
+            android:textSize="12sp"
+            android:textColor="@color/gray"
+            android:text="12:30" />
+
+        <TextView
+            android:id="@+id/textViewReadStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="12sp"
+            android:textColor="@color/gray"
+            android:text="Delivered" />
 
     </LinearLayout>
 

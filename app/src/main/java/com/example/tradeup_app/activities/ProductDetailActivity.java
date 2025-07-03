@@ -72,7 +72,7 @@ public class ProductDetailActivity extends AppCompatActivity {
     private MaterialButton viewProfileButton;
 
     // Action Buttons
-    private MaterialButton contactSellerButton, makeOfferButton, shareButton, reportButton;
+    private MaterialButton contactSellerButton, chatButton, makeOfferButton, shareButton, reportButton;
 
     // Owner Actions
     private MaterialCardView ownerActionsCard;
@@ -141,6 +141,7 @@ public class ProductDetailActivity extends AppCompatActivity {
 
         // Action buttons
         contactSellerButton = findViewById(R.id.contact_seller_button);
+        chatButton = findViewById(R.id.chat_button);
         makeOfferButton = findViewById(R.id.make_offer_button);
         shareButton = findViewById(R.id.share_button);
         reportButton = findViewById(R.id.report_button);
@@ -226,6 +227,9 @@ public class ProductDetailActivity extends AppCompatActivity {
 
         // Contact seller
         contactSellerButton.setOnClickListener(v -> contactSeller());
+
+        // Chat button - new functionality
+        chatButton.setOnClickListener(v -> openChatDirectly());
 
         // Make offer
         makeOfferButton.setOnClickListener(v -> showMakeOfferDialog(currentProduct));
@@ -418,6 +422,10 @@ public class ProductDetailActivity extends AppCompatActivity {
         contactSellerButton.setVisibility(isOwner ? View.GONE : View.VISIBLE);
         contactSellerButton.setEnabled(isAvailable && isLoggedIn);
 
+        // Chat button - new separate functionality
+        chatButton.setVisibility(isOwner ? View.GONE : View.VISIBLE);
+        chatButton.setEnabled(isLoggedIn);
+
         // Make offer - hidden for owner, disabled if sold or not negotiable
         makeOfferButton.setVisibility(isOwner ? View.GONE : View.VISIBLE);
         makeOfferButton.setEnabled(isAvailable && currentProduct.isNegotiable() && isLoggedIn);
@@ -522,13 +530,31 @@ public class ProductDetailActivity extends AppCompatActivity {
                     String conversationId = task.getResult();
                     Intent intent = new Intent(this, ChatActivity.class);
                     intent.putExtra("conversationId", conversationId);
-                    intent.putExtra(Constants.EXTRA_PRODUCT_ID, productId);
-                    intent.putExtra("sellerId", currentProduct.getSellerId());
+                    intent.putExtra("receiverId", currentProduct.getSellerId());
+                    intent.putExtra("receiverName", currentProduct.getSellerName());
+                    intent.putExtra("productTitle", currentProduct.getTitle());
                     startActivity(intent);
                 } else {
                     Toast.makeText(this, "Failed to start conversation", Toast.LENGTH_SHORT).show();
                 }
             });
+    }
+
+    // New method for direct chat access
+    private void openChatDirectly() {
+        if (currentUserId == null) {
+            Toast.makeText(this, "Please login to start chat", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUserId.equals(currentProduct.getSellerId())) {
+            Toast.makeText(this, "You cannot chat with yourself", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Direct navigation to MessagesFragment (conversations list)
+        Intent intent = new Intent(this, ConversationsActivity.class);
+        startActivity(intent);
     }
 
     private void showMakeOfferDialog(Product product) {

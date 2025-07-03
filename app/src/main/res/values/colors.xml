@@ -49,6 +49,14 @@
     <color name="primary_text">#212121</color>
     <color name="secondary_text">#757575</color>
 
+    <!-- Basic Colors (No Duplicates) -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="gray">#757575</color>
+    <color name="gray_light">#F5F5F5</color>
+    <color name="red">#F44336</color>
+    <color name="colorPrimary">#2196F3</color>
+
     <!-- Border and Divider -->
     <color name="divider">#E0E0E0</color>
     <color name="border_light">#EEEEEE</color>
@@ -62,34 +70,32 @@
     <color name="online">#4CAF50</color>
     <color name="offline">#9E9E9E</color>
 
-    <!-- Missing colors from activity_user_profile.xml -->
+    <!-- User Profile Colors -->
     <color name="cream">#FFF8E1</color>
     <color name="darkBrown">#5D4037</color>
     <color name="grey">#9E9E9E</color>
     <color name="lightGrey">#E0E0E0</color>
-    <color name="black">#000000</color>
-    <color name="white">#FFFFFF</color>
     <color name="orange">#FF9800</color>
     <color name="brown">#8D6E63</color>
 
-    <!-- Missing color from dialog_admin_action.xml -->
+    <!-- Offer Status Colors -->
     <color name="offer_rejected">#F44336</color>
-
-    <!-- Missing colors from build error -->
     <color name="offer_countered">#FF9800</color>
     <color name="offer_accepted">#4CAF50</color>
-    <color name="star_filled">#FFD700</color>
     <color name="offer_pending">#FFC107</color>
-    <color name="sold">#9E9E9E</color>
+
+    <!-- Star Rating Colors -->
+    <color name="star_filled">#FFD700</color>
     <color name="star_empty">#E0E0E0</color>
 
-    <!-- Missing colors for ProductDetailActivity -->
+    <!-- Product Status Colors -->
+    <color name="sold">#9E9E9E</color>
+
+    <!-- Additional UI Colors -->
     <color name="accent_color">#4CAF50</color>
     <color name="success_color">#4CAF50</color>
     <color name="divider_color">#E0E0E0</color>
     <color name="warning_color">#FF9800</color>
-
-    <!-- Additional colors for better UI -->
     <color name="ripple_color">#1F000000</color>
     <color name="shadow_color">#1F000000</color>
 

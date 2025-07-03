@@ -59,6 +59,7 @@ public class SellFragment extends Fragment {
 
     private static final int PICK_IMAGES_REQUEST = 1001;
     private static final int LOCATION_PERMISSION_REQUEST = 1002;
+    private static final int BACKGROUND_LOCATION_PERMISSION_REQUEST = 1003;
 
     private EditText titleEditText, descriptionEditText, priceEditText, locationEditText, behaviorEditText, addTagEditText;
     private Spinner categorySpinner, conditionSpinner;
@@ -79,6 +80,9 @@ public class SellFragment extends Fragment {
     private double latitude;
     private double longitude;
     private Dialog loadingDialog;
+
+    private static final float REQUIRED_ACCURACY = 50.0f; // 50 meters accuracy
+    private static final long LOCATION_TIMEOUT = 30000; // 30 seconds timeout
 
     @Nullable
     @Override
@@ -172,83 +176,164 @@ public class SellFragment extends Fragment {
 
             // Show loading state
             locationGpsButton.setEnabled(false);
-            Toast.makeText(requireContext(), "Đang lấy vị trí...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Đang lấy vị trí hiện tại...", Toast.LENGTH_SHORT).show();
 
-            fusedLocationClient.getLastLocation()
-                .addOnSuccessListener(location -> {
-                    if (location != null) {
-                        // Successfully got location
-                        handleLocationSuccess(location);
-                    } else {
-                        // Last location is null, request fresh location
-                        requestFreshLocation();
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    locationGpsButton.setEnabled(true);
-                    Toast.makeText(requireContext(), "Lỗi lấy vị trí: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+            // Use simplified location request - just get current location
+            requestCurrentLocation();
         }
     }
 
-    private void handleLocationSuccess(Location location) {
-        LocationUtils.getAddressFromLocation(requireContext(), location.getLatitude(), location.getLongitude(),
-            address -> {
-                locationEditText.setText(address);
-                latitude = location.getLatitude();
-                longitude = location.getLongitude();
-                locationGpsButton.setEnabled(true);
-                Toast.makeText(requireContext(), "Đã lấy vị trí thành công", Toast.LENGTH_SHORT).show();
-            });
-    }
-
-    private void requestFreshLocation() {
+    private void requestCurrentLocation() {
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
 
+        // Create simple location request for current location
         LocationRequest locationRequest = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(5000)
-                .setFastestInterval(2000)
-                .setNumUpdates(1);
+                .setInterval(1000)
+                .setFastestInterval(500)
+                .setNumUpdates(1); // Only get one update
 
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
+                locationGpsButton.setEnabled(true);
+
                 if (locationResult != null && !locationResult.getLocations().isEmpty()) {
                     Location location = locationResult.getLastLocation();
-                    handleLocationSuccess(location);
-                    // Stop location updates
-                    fusedLocationClient.removeLocationUpdates(this);
+
+                    if (location != null) {
+                        // Log location details for debugging
+                        android.util.Log.d("SellFragment", String.format(
+                            "Got location: lat=%.6f, lng=%.6f, accuracy=%.2f, provider=%s, time=%d, isMock=%b",
+                            location.getLatitude(), location.getLongitude(), location.getAccuracy(),
+                            location.getProvider(), location.getTime(), location.isFromMockProvider()));
+
+                        // Check if this is a reasonable location (not at 0,0 or obviously fake)
+                        if (isValidLocation(location)) {
+                            handleLocationSuccess(location);
+                        } else {
+                            Toast.makeText(requireContext(), "Vị trí không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.", Toast.LENGTH_LONG).show();
+                        }
+                    } else {
+                        Toast.makeText(requireContext(), "Không thể lấy vị trí. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
+                    }
                 } else {
-                    locationGpsButton.setEnabled(true);
-                    Toast.makeText(requireContext(), "Không thể lấy vị trí. Vui lòng thử lại sau.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(requireContext(), "Không nhận được dữ liệu vị trí. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
                 }
+
+                // Clean up
+                fusedLocationClient.removeLocationUpdates(this);
             }
         };
+
+        // Add timeout
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            if (locationCallback != null) {
+                fusedLocationClient.removeLocationUpdates(locationCallback);
+                locationGpsButton.setEnabled(true);
+                Toast.makeText(requireContext(), "Timeout: Không thể lấy vị trí. Vui lòng kiểm tra GPS.", Toast.LENGTH_LONG).show();
+            }
+        }, 15000); // 15 seconds timeout
 
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
                 .addOnFailureListener(e -> {
                     locationGpsButton.setEnabled(true);
-                    Toast.makeText(requireContext(), "Lỗi yêu cầu vị trí: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Lỗi GPS: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    android.util.Log.e("SellFragment", "Location request failed", e);
                 });
     }
 
-    private void showGPSEnableDialog() {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Bật GPS")
-                .setMessage("Để sử dụng chức năng lấy vị trí, bạn cần bật GPS. Bạn có muốn mở cài đặt GPS không?")
-                .setPositiveButton("Mở cài đặt", (dialog, which) -> {
-                    Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                    startActivity(intent);
+    private boolean isValidLocation(Location location) {
+        // Check for null or invalid coordinates
+        if (location == null) return false;
+
+        double lat = location.getLatitude();
+        double lng = location.getLongitude();
+
+        // Check for 0,0 coordinates (invalid)
+        if (lat == 0.0 && lng == 0.0) return false;
+
+        // Check for valid latitude/longitude ranges
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+
+        // Check if location is too old (more than 5 minutes)
+        long currentTime = System.currentTimeMillis();
+        long locationTime = location.getTime();
+        if (currentTime - locationTime > 5 * 60 * 1000) { // 5 minutes
+            android.util.Log.w("SellFragment", "Location is too old: " + (currentTime - locationTime) / 1000 + " seconds");
+        }
+
+        return true;
+    }
+
+    private void handleLocationSuccess(Location location) {
+        // Check if this is a mock location (fake/simulated location)
+        if (location.isFromMockProvider()) {
+            locationGpsButton.setEnabled(true);
+            Toast.makeText(requireContext(), "Phát hiện vị trí giả lập. Vui lòng tắt mock location và thử lại.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Check if location is Google headquarters (indicates emulator or mock location)
+        double googleLat = 37.4220936;
+        double googleLng = -122.083922;
+        float[] results = new float[1];
+        Location.distanceBetween(location.getLatitude(), location.getLongitude(), googleLat, googleLng, results);
+
+        if (results[0] < 1000) { // Within 1km of Google HQ
+            locationGpsButton.setEnabled(true);
+            new AlertDialog.Builder(requireContext())
+                .setTitle("Vị trí không chính xác")
+                .setMessage("Ứng dụng đang lấy vị trí giả lập (Google HQ). Điều này có thể do:\n\n" +
+                    "1. Bạn đang sử dụng máy ảo (emulator)\n" +
+                    "2. Có ứng dụng mock location đang chạy\n" +
+                    "3. Vị trí GPS chưa được cập nhật\n\n" +
+                    "Bạn có muốn nhập địa chỉ thủ công không?")
+                .setPositiveButton("Nhập thủ công", (dialog, which) -> {
+                    locationEditText.requestFocus();
+                    Toast.makeText(requireContext(), "Vui lòng nhập địa chỉ của bạn", Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Hủy", (dialog, which) -> {
-                    dialog.dismiss();
-                    Toast.makeText(requireContext(), "Bạn có thể nhập địa chỉ thủ công", Toast.LENGTH_SHORT).show();
+                .setNegativeButton("Thử lại", (dialog, which) -> {
+                    // Reset and try again
+                    latitude = 0;
+                    longitude = 0;
+                    requestLocation();
                 })
                 .show();
+            return;
+        }
+
+        // Check accuracy
+        if (location.getAccuracy() > 100) { // More than 100 meters accuracy
+            Toast.makeText(requireContext(), String.format("Độ chính xác thấp (±%.0fm). Đang thử cải thiện...", location.getAccuracy()), Toast.LENGTH_SHORT).show();
+            // Continue trying for better accuracy, but don't return immediately
+        }
+
+        LocationUtils.getAddressFromLocation(requireContext(), location.getLatitude(), location.getLongitude(),
+            address -> {
+                if (address == null || address.trim().isEmpty()) {
+                    locationGpsButton.setEnabled(true);
+                    Toast.makeText(requireContext(), "Không thể chuyển đổi tọa độ thành địa chỉ. Vui lòng nhập thủ công.", Toast.LENGTH_LONG).show();
+                    locationEditText.requestFocus();
+                    return;
+                }
+
+                locationEditText.setText(address);
+                latitude = location.getLatitude();
+                longitude = location.getLongitude();
+                locationGpsButton.setEnabled(true);
+
+                String successMessage = String.format("Vị trí: %s (±%.0fm)", address, location.getAccuracy());
+                Toast.makeText(requireContext(), successMessage, Toast.LENGTH_LONG).show();
+
+                // Log for debugging
+                android.util.Log.d("SellFragment", String.format("Location obtained: lat=%.6f, lng=%.6f, accuracy=%.2f, provider=%s",
+                    location.getLatitude(), location.getLongitude(), location.getAccuracy(), location.getProvider()));
+            });
     }
+
 
     private void setupImageUpload() {
         imagePreviewAdapter = new ImagePreviewAdapter(getContext(), selectedImages, uri -> {
@@ -515,6 +600,51 @@ public class SellFragment extends Fragment {
                     Toast.makeText(requireContext(), "Vui lòng nhập địa chỉ thủ công", Toast.LENGTH_SHORT).show();
                 })
                 .show();
+    }
+
+    private void showGPSEnableDialog() {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Bật GPS")
+                .setMessage("Để sử dụng chức năng lấy vị trí, bạn cần bật GPS. Bạn có muốn mở cài đặt GPS không?")
+                .setPositiveButton("Mở cài đặt", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    startActivity(intent);
+                })
+                .setNegativeButton("Hủy", (dialog, which) -> {
+                    dialog.dismiss();
+                    Toast.makeText(requireContext(), "Bạn có thể nhập địa chỉ thủ công", Toast.LENGTH_SHORT).show();
+                })
+                .show();
+    }
+
+    private void tryGetLastKnownLocation() {
+        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        Toast.makeText(requireContext(), "Đang thử lấy vị trí cuối cùng...", Toast.LENGTH_SHORT).show();
+
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(location -> {
+                    if (location != null && isValidLocation(location)) {
+                        // Check if location is recent (less than 10 minutes old)
+                        long locationAge = System.currentTimeMillis() - location.getTime();
+                        if (locationAge < 10 * 60 * 1000) { // 10 minutes
+                            android.util.Log.d("SellFragment", "Using last known location (age: " + locationAge/1000 + "s)");
+                            handleLocationSuccess(location);
+                        } else {
+                            android.util.Log.d("SellFragment", "Last known location too old, requesting fresh location");
+                            requestCurrentLocation();
+                        }
+                    } else {
+                        android.util.Log.d("SellFragment", "No valid last known location, requesting fresh location");
+                        requestCurrentLocation();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("SellFragment", "Failed to get last location: " + e.getMessage());
+                    requestCurrentLocation();
+                });
     }
 
     @Override

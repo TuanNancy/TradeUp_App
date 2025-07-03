@@ -1,47 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="horizontal"
-    android:padding="8dp"
-    android:gravity="start">
+    android:layout_gravity="start"
+    android:layout_marginEnd="64dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="4dp"
+    android:orientation="vertical">
 
+    <!-- Sender name (optional) -->
+    <TextView
+        android:id="@+id/textViewSenderName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:textSize="12sp"
+        android:textColor="@color/gray"
+        android:textStyle="bold"
+        android:text="Sender Name"
+        android:visibility="gone" />
+
+    <!-- Message bubble -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_message_received"
         android:orientation="vertical"
-        android:layout_marginEnd="64dp">
+        android:padding="12dp">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            app:cardBackgroundColor="@android:color/white"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
-
-            <TextView
-                android:id="@+id/message_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Tin nhắn nhận được"
-                android:textColor="@android:color/black"
-                android:padding="12dp"
-                android:maxWidth="250dp" />
-
-        </com.google.android.material.card.MaterialCardView>
-
+        <!-- Text message -->
         <TextView
-            android:id="@+id/time_text"
+            android:id="@+id/textViewMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="10:30"
-            android:textSize="10sp"
-            android:textColor="@android:color/darker_gray"
-            android:layout_gravity="start"
-            android:layout_marginTop="2dp" />
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:text="Hello, this is a received message" />
+
+        <!-- Image message -->
+        <ImageView
+            android:id="@+id/imageViewMessage"
+            android:layout_width="200dp"
+            android:layout_height="150dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            android:background="@drawable/bg_image_message" />
 
     </LinearLayout>
+
+    <!-- Time -->
+    <TextView
+        android:id="@+id/textViewTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textSize="12sp"
+        android:textColor="@color/gray"
+        android:text="12:30" />
 
 </LinearLayout>

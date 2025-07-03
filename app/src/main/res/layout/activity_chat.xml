@@ -5,123 +5,88 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Chat Header -->
-    <com.google.android.material.card.MaterialCardView
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cardElevation="4dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="12dp"
-            android:gravity="center_vertical">
-
-            <ImageView
-                android:id="@+id/back_button"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@android:drawable/ic_menu_revert"
-                android:layout_marginEnd="12dp" />
-
-            <ImageView
-                android:id="@+id/product_image"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:scaleType="centerCrop"
-                android:layout_marginEnd="12dp" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/product_title"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Tên sản phẩm"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/product_price"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="500,000 VNĐ"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/holo_red_dark"
-                        android:layout_marginEnd="8dp" />
-
-                    <TextView
-                        android:id="@+id/seller_name"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Người bán"
-                        android:textSize="12sp"
-                        android:textColor="@android:color/darker_gray" />
-
-                </LinearLayout>
-            </LinearLayout>
-
-            <Button
-                android:id="@+id/make_offer_button"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="Đề xuất"
-                android:textSize="12sp"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
-
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
     <!-- Messages RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/messages_recycler_view"
+        android:id="@+id/recyclerViewMessages"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:padding="8dp" />
+        android:padding="8dp"
+        android:clipToPadding="false" />
 
-    <!-- Message Input -->
+    <!-- Typing indicator -->
+    <TextView
+        android:id="@+id/textViewTyping"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:text="User is typing..."
+        android:textStyle="italic"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <!-- Message input area -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="@android:color/white">
+        android:padding="8dp"
+        android:background="@color/white"
+        android:elevation="4dp">
 
-        <com.google.android.material.textfield.TextInputLayout
+        <!-- Attach button -->
+        <ImageButton
+            android:id="@+id/buttonAttach"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center_vertical"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_attach"
+            android:contentDescription="Attach file" />
+
+        <!-- Emoji button -->
+        <ImageButton
+            android:id="@+id/buttonEmoji"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center_vertical"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_emoji"
+            android:contentDescription="Add emoji" />
+
+        <!-- Message input -->
+        <EditText
+            android:id="@+id/editTextMessage"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginEnd="8dp">
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:hint="Type a message..."
+            android:background="@drawable/bg_message_input"
+            android:padding="12dp"
+            android:maxLines="4"
+            android:inputType="textMultiLine|textCapSentences" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/message_edit_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Nhập tin nhắn..."
-                android:maxLines="3" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <Button
-            android:id="@+id/send_button"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:text=">"
-            android:enabled="false"
-            style="@style/Widget.Material3.Button" />
+        <!-- Send button -->
+        <ImageButton
+            android:id="@+id/buttonSend"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center_vertical"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_send"
+            android:contentDescription="Send message"
+            android:enabled="false" />
 
     </LinearLayout>
 
