@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -30,6 +31,7 @@ import com.example.tradeup_app.adapters.MessageAdapter;
 import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Message;
 import com.example.tradeup_app.services.MessagingService;
+import com.example.tradeup_app.utils.ImageUploadManager;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.util.ArrayList;
@@ -216,33 +218,60 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void showAttachmentOptions() {
+        Log.d("ChatActivity", "showAttachmentOptions called");
         BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
         View bottomSheetView = getLayoutInflater().inflate(R.layout.bottom_sheet_attachments, null);
         bottomSheetDialog.setContentView(bottomSheetView);
 
         bottomSheetView.findViewById(R.id.layoutCamera).setOnClickListener(v -> {
+            Log.d("ChatActivity", "Camera option clicked");
             bottomSheetDialog.dismiss();
             openImagePicker();
         });
 
         bottomSheetView.findViewById(R.id.layoutGallery).setOnClickListener(v -> {
+            Log.d("ChatActivity", "Gallery option clicked");
             bottomSheetDialog.dismiss();
             openImagePicker();
         });
 
         bottomSheetDialog.show();
+        Log.d("ChatActivity", "BottomSheet shown");
     }
 
     private void openImagePicker() {
-        // Check storage permission
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                    REQUEST_STORAGE_PERMISSION);
-            return;
+        Log.d("ChatActivity", "openImagePicker called");
+
+        // Check permissions based on Android version
+        boolean hasPermission = false;
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+ (API 33+) - use READ_MEDIA_IMAGES
+            hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
+                    == PackageManager.PERMISSION_GRANTED;
+
+            if (!hasPermission) {
+                Log.d("ChatActivity", "READ_MEDIA_IMAGES permission not granted, requesting permission");
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.READ_MEDIA_IMAGES},
+                        REQUEST_STORAGE_PERMISSION);
+                return;
+            }
+        } else {
+            // Below Android 13 - use READ_EXTERNAL_STORAGE
+            hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED;
+
+            if (!hasPermission) {
+                Log.d("ChatActivity", "READ_EXTERNAL_STORAGE permission not granted, requesting permission");
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        REQUEST_STORAGE_PERMISSION);
+                return;
+            }
         }
 
+        Log.d("ChatActivity", "Storage permission granted, starting image picker");
         Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         intent.setType("image/*");
         startActivityForResult(intent, REQUEST_IMAGE_PICK);
@@ -319,13 +348,16 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void sendImageMessage(Uri imageUri) {
+        Log.d("ChatActivity", "sendImageMessage called with URI: " + imageUri);
         // Show progress
         Toast.makeText(this, "Uploading image...", Toast.LENGTH_SHORT).show();
 
+        Log.d("ChatActivity", "Calling messagingService.sendImageMessage");
         messagingService.sendImageMessage(conversationId, receiverId, imageUri,
             new MessagingService.ImageUploadCallback() {
                 @Override
                 public void onImageUploaded(String imageUrl) {
+                    Log.d("ChatActivity", "Image uploaded successfully: " + imageUrl);
                     runOnUiThread(() -> {
                         Toast.makeText(ChatActivity.this, "Image sent", Toast.LENGTH_SHORT).show();
                     });
@@ -333,11 +365,13 @@ public class ChatActivity extends AppCompatActivity {
 
                 @Override
                 public void onUploadProgress(int progress) {
+                    Log.d("ChatActivity", "Upload progress: " + progress + "%");
                     // Update progress if needed
                 }
 
                 @Override
                 public void onError(String error) {
+                    Log.e("ChatActivity", "Image upload failed: " + error);
                     runOnUiThread(() -> {
                         Toast.makeText(ChatActivity.this, "Failed to send image: " + error, Toast.LENGTH_LONG).show();
                     });

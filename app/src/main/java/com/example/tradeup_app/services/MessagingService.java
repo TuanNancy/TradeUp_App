@@ -7,6 +7,7 @@ import android.util.Log;
 import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Conversation;
 import com.example.tradeup_app.models.Message;
+import com.example.tradeup_app.utils.ImageUploadManager;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
@@ -167,39 +168,82 @@ public class MessagingService {
         });
     }
 
-    // Send image message
+
+    // Send image message using Cloudinary
     public void sendImageMessage(String conversationId, String receiverId, Uri imageUri,
-                               Context context, MessageCallback callback) {
+                               ImageUploadCallback callback) {
         String currentUserId = firebaseManager.getCurrentUserId();
         if (currentUserId == null) {
             callback.onError("User not authenticated");
             return;
         }
 
-        // Check if current user is blocked by receiver or if receiver is blocked by current user
+        Log.d(TAG, "Starting image message send for conversation: " + conversationId);
+
+        // Check if user is blocked
         checkIfUserBlocked(currentUserId, receiverId, (isBlocked) -> {
             if (isBlocked) {
                 callback.onError("Cannot send message. This user has been blocked.");
                 return;
             }
 
-            // Upload image first
-            uploadImage(imageUri, new ImageUploadCallback() {
+            // Upload image to Cloudinary first
+            ImageUploadManager.uploadChatImage(imageUri, null, new ImageUploadManager.ChatImageUploadCallback() {
                 @Override
-                public void onImageUploaded(String imageUrl) {
-                    String fileName = "image_" + System.currentTimeMillis() + ".jpg";
+                public void onStart() {
+                    Log.d(TAG, "Image upload started");
+                }
+
+                @Override
+                public void onProgress(int progress) {
+                    Log.d(TAG, "Image upload progress: " + progress + "%");
+                    callback.onUploadProgress(progress);
+                }
+
+                @Override
+                public void onSuccess(String imageUrl) {
+                    Log.d(TAG, "Image uploaded successfully: " + imageUrl);
+
+                    // Create image message using the correct constructor
+                    String fileName = "chat_image_" + System.currentTimeMillis() + ".jpg";
                     Message message = new Message(conversationId, currentUserId, receiverId, imageUrl, fileName);
-                    sendMessage(message, callback);
+
+                    // Get sender name and send message
+                    getUserProfile(currentUserId, new UserProfileCallback() {
+                        @Override
+                        public void onSuccess(String userName, String userAvatar) {
+                            message.setSenderName(userName);
+
+                            sendMessage(message, new MessageCallback() {
+                                @Override
+                                public void onMessagesLoaded(List<Message> messages) {}
+
+                                @Override
+                                public void onMessageSent(String messageId) {
+                                    Log.d(TAG, "Image message sent successfully with ID: " + messageId);
+                                    callback.onImageUploaded(imageUrl);
+                                }
+
+                                @Override
+                                public void onError(String error) {
+                                    Log.e(TAG, "Failed to send image message: " + error);
+                                    callback.onError("Failed to send message: " + error);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onError(String error) {
+                            Log.e(TAG, "Failed to load sender profile: " + error);
+                            callback.onError("Failed to load sender profile: " + error);
+                        }
+                    });
                 }
 
                 @Override
-                public void onUploadProgress(int progress) {
-                    // Could show progress to user if needed
-                }
-
-                @Override
-                public void onError(String error) {
-                    callback.onError("Failed to upload image: " + error);
+                public void onFailure(Exception e) {
+                    Log.e(TAG, "Image upload failed: " + e.getMessage(), e);
+                    callback.onError("Failed to upload image: " + e.getMessage());
                 }
             });
         });
@@ -536,57 +580,6 @@ public class MessagingService {
     // Interface for block checking
     public interface BlockCheckCallback {
         void onBlockCheckComplete(boolean isBlocked);
-    }
-
-    // Send image message overload without context
-    public void sendImageMessage(String conversationId, String receiverId, Uri imageUri,
-                               ImageUploadCallback callback) {
-        String currentUserId = firebaseManager.getCurrentUserId();
-        if (currentUserId == null) {
-            callback.onError("User not authenticated");
-            return;
-        }
-
-        // Check if user is blocked
-        checkIfBlocked(conversationId, currentUserId, (isBlocked) -> {
-            if (isBlocked) {
-                callback.onError("Cannot send message. User may have blocked you.");
-                return;
-            }
-
-            // Upload image first
-            uploadImage(imageUri, new ImageUploadCallback() {
-                @Override
-                public void onImageUploaded(String imageUrl) {
-                    String fileName = "image_" + System.currentTimeMillis() + ".jpg";
-                    Message message = new Message(conversationId, currentUserId, receiverId, imageUrl, fileName);
-                    sendMessage(message, new MessageCallback() {
-                        @Override
-                        public void onMessagesLoaded(List<Message> messages) {}
-
-                        @Override
-                        public void onMessageSent(String messageId) {
-                            callback.onImageUploaded(imageUrl);
-                        }
-
-                        @Override
-                        public void onError(String error) {
-                            callback.onError(error);
-                        }
-                    });
-                }
-
-                @Override
-                public void onUploadProgress(int progress) {
-                    callback.onUploadProgress(progress);
-                }
-
-                @Override
-                public void onError(String error) {
-                    callback.onError("Failed to upload image: " + error);
-                }
-            });
-        });
     }
 
     // Get user profile information

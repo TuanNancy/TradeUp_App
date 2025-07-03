@@ -104,51 +104,69 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
 
     private void bindCommonMessageData(TextView textViewMessage, TextView textViewTime,
-                                     ImageView imageViewMessage, Message message) {
-        // Check if message is deleted
-        if (message.isDeleted()) {
-            textViewMessage.setVisibility(View.VISIBLE);
-            textViewMessage.setText(context.getString(R.string.message_deleted));
-            textViewMessage.setTextColor(ContextCompat.getColor(context, R.color.text_secondary));
-            textViewMessage.setTypeface(null, android.graphics.Typeface.ITALIC);
-            if (imageViewMessage != null) {
-                imageViewMessage.setVisibility(View.GONE);
-            }
-        }
-        // Handle text messages
-        else if ("text".equals(message.getMessageType()) || "emoji".equals(message.getMessageType())) {
-            textViewMessage.setVisibility(View.VISIBLE);
-            textViewMessage.setText(message.getContent());
-            textViewMessage.setTextColor(ContextCompat.getColor(context, R.color.text_primary));
-            textViewMessage.setTypeface(android.graphics.Typeface.DEFAULT);
-            if (imageViewMessage != null) {
-                imageViewMessage.setVisibility(View.GONE);
-            }
-        }
-        // Handle image messages
-        else if ("image".equals(message.getMessageType())) {
+                                       ImageView imageViewMessage, Message message) {
+        // Handle different message types
+        if ("image".equals(message.getMessageType()) && message.getImageUrl() != null) {
+            // Show image message
             textViewMessage.setVisibility(View.GONE);
-            if (imageViewMessage != null) {
-                imageViewMessage.setVisibility(View.VISIBLE);
+            imageViewMessage.setVisibility(View.VISIBLE);
 
-                // Use imageUrl for image messages, fallback to content
-                String imageUrl = message.getImageUrl() != null ? message.getImageUrl() : message.getContent();
+            // Load image using Glide
+            Glide.with(context)
+                .load(message.getImageUrl())
+                .placeholder(R.drawable.ic_image_placeholder)
+                .error(R.drawable.ic_image_error)
+                .centerCrop()
+                .into(imageViewMessage);
 
-                Glide.with(context)
-                    .load(imageUrl)
-                    .placeholder(android.R.drawable.ic_menu_gallery)
-                    .error(android.R.drawable.ic_menu_close_clear_cancel)
-                    .into(imageViewMessage);
+            // Click to view full image
+            imageViewMessage.setOnClickListener(v -> {
+                showFullScreenImage(message.getImageUrl());
+            });
+        } else {
+            // Show text message
+            textViewMessage.setVisibility(View.VISIBLE);
+            imageViewMessage.setVisibility(View.GONE);
 
-                // Click to view full image
-                imageViewMessage.setOnClickListener(v ->
-                    Toast.makeText(context, "Image viewer not implemented yet", Toast.LENGTH_SHORT).show());
+            // Handle deleted messages
+            if (message.isDeleted()) {
+                textViewMessage.setText("This message was deleted");
+                textViewMessage.setTextColor(ContextCompat.getColor(context, R.color.text_hint));
+                textViewMessage.setTypeface(null, android.graphics.Typeface.ITALIC);
+            } else {
+                textViewMessage.setText(message.getContent());
+                textViewMessage.setTextColor(ContextCompat.getColor(context, R.color.text_primary));
+                textViewMessage.setTypeface(null, android.graphics.Typeface.NORMAL);
             }
         }
 
-        // Set timestamp
-        String timeText = formatTimestamp(message.getTimestamp());
-        textViewTime.setText(timeText);
+        // Set time
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+        textViewTime.setText(sdf.format(new Date(message.getTimestamp())));
+    }
+
+    private void showFullScreenImage(String imageUrl) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+
+        // Create a simple ImageView for full screen display
+        ImageView imageView = new ImageView(context);
+        imageView.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+            android.widget.LinearLayout.LayoutParams.MATCH_PARENT));
+        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        imageView.setAdjustViewBounds(true);
+        imageView.setBackgroundColor(android.graphics.Color.BLACK);
+
+        Glide.with(context)
+            .load(imageUrl)
+            .placeholder(android.R.drawable.ic_menu_gallery)
+            .error(android.R.drawable.ic_dialog_alert)
+            .into(imageView);
+
+        builder.setView(imageView);
+        builder.setNegativeButton("Close", null);
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     private void showMessageOptions(Message message, boolean isSentByMe) {

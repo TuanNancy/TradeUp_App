@@ -118,6 +118,86 @@ public class ImageUploadManager {
         }
     }
 
+    /**
+     * Upload single image for chat messages
+     */
+    public static void uploadChatImage(Uri imageUri, Context context, ChatImageUploadCallback callback) {
+        if (imageUri == null) {
+            callback.onFailure(new Exception("No image selected"));
+            return;
+        }
+
+        Log.d(TAG, "Starting chat image upload to Cloudinary");
+
+        try {
+            // Prepare upload options for chat images
+            Map<String, Object> options = new HashMap<>();
+            options.put("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+            options.put("folder", "tradeup/chat_images");
+            options.put("public_id", "chat_" + System.currentTimeMillis());
+            options.put("resource_type", "image");
+            options.put("transformation", "c_limit,w_800,h_800,q_auto:good"); // Optimize for chat
+
+            Log.d(TAG, "Uploading chat image to Cloudinary with options: " + options.toString());
+
+            MediaManager.get().upload(imageUri)
+                .options(options)
+                .callback(new UploadCallback() {
+                    @Override
+                    public void onStart(String requestId) {
+                        Log.d(TAG, "Chat image upload started with requestId: " + requestId);
+                        callback.onStart();
+                    }
+
+                    @Override
+                    public void onProgress(String requestId, long bytes, long totalBytes) {
+                        int progress = (int) ((bytes * 100) / totalBytes);
+                        Log.d(TAG, "Chat image upload progress: " + progress + "% (" + bytes + "/" + totalBytes + " bytes)");
+                        callback.onProgress(progress);
+                    }
+
+                    @Override
+                    public void onSuccess(String requestId, Map resultData) {
+                        String imageUrl = (String) resultData.get("secure_url");
+                        if (imageUrl != null) {
+                            Log.d(TAG, "Chat image uploaded successfully: " + imageUrl);
+                            callback.onSuccess(imageUrl);
+                        } else {
+                            Log.e(TAG, "No secure_url in response for chat image. Response: " + resultData.toString());
+                            callback.onFailure(new Exception("Failed to get image URL from Cloudinary"));
+                        }
+                    }
+
+                    @Override
+                    public void onError(String requestId, ErrorInfo error) {
+                        Log.e(TAG, "Chat image upload failed - RequestID: " + requestId +
+                                   ", Error: " + error.getDescription() +
+                                   ", Code: " + error.getCode());
+                        callback.onFailure(new Exception("Upload failed: " + error.getDescription()));
+                    }
+
+                    @Override
+                    public void onReschedule(String requestId, ErrorInfo error) {
+                        Log.w(TAG, "Chat image upload rescheduled - RequestID: " + requestId +
+                                   ", Error: " + error.getDescription());
+                    }
+                })
+                .dispatch();
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up chat image upload", e);
+            callback.onFailure(new Exception("Upload setup failed: " + e.getMessage()));
+        }
+    }
+
+    // Interface for chat image upload
+    public interface ChatImageUploadCallback {
+        void onStart();
+        void onProgress(int progress);
+        void onSuccess(String imageUrl);
+        void onFailure(Exception e);
+    }
+
     private static boolean isValidImageFormat(Context context, Uri uri) {
         try {
             String mimeType = context.getContentResolver().getType(uri);
