@@ -2,6 +2,7 @@ package com.example.tradeup_app;
 
 import android.app.Application;
 import com.cloudinary.android.MediaManager;
+import com.example.tradeup_app.utils.NotificationManager;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,6 +14,9 @@ public class TradeUpApplication extends Application {
 
         // Initialize Cloudinary
         initCloudinary();
+        
+        // Initialize Notification System
+        initNotificationSystem();
     }
 
     private void initCloudinary() {
@@ -36,6 +40,15 @@ public class TradeUpApplication extends Application {
             } catch (Exception fallbackError) {
                 android.util.Log.e("TradeUpApp", "Fallback init also failed: " + fallbackError.getMessage());
             }
+        }
+    }
+    
+    private void initNotificationSystem() {
+        try {
+            NotificationManager.getInstance(this).initialize();
+            android.util.Log.d("TradeUpApp", "Notification system initialized successfully");
+        } catch (Exception e) {
+            android.util.Log.e("TradeUpApp", "Failed to initialize notification system: " + e.getMessage());
         }
     }
 }

@@ -8,6 +8,7 @@ import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Conversation;
 import com.example.tradeup_app.models.Message;
 import com.example.tradeup_app.utils.ImageUploadManager;
+import com.example.tradeup_app.utils.NotificationManager;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
@@ -31,6 +32,7 @@ public class MessagingService {
     private static final String TAG = "MessagingService";
     private final FirebaseManager firebaseManager;
     private final FirebaseStorage storage;
+    private Context context; // Add context for notifications
 
     // Node references
     private static final String BLOCKED_USERS_NODE = "blocked_users";
@@ -74,6 +76,13 @@ public class MessagingService {
     public MessagingService() {
         this.firebaseManager = FirebaseManager.getInstance();
         this.storage = FirebaseStorage.getInstance();
+    }
+
+    // Add constructor that accepts context for notifications
+    public MessagingService(Context context) {
+        this.firebaseManager = FirebaseManager.getInstance();
+        this.storage = FirebaseStorage.getInstance();
+        this.context = context;
     }
 
     // Create or get existing conversation
@@ -261,11 +270,46 @@ public class MessagingService {
                     if (task.isSuccessful()) {
                         // Update conversation's last message
                         updateConversationLastMessage(message);
+
+                        // Send notification to receiver if context is available
+                        if (context != null) {
+                            sendMessageNotification(message);
+                        }
+
                         callback.onMessageSent(messageId);
                     } else {
                         callback.onError("Failed to send message: " + task.getException().getMessage());
                     }
                 });
+    }
+
+    // Send notification for new message
+    private void sendMessageNotification(Message message) {
+        if (message.getReceiverId() == null || message.getSenderId() == null) {
+            return;
+        }
+
+        NotificationService notificationService = new NotificationService(context);
+
+        // Get sender name for notification
+        String senderName = message.getSenderName();
+        if (senderName == null || senderName.isEmpty()) {
+            senderName = "Someone";
+        }
+
+        // Prepare message content for notification
+        String notificationContent = message.getContent();
+        if ("image".equals(message.getMessageType())) {
+            notificationContent = "📸 Image";
+        }
+
+        notificationService.sendMessageNotification(
+            message.getConversationId(),
+            message.getSenderId(),
+            senderName,
+            notificationContent,
+            message.getReceiverId()
+        );
     }
 
     private void updateConversationLastMessage(Message message) {
@@ -702,18 +746,12 @@ public class MessagingService {
                 updates.put("deletedBy", currentUserId);
                 updates.put("deletedAt", System.currentTimeMillis());
 
-                // If it's a text message, replace content
-                if ("text".equals(message.getMessageType()) || "emoji".equals(message.getMessageType())) {
-                    updates.put("content", "This message was deleted");
-                }
-
                 messageRef.updateChildren(updates)
                         .addOnCompleteListener(task -> {
                             if (task.isSuccessful()) {
                                 callback.onMessageDeleted(messageId);
                             } else {
-                                callback.onError("Failed to delete message: " +
-                                    (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
+                                callback.onError("Failed to delete message: " + task.getException().getMessage());
                             }
                         });
             }
@@ -725,7 +763,25 @@ public class MessagingService {
         });
     }
 
-    // Delete message for everyone (only if sent within last 7 days and user is sender)
+    // Check if user can delete message for everyone
+    public boolean canDeleteForEveryone(Message message, String currentUserId) {
+        if (message == null || currentUserId == null) {
+            return false;
+        }
+
+        // Only the sender can delete for everyone
+        if (!currentUserId.equals(message.getSenderId())) {
+            return false;
+        }
+
+        // Check if message is too old (e.g., more than 24 hours)
+        long messageAge = System.currentTimeMillis() - message.getTimestamp();
+        long maxDeleteAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+        return messageAge <= maxDeleteAge;
+    }
+
+    // Delete message for everyone
     public void deleteMessageForEveryone(String messageId, MessageDeletionCallback callback) {
         String currentUserId = firebaseManager.getCurrentUserId();
         if (currentUserId == null) {
@@ -737,6 +793,7 @@ public class MessagingService {
                 .getReference(FirebaseManager.MESSAGES_NODE)
                 .child(messageId);
 
+        // First get the message to check if user can delete it
         messageRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -751,38 +808,40 @@ public class MessagingService {
                     return;
                 }
 
-                // Check if user is the sender
+                // Check if current user is the sender
                 if (!currentUserId.equals(message.getSenderId())) {
-                    callback.onError("You can only delete your own messages for everyone");
+                    callback.onError("You can only delete your own messages");
                     return;
                 }
 
-                // Check if message is within 7 days (7 * 24 * 60 * 60 * 1000 milliseconds)
-                long sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L;
-                long currentTime = System.currentTimeMillis();
-                if (currentTime - message.getTimestamp() > sevenDaysInMillis) {
-                    callback.onError("Messages older than 7 days cannot be deleted for everyone");
+                // Check if message is not too old
+                if (!canDeleteForEveryone(message, currentUserId)) {
+                    callback.onError("This message is too old to delete for everyone");
                     return;
                 }
 
-                // If it's an image message, delete from storage first
-                if ("image".equals(message.getMessageType()) && message.getImageUrl() != null) {
-                    deleteImageFromStorage(message.getImageUrl(), new ImageDeletionCallback() {
-                        @Override
-                        public void onImageDeleted() {
-                            performCompleteMessageDeletion(messageId, message, callback);
-                        }
+                // Update message to show it's deleted for everyone
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("isDeleted", true);
+                updates.put("deletedForEveryone", true);
+                updates.put("deletedBy", currentUserId);
+                updates.put("deletedAt", System.currentTimeMillis());
+                updates.put("content", "This message was deleted");
 
-                        @Override
-                        public void onError(String error) {
-                            Log.w(TAG, "Failed to delete image from storage: " + error);
-                            // Continue with message deletion even if image deletion fails
-                            performCompleteMessageDeletion(messageId, message, callback);
-                        }
-                    });
-                } else {
-                    performCompleteMessageDeletion(messageId, message, callback);
+                // If it's an image message, remove image data
+                if ("image".equals(message.getMessageType())) {
+                    updates.put("imageUrl", null);
+                    updates.put("imageFileName", null);
                 }
+
+                messageRef.updateChildren(updates)
+                        .addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                callback.onMessageDeleted(messageId);
+                            } else {
+                                callback.onError("Failed to delete message: " + task.getException().getMessage());
+                            }
+                        });
             }
 
             @Override
@@ -792,168 +851,54 @@ public class MessagingService {
         });
     }
 
-    // Helper method to perform complete message deletion
-    private void performCompleteMessageDeletion(String messageId, Message message, MessageDeletionCallback callback) {
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("isDeleted", true);
-        updates.put("deletedBy", message.getSenderId());
-        updates.put("deletedAt", System.currentTimeMillis());
-        updates.put("deletedForEveryone", true);
-        updates.put("content", "This message was deleted");
-
-        // Clear image data if it was an image message
-        if ("image".equals(message.getMessageType())) {
-            updates.put("imageUrl", null);
-            updates.put("imageFileName", null);
-        }
-
-        DatabaseReference messageRef = firebaseManager.getDatabase()
-                .getReference(FirebaseManager.MESSAGES_NODE)
-                .child(messageId);
-
-        messageRef.updateChildren(updates)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        callback.onMessageDeleted(messageId);
-                    } else {
-                        callback.onError("Failed to delete message: " +
-                            (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
-                    }
-                });
-    }
-
-    // Interface for image deletion callback
-    private interface ImageDeletionCallback {
-        void onImageDeleted();
-        void onError(String error);
-    }
-
-    // Delete image from Firebase Storage
-    private void deleteImageFromStorage(String imageUrl, ImageDeletionCallback callback) {
-        try {
-            StorageReference imageRef = storage.getReferenceFromUrl(imageUrl);
-            imageRef.delete()
-                    .addOnSuccessListener(aVoid -> callback.onImageDeleted())
-                    .addOnFailureListener(exception ->
-                        callback.onError("Failed to delete image: " + exception.getMessage()));
-        } catch (Exception e) {
-            callback.onError("Invalid image URL: " + e.getMessage());
-        }
-    }
-
-    // Delete multiple messages (bulk deletion)
-    public void deleteMultipleMessages(List<String> messageIds, boolean deleteForEveryone, MessageDeletionCallback callback) {
-        String currentUserId = firebaseManager.getCurrentUserId();
-        if (currentUserId == null) {
-            callback.onError("User not authenticated");
-            return;
-        }
-
-        if (messageIds.isEmpty()) {
-            callback.onError("No messages selected for deletion");
-            return;
-        }
-
-        // Track successful deletions
-        final int[] successCount = {0};
-        final int[] failureCount = {0};
-        final int totalMessages = messageIds.size();
-
-        for (String messageId : messageIds) {
-            MessageDeletionCallback individualCallback = new MessageDeletionCallback() {
-                @Override
-                public void onMessageDeleted(String deletedMessageId) {
-                    successCount[0]++;
-                    checkBulkDeletionComplete(successCount[0], failureCount[0], totalMessages, callback);
-                }
-
-                @Override
-                public void onError(String error) {
-                    failureCount[0]++;
-                    Log.w(TAG, "Failed to delete message " + messageId + ": " + error);
-                    checkBulkDeletionComplete(successCount[0], failureCount[0], totalMessages, callback);
-                }
-            };
-
-            if (deleteForEveryone) {
-                deleteMessageForEveryone(messageId, individualCallback);
-            } else {
-                deleteMessageForMe(messageId, individualCallback);
-            }
-        }
-    }
-
-    // Helper method to check if bulk deletion is complete
-    private void checkBulkDeletionComplete(int successCount, int failureCount, int totalMessages, MessageDeletionCallback callback) {
-        if (successCount + failureCount == totalMessages) {
-            if (successCount == totalMessages) {
-                callback.onMessageDeleted("All messages deleted successfully");
-            } else if (successCount > 0) {
-                callback.onError(successCount + " out of " + totalMessages + " messages deleted successfully");
-            } else {
-                callback.onError("Failed to delete all messages");
-            }
-        }
-    }
-
-    // Check if message can be deleted for everyone
-    public boolean canDeleteForEveryone(Message message, String currentUserId) {
-        if (message == null || currentUserId == null) {
-            return false;
-        }
-
-        // Must be sender
-        if (!currentUserId.equals(message.getSenderId())) {
-            return false;
-        }
-
-        // Must be within 7 days
-        long sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L;
-        long currentTime = System.currentTimeMillis();
-        return currentTime - message.getTimestamp() <= sevenDaysInMillis;
-    }
-
-    // Enhanced block checking - checks both users' blocked lists
+    // Check if user is blocked - Enhanced version that checks both directions
     public void checkIfUserBlocked(String senderId, String receiverId, BlockCheckCallback callback) {
-        // Check if sender is blocked by receiver
-        firebaseManager.getDatabase()
+        if (senderId == null || receiverId == null) {
+            callback.onBlockCheckComplete(false);
+            return;
+        }
+
+        // Check if senderId has blocked receiverId
+        DatabaseReference senderBlockedRef = firebaseManager.getDatabase()
                 .getReference(FirebaseManager.USERS_NODE)
-                .child(receiverId)
-                .child("blockedUsers")
                 .child(senderId)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
+                .child("blockedUsers")
+                .child(receiverId);
+
+        senderBlockedRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    // Sender has blocked receiver
+                    callback.onBlockCheckComplete(true);
+                    return;
+                }
+
+                // Check if receiverId has blocked senderId
+                DatabaseReference receiverBlockedRef = firebaseManager.getDatabase()
+                        .getReference(FirebaseManager.USERS_NODE)
+                        .child(receiverId)
+                        .child("blockedUsers")
+                        .child(senderId);
+
+                receiverBlockedRef.addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
-                        Boolean isBlockedByReceiver = dataSnapshot.getValue(Boolean.class);
-                        if (isBlockedByReceiver != null && isBlockedByReceiver) {
-                            callback.onBlockCheckComplete(true);
-                            return;
-                        }
-
-                        // Check if receiver is blocked by sender
-                        firebaseManager.getDatabase()
-                                .getReference(FirebaseManager.USERS_NODE)
-                                .child(senderId)
-                                .child("blockedUsers")
-                                .child(receiverId)
-                                .addListenerForSingleValueEvent(new ValueEventListener() {
-                                    @Override
-                                    public void onDataChange(DataSnapshot dataSnapshot) {
-                                        Boolean isBlockedBySender = dataSnapshot.getValue(Boolean.class);
-                                        callback.onBlockCheckComplete(isBlockedBySender != null && isBlockedBySender);
-                                    }
-
-                                    @Override
-                                    public void onCancelled(DatabaseError databaseError) {
-                                        callback.onBlockCheckComplete(false);
-                                    }
-                                });
+                        boolean isBlocked = dataSnapshot.exists();
+                        callback.onBlockCheckComplete(isBlocked);
                     }
 
                     @Override
                     public void onCancelled(DatabaseError databaseError) {
-                        callback.onBlockCheckComplete(false);
+                        callback.onBlockCheckComplete(false); // Assume not blocked on error
                     }
                 });
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                callback.onBlockCheckComplete(false); // Assume not blocked on error
+            }
+        });
     }
 }

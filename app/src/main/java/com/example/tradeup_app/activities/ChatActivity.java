@@ -70,11 +70,11 @@ public class ChatActivity extends AppCompatActivity {
         // Get data from intent
         getIntentData();
 
+        // Initialize messaging service FIRST before UI initialization
+        messagingService = new MessagingService(this); // Pass context for notifications
+
         // Initialize UI
         initializeUI();
-
-        // Initialize messaging service
-        messagingService = new MessagingService();
 
         // Setup RecyclerView
         setupRecyclerView();
@@ -128,21 +128,25 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void loadReceiverName() {
-        if (receiverId != null) {
+        if (receiverId != null && messagingService != null) {
             // Load user profile from Firebase
             messagingService.getUserProfile(receiverId, new MessagingService.UserProfileCallback() {
                 @Override
                 public void onSuccess(String userName, String userAvatar) {
                     runOnUiThread(() -> {
                         receiverName = userName;
-                        getSupportActionBar().setTitle(userName);
+                        if (getSupportActionBar() != null) {
+                            getSupportActionBar().setTitle(userName);
+                        }
                     });
                 }
 
                 @Override
                 public void onError(String error) {
                     runOnUiThread(() -> {
-                        getSupportActionBar().setTitle("Chat");
+                        if (getSupportActionBar() != null) {
+                            getSupportActionBar().setTitle("Chat");
+                        }
                     });
                 }
             });
@@ -203,6 +207,7 @@ public class ChatActivity extends AppCompatActivity {
                 public void onMessageSent(String messageId) {
                     runOnUiThread(() -> {
                         Toast.makeText(ChatActivity.this, "Message sent", Toast.LENGTH_SHORT).show();
+                        buttonSend.setEnabled(true); // Re-enable send button
                         // Message will be updated via real-time listener
                     });
                 }
@@ -212,6 +217,7 @@ public class ChatActivity extends AppCompatActivity {
                     runOnUiThread(() -> {
                         Toast.makeText(ChatActivity.this, "Failed to send: " + error, Toast.LENGTH_LONG).show();
                         editTextMessage.setText(messageText); // Restore text
+                        buttonSend.setEnabled(true); // Re-enable send button
                     });
                 }
             });

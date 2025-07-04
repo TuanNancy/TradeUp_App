@@ -39,12 +39,21 @@
 
         <!-- Firebase Messaging Service -->
         <service
-            android:name=".utils.TradeUpFirebaseMessagingService"
+            android:name=".services.FCMService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- Offer Action Receiver for notification actions -->
+        <receiver
+            android:name=".receivers.OfferActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.tradeup_app.OFFER_ACTION" />
+            </intent-filter>
+        </receiver>
 
         <!-- Main Activity -->
         <activity
@@ -144,6 +153,13 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".activities.ChatActivity" />
         </activity>
+
+        <!-- Notification Test Activity -->
+        <activity
+            android:name=".activities.NotificationTestActivity"
+            android:exported="false"
+            android:parentActivityName=".auth.MainActivity"
+            android:label="Notification Test" />
 
     </application>
 </manifest>

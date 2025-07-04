@@ -31,6 +31,7 @@ import com.example.tradeup_app.models.Product;
 import com.example.tradeup_app.models.Report;
 import com.example.tradeup_app.utils.Constants;
 import com.example.tradeup_app.utils.DataValidator;
+import com.example.tradeup_app.utils.NotificationManager;
 import com.example.tradeup_app.utils.ReportUtils;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.button.MaterialButton;
@@ -660,10 +661,29 @@ public class ProductDetailActivity extends AppCompatActivity {
         firebaseManager.submitOffer(offer, task -> {
             if (task.isSuccessful()) {
                 Toast.makeText(this, Constants.SUCCESS_OFFER_SENT, Toast.LENGTH_SHORT).show();
+
+                // Send notification to seller about new price offer
+                sendPriceOfferNotification(product, offerPrice, currentUserName);
             } else {
                 Toast.makeText(this, Constants.ERROR_NETWORK, Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    // Send notification for new price offer
+    private void sendPriceOfferNotification(Product product, double offerPrice, String buyerName) {
+        try {
+            NotificationManager notificationManager = NotificationManager.getInstance(this);
+            notificationManager.sendPriceOfferNotification(
+                product.getId(),
+                product.getTitle(),
+                String.valueOf(offerPrice),
+                buyerName,
+                product.getSellerId()
+            );
+        } catch (Exception e) {
+            android.util.Log.e("ProductDetailActivity", "Failed to send price offer notification", e);
+        }
     }
 
     private void shareProduct() {
@@ -720,6 +740,9 @@ public class ProductDetailActivity extends AppCompatActivity {
                         currentProduct.setStatus(Constants.PRODUCT_STATUS_SOLD);
                         updateUI();
                         Toast.makeText(this, "Product marked as sold", Toast.LENGTH_SHORT).show();
+
+                        // Send notification about listing update
+                        sendListingUpdateNotification("sold");
                     } else {
                         Toast.makeText(this, "Failed to update product status", Toast.LENGTH_SHORT).show();
                     }
@@ -727,6 +750,21 @@ public class ProductDetailActivity extends AppCompatActivity {
             })
             .setNegativeButton("Cancel", null)
             .show();
+    }
+
+    // Send notification for listing updates
+    private void sendListingUpdateNotification(String updateType) {
+        try {
+            NotificationManager notificationManager = NotificationManager.getInstance(this);
+            notificationManager.sendListingUpdateNotification(
+                currentProduct.getId(),
+                currentProduct.getTitle(),
+                updateType,
+                currentUserId
+            );
+        } catch (Exception e) {
+            android.util.Log.e("ProductDetailActivity", "Failed to send listing update notification", e);
+        }
     }
 
     private void deleteProduct() {

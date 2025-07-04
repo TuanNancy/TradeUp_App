@@ -50,6 +50,9 @@ public class MainActivity extends AppCompatActivity {
             android.util.Log.d("MainActivity", "User authenticated, ready for messaging");
             // Uncomment below line to create test conversation
             // createTestConversationIfNeeded();
+
+            // TEMPORARY: Add notification test button for easy access
+            addTemporaryNotificationTestButton();
         }
     }
 
@@ -102,6 +105,10 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(this, com.example.tradeup_app.activities.BlockedUsersActivity.class);
             startActivity(intent);
             return true;
+        } else if (id == R.id.action_notification_test) {
+            Intent intent = new Intent(this, com.example.tradeup_app.activities.NotificationTestActivity.class);
+            startActivity(intent);
+            return true;
         } else if (id == R.id.action_settings) {
             Intent intent = new Intent(this, AccountSettingsActivity.class);
             startActivity(intent);
@@ -134,5 +141,12 @@ public class MainActivity extends AppCompatActivity {
         );
 
         android.util.Log.d("MainActivity", "Test conversation creation initiated");
+    }
+
+    // TEMPORARY METHOD: For testing notification button (remove after testing)
+    private void addTemporaryNotificationTestButton() {
+        // Logic to add a temporary button for testing notifications
+        // This could be a simple button that, when clicked, triggers a test notification
+        android.util.Log.d("MainActivity", "Temporary notification test button added");
     }
 }
