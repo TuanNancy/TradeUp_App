@@ -2,24 +2,26 @@ package com.example.tradeup_app.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.tradeup_app.R;
 import com.example.tradeup_app.adapters.ConversationAdapter;
 import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Conversation;
-import com.example.tradeup_app.services.MessagingService;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class ConversationsActivity extends AppCompatActivity {
@@ -27,15 +29,14 @@ public class ConversationsActivity extends AppCompatActivity {
 
     // UI Components
     private RecyclerView recyclerViewConversations;
-    private SwipeRefreshLayout swipeRefreshLayout;
     private TextView textViewEmptyState;
     private Toolbar toolbar;
 
     // Data
     private ConversationAdapter conversationAdapter;
     private List<Conversation> conversationList;
-    private MessagingService messagingService;
     private FirebaseManager firebaseManager;
+    private boolean isLoading = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,7 +47,6 @@ public class ConversationsActivity extends AppCompatActivity {
         initializeUI();
 
         // Initialize services
-        messagingService = new MessagingService();
         firebaseManager = FirebaseManager.getInstance();
 
         // Setup RecyclerView
@@ -59,16 +59,35 @@ public class ConversationsActivity extends AppCompatActivity {
         loadConversations();
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_conversations, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.action_refresh) {
+            loadConversations();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
     private void initializeUI() {
         // Setup toolbar
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setTitle("Messages");
+        
+        // Null check for ActionBar
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setTitle("Messages");
+        }
 
         // Initialize views
         recyclerViewConversations = findViewById(R.id.recyclerViewConversations);
-        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
         textViewEmptyState = findViewById(R.id.textViewEmptyState);
 
         // Initially hide empty state
@@ -107,8 +126,11 @@ public class ConversationsActivity extends AppCompatActivity {
             public void onConversationReported(Conversation conversation) {
                 // Show confirmation and optionally refresh
                 Toast.makeText(ConversationsActivity.this, "Conversation reported successfully", Toast.LENGTH_SHORT).show();
-                // Refresh to show visual indication
-                conversationAdapter.notifyDataSetChanged();
+                // Notify specific item changed instead of entire dataset
+                int position = conversationList.indexOf(conversation);
+                if (position != -1) {
+                    conversationAdapter.notifyItemChanged(position);
+                }
             }
         });
 
@@ -117,9 +139,6 @@ public class ConversationsActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        // Swipe to refresh
-        swipeRefreshLayout.setOnRefreshListener(this::loadConversations);
-
         // Back button
         toolbar.setNavigationOnClickListener(v -> finish());
     }
@@ -131,14 +150,19 @@ public class ConversationsActivity extends AppCompatActivity {
             return;
         }
 
-        swipeRefreshLayout.setRefreshing(true);
+        if (isLoading) {
+            return; // Prevent multiple simultaneous loads
+        }
+
+        isLoading = true;
+        Log.d(TAG, "Loading conversations...");
 
         // Load conversations from Firebase
         firebaseManager.getDatabase()
                 .getReference(FirebaseManager.CONVERSATIONS_NODE)
                 .addValueEventListener(new com.google.firebase.database.ValueEventListener() {
                     @Override
-                    public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                    public void onDataChange(@NonNull com.google.firebase.database.DataSnapshot dataSnapshot) {
                         List<Conversation> conversations = new ArrayList<>();
 
                         for (com.google.firebase.database.DataSnapshot snapshot : dataSnapshot.getChildren()) {
@@ -158,21 +182,22 @@ public class ConversationsActivity extends AppCompatActivity {
                             }
                         }
 
-                        // Sort by last message time (newest first)
-                        Collections.sort(conversations, (c1, c2) ->
+                        // Sort by last message time (newest first) - use List.sort instead of Collections.sort
+                        conversations.sort((c1, c2) ->
                             Long.compare(c2.getLastMessageTime(), c1.getLastMessageTime()));
 
                         updateConversationsList(conversations);
-                        swipeRefreshLayout.setRefreshing(false);
+                        isLoading = false;
                     }
 
                     @Override
-                    public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                    public void onCancelled(@NonNull com.google.firebase.database.DatabaseError databaseError) {
+                        Log.e(TAG, "Error loading conversations", databaseError.toException());
                         runOnUiThread(() -> {
                             Toast.makeText(ConversationsActivity.this,
                                 "Error loading conversations: " + databaseError.getMessage(),
                                 Toast.LENGTH_LONG).show();
-                            swipeRefreshLayout.setRefreshing(false);
+                            isLoading = false;
                         });
                     }
                 });
@@ -180,9 +205,19 @@ public class ConversationsActivity extends AppCompatActivity {
 
     private void updateConversationsList(List<Conversation> conversations) {
         runOnUiThread(() -> {
+            // Calculate differences for better performance
+            int oldSize = conversationList.size();
             conversationList.clear();
             conversationList.addAll(conversations);
-            conversationAdapter.notifyDataSetChanged();
+
+            // Use more specific notifications
+            if (oldSize == 0 && !conversations.isEmpty()) {
+                conversationAdapter.notifyItemRangeInserted(0, conversations.size());
+            } else if (conversations.isEmpty() && oldSize > 0) {
+                conversationAdapter.notifyItemRangeRemoved(0, oldSize);
+            } else {
+                conversationAdapter.notifyDataSetChanged(); // Fallback for complex changes
+            }
 
             // Show/hide empty state
             if (conversationList.isEmpty()) {

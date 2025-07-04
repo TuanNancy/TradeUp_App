@@ -125,8 +125,9 @@ public class NotificationService {
         if (shouldSendNotification(receiverId, TYPE_NEW_MESSAGE)) {
             Intent intent = new Intent(context, ChatActivity.class);
             intent.putExtra("conversationId", conversationId);
-            intent.putExtra("receiverId", senderId);
-            intent.putExtra("receiverName", senderName);
+            // Sửa lỗi: khi người nhận click vào thông báo, cần biết họ đang chat với ai (người gửi)
+            intent.putExtra("receiverId", senderId);  // ✅ ĐÚNG: người nhận sẽ chat với người gửi
+            intent.putExtra("receiverName", senderName); // ✅ ĐÚNG: hiển thị tên người gửi
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
             PendingIntent pendingIntent = PendingIntent.getActivity(
@@ -142,7 +143,7 @@ public class NotificationService {
 
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_MESSAGES)
                 .setSmallIcon(R.drawable.ic_message)
-                .setContentTitle(senderName)
+                .setContentTitle(senderName) // ✅ ĐÚNG: hiển thị tên người gửi trong thông báo
                 .setContentText(displayMessage)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(messageContent))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
