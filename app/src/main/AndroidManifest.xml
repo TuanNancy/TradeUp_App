@@ -46,7 +46,7 @@
             </intent-filter>
         </service>
 
-        <!-- Background Message Service -->
+        <!-- ✅ Background Message Service for real-time notifications -->
         <service
             android:name=".services.BackgroundMessageService"
             android:exported="false"

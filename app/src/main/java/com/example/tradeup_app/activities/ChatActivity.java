@@ -108,17 +108,28 @@ public class ChatActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        // Set initial title, load actual name if needed
-        if (receiverName != null && !receiverName.equals("Unknown")) {
-            if (getSupportActionBar() != null) {
-                getSupportActionBar().setTitle(receiverName);
+        // ✅ SỬA: Cải thiện logic hiển thị tên user
+        Log.d(TAG, "Initializing UI - receiverId: " + receiverId + ", receiverName: " + receiverName);
+
+        // Luôn load tên từ Firebase để đảm bảo hiển thị đúng
+        if (receiverId != null) {
+            // Hiển thị tên tạm thời nếu có
+            if (receiverName != null && !receiverName.isEmpty() && !receiverName.equals("Unknown")) {
+                if (getSupportActionBar() != null) {
+                    getSupportActionBar().setTitle(receiverName);
+                }
+            } else {
+                if (getSupportActionBar() != null) {
+                    getSupportActionBar().setTitle("Loading...");
+                }
             }
-        } else {
-            if (getSupportActionBar() != null) {
-                getSupportActionBar().setTitle("Loading...");
-            }
-            // Load receiver name from Firebase if not provided
+            // Luôn load tên mới nhất từ Firebase
             loadReceiverName();
+        } else {
+            // Nếu không có receiverId, hiển thị title mặc định
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setTitle("Chat");
+            }
         }
 
         if (productTitle != null && getSupportActionBar() != null) {
@@ -154,10 +165,13 @@ public class ChatActivity extends AppCompatActivity {
 
     private void loadReceiverName() {
         if (receiverId != null && messagingService != null) {
+            Log.d(TAG, "Loading receiver name for userId: " + receiverId);
+
             // Load user profile from Firebase
             messagingService.getUserProfile(receiverId, new MessagingService.UserProfileCallback() {
                 @Override
                 public void onSuccess(String userName, String userAvatar) {
+                    Log.d(TAG, "Successfully loaded user name: " + userName);
                     runOnUiThread(() -> {
                         receiverName = userName;
                         if (getSupportActionBar() != null) {
@@ -168,13 +182,19 @@ public class ChatActivity extends AppCompatActivity {
 
                 @Override
                 public void onError(String error) {
+                    Log.e(TAG, "Failed to load user name: " + error);
                     runOnUiThread(() -> {
                         if (getSupportActionBar() != null) {
-                            getSupportActionBar().setTitle("Chat");
+                            // Nếu load thất bại, hiển thị tên mặc định
+                            String fallbackName = (receiverName != null && !receiverName.isEmpty() && !receiverName.equals("Unknown"))
+                                                 ? receiverName : "User";
+                            getSupportActionBar().setTitle(fallbackName);
                         }
                     });
                 }
             });
+        } else {
+            Log.w(TAG, "Cannot load receiver name - receiverId or messagingService is null");
         }
     }
 
@@ -802,9 +822,9 @@ public class ChatActivity extends AppCompatActivity {
         Toast.makeText(this, "Đang gửi chào giá...", Toast.LENGTH_SHORT).show();
 
         try {
-            // Use ChatOfferService to send offer
+            // ✅ SỬA: Sử dụng constructor có context để notifications hoạt động
             com.example.tradeup_app.services.ChatOfferService chatOfferService =
-                new com.example.tradeup_app.services.ChatOfferService();
+                new com.example.tradeup_app.services.ChatOfferService(this);
 
             chatOfferService.sendOfferInChat(
                 conversationId,
@@ -880,8 +900,9 @@ public class ChatActivity extends AppCompatActivity {
             .setPositiveButton("Accept", (dialog, which) -> {
                 showProgressDialog("Accepting offer...");
 
+                // ✅ SỬA: Sử dụng constructor có context để notifications hoạt động
                 com.example.tradeup_app.services.ChatOfferService chatOfferService =
-                    new com.example.tradeup_app.services.ChatOfferService();
+                    new com.example.tradeup_app.services.ChatOfferService(this);
 
                 chatOfferService.respondToOffer(
                     offerMessage.getOfferId(),
@@ -929,8 +950,9 @@ public class ChatActivity extends AppCompatActivity {
             .setPositiveButton("Reject", (dialog, which) -> {
                 showProgressDialog("Rejecting offer...");
 
+                // ✅ SỬA: Sử dụng constructor có context để notifications hoạt động
                 com.example.tradeup_app.services.ChatOfferService chatOfferService =
-                    new com.example.tradeup_app.services.ChatOfferService();
+                    new com.example.tradeup_app.services.ChatOfferService(this);
 
                 chatOfferService.respondToOffer(
                     offerMessage.getOfferId(),
@@ -1001,8 +1023,9 @@ public class ChatActivity extends AppCompatActivity {
 
                     showProgressDialog("Sending counter offer...");
 
+                    // ✅ SỬA: Sử dụng constructor có context để notifications hoạt động
                     com.example.tradeup_app.services.ChatOfferService chatOfferService =
-                        new com.example.tradeup_app.services.ChatOfferService();
+                        new com.example.tradeup_app.services.ChatOfferService(this);
 
                     chatOfferService.respondToOffer(
                         offerMessage.getOfferId(),

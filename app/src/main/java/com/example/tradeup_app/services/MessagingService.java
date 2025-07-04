@@ -271,10 +271,9 @@ public class MessagingService {
                         // Update conversation's last message
                         updateConversationLastMessage(message);
 
-                        // Send notification to receiver if context is available
-                        if (context != null) {
-                            sendMessageNotification(message);
-                        }
+                        // ✅ SỬA: KHÔNG gửi notification ở đây nữa
+                        // Notification sẽ được gửi từ listenForMessages khi detect tin nhắn mới
+                        Log.d(TAG, "📤 Message sent successfully, notification will be handled by listeners");
 
                         callback.onMessageSent(messageId);
                     } else {
@@ -286,9 +285,11 @@ public class MessagingService {
     // Send notification for new message
     private void sendMessageNotification(Message message) {
         if (message.getReceiverId() == null || message.getSenderId() == null) {
+            Log.w(TAG, "Cannot send notification - missing receiver or sender ID");
             return;
         }
 
+        // ✅ SỬA: Logic hoàn toàn mới - kiểm tra và gửi thông báo chính xác
         NotificationService notificationService = new NotificationService(context);
 
         // Get sender name for notification
@@ -303,13 +304,23 @@ public class MessagingService {
             notificationContent = "📸 Image";
         }
 
+        Log.d(TAG, "📨 NOTIFICATION LOGIC CHECK:");
+        Log.d(TAG, "   - Sender ID: " + message.getSenderId() + " (Name: " + senderName + ")");
+        Log.d(TAG, "   - Receiver ID: " + message.getReceiverId());
+        Log.d(TAG, "   - Message: " + notificationContent);
+        Log.d(TAG, "   - Conversation ID: " + message.getConversationId());
+
+        // ✅ GỬI THÔNG BÁO CHO NGƯỜI NHẬN - không gửi cho người gửi
+        // Đây là logic chính: senderId là excludeUserId để tránh tự gửi cho mình
         notificationService.sendMessageNotification(
-            message.getConversationId(),
-            message.getSenderId(),
-            senderName,
-            notificationContent,
-            message.getReceiverId()
+            message.getConversationId(),      // conversationId
+            message.getSenderId(),            // senderId (người gửi)
+            senderName,                       // senderName
+            notificationContent,              // messageContent
+            message.getReceiverId()           // receiverId (người nhận - sẽ nhận thông báo)
         );
+
+        Log.d(TAG, "📨 Notification request sent to NotificationService");
     }
 
     private void updateConversationLastMessage(Message message) {
@@ -513,30 +524,65 @@ public class MessagingService {
         android.util.Log.d("MessagingService", "🔎 Query filter: conversationId == " + conversationId);
 
         Query query = messagesRef.orderByChild("conversationId").equalTo(conversationId);
+
+        // ✅ SỬA: Sử dụng ValueEventListener để load initial messages, sau đó ChildEventListener cho real-time
         query.addValueEventListener(new ValueEventListener() {
+            private boolean isFirstLoad = true;
+            private List<String> loadedMessageIds = new ArrayList<>();
+
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                android.util.Log.d("MessagingService", "📨 onDataChange triggered, snapshot count: " + dataSnapshot.getChildrenCount());
+                android.util.Log.d("MessagingService", "📨 onDataChange triggered - isFirstLoad: " + isFirstLoad);
 
                 List<Message> messages = new ArrayList<>();
-                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                    android.util.Log.d("MessagingService", "Processing message snapshot: " + snapshot.getKey());
+                List<String> currentMessageIds = new ArrayList<>();
 
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     Message message = snapshot.getValue(Message.class);
                     if (message != null) {
                         message.setId(snapshot.getKey());
                         messages.add(message);
+                        currentMessageIds.add(snapshot.getKey());
 
                         android.util.Log.d("MessagingService", "✅ Message loaded: " + message.getMessageType() +
                                           ", ConvId: " + message.getConversationId() +
                                           ", OfferId: " + message.getOfferId());
-                    } else {
-                        android.util.Log.w("MessagingService", "⚠️ Null message from snapshot: " + snapshot.getKey());
+
+                        // ✅ SỬA: Chỉ gửi thông báo cho tin nhắn MỚI (không có trong loadedMessageIds)
+                        if (!isFirstLoad && context != null && !loadedMessageIds.contains(snapshot.getKey())) {
+                            String currentUserId = firebaseManager.getCurrentUserId();
+
+                            android.util.Log.d("MessagingService", "🔔 NEW MESSAGE DETECTED: " + snapshot.getKey());
+                            android.util.Log.d("MessagingService", "   - Current User: " + currentUserId);
+                            android.util.Log.d("MessagingService", "   - Message Sender: " + message.getSenderId());
+
+                            // Chỉ gửi thông báo nếu tin nhắn không phải từ user hiện tại
+                            if (currentUserId != null && !currentUserId.equals(message.getSenderId())) {
+                                android.util.Log.d("MessagingService", "🔔 Sending notification for new message from: " + message.getSenderId());
+                                sendMessageNotification(message);
+                            } else {
+                                android.util.Log.d("MessagingService", "⭕ Skip notification - message from current user: " + message.getSenderId());
+                            }
+                        }
                     }
                 }
 
-                android.util.Log.d("MessagingService", "🎯 Total messages loaded: " + messages.size());
-                callback.onMessagesLoaded(messages);
+                // Sort messages by timestamp
+                messages.sort((m1, m2) -> Long.compare(m1.getTimestamp(), m2.getTimestamp()));
+
+                if (isFirstLoad) {
+                    android.util.Log.d("MessagingService", "🎯 Initial load completed with " + messages.size() + " messages");
+                    isFirstLoad = false;
+                } else {
+                    android.util.Log.d("MessagingService", "🔄 Real-time update with " + messages.size() + " messages");
+                }
+
+                // Update loaded message IDs for next comparison
+                loadedMessageIds.clear();
+                loadedMessageIds.addAll(currentMessageIds);
+
+                // Callback with updated list
+                callback.onMessagesLoaded(new ArrayList<>(messages));
             }
 
             @Override

@@ -27,7 +27,15 @@ public class ChatOfferService {
     public ChatOfferService() {
         this.firebaseManager = FirebaseManager.getInstance();
         this.messagingService = new MessagingService();
-        this.notificationManager = NotificationManager.getInstance(null);
+        // ✅ SỬA: Không khởi tạo NotificationManager với null context
+        this.notificationManager = null; // Sẽ khởi tạo khi cần với context thích hợp
+    }
+
+    // ✅ SỬA: Thêm constructor nhận context để có thể gửi thông báo
+    public ChatOfferService(android.content.Context context) {
+        this.firebaseManager = FirebaseManager.getInstance();
+        this.messagingService = new MessagingService(context);
+        this.notificationManager = NotificationManager.getInstance(context);
     }
 
     /**

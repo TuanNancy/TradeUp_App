@@ -15,7 +15,9 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.Query;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -29,8 +31,9 @@ public class BackgroundMessageService extends Service {
     private NotificationService notificationService;
     private String currentUserId;
     private ChildEventListener messageListener;
-    private Set<String> processedMessageIds = new HashSet<>();
-    private boolean isInitialLoad = true;
+    private Map<String, Long> lastMessageTimestamps = new HashMap<>();
+    private Set<String> processedMessageIds = new HashSet<>(); // ✅ Track processed messages
+    private boolean isInitialLoad = true; // ✅ Track initial load state
 
     @Override
     public void onCreate() {
@@ -41,13 +44,7 @@ public class BackgroundMessageService extends Service {
         notificationService = new NotificationService(this);
         currentUserId = firebaseManager.getCurrentUserId();
 
-        Log.d(TAG, "🔍 Service initialization:");
-        Log.d(TAG, "   - Current User ID: " + currentUserId);
-        Log.d(TAG, "   - FirebaseManager: " + (firebaseManager != null ? "OK" : "NULL"));
-        Log.d(TAG, "   - NotificationService: " + (notificationService != null ? "OK" : "NULL"));
-
         if (currentUserId != null) {
-            Log.d(TAG, "👂 Starting message listener for user: " + currentUserId);
             startListeningForMessages();
         } else {
             Log.w(TAG, "❌ No current user - stopping service");
@@ -98,23 +95,28 @@ public class BackgroundMessageService extends Service {
                     Log.d(TAG, "   - Content: " + message.getContent());
                     Log.d(TAG, "   - Timestamp: " + message.getTimestamp());
 
-                    // Check if this is a genuinely new message
+                    // Check if this is a genuinely new message (not from initial load)
                     if (isNewMessage(message)) {
                         Log.d(TAG, "🔔 This is a NEW message - sending notification");
                         sendNotificationForMessage(message);
                     } else {
                         Log.d(TAG, "⭕ This is an old message - skipping notification");
                     }
+
+                    // Update last message timestamp for this conversation
+                    lastMessageTimestamps.put(message.getConversationId(), message.getTimestamp());
                 }
             }
 
             @Override
             public void onChildChanged(DataSnapshot dataSnapshot, String previousChildName) {
+                // Handle message updates if needed
                 Log.d(TAG, "🔄 Message updated: " + dataSnapshot.getKey());
             }
 
             @Override
             public void onChildRemoved(DataSnapshot dataSnapshot) {
+                // Handle message deletion if needed
                 Log.d(TAG, "🗑️ Message removed: " + dataSnapshot.getKey());
             }
 
@@ -146,37 +148,23 @@ public class BackgroundMessageService extends Service {
 
     /**
      * Check if this is a new message (not from initial load)
+     * Logic: Message is new if it's timestamp is recent (within last 30 seconds)
      */
     private boolean isNewMessage(Message message) {
-        String messageId = message.getId();
         long currentTime = System.currentTimeMillis();
         long messageTime = message.getTimestamp();
         long timeDifference = currentTime - messageTime;
 
-        // Check if message was already processed
-        boolean alreadyProcessed = processedMessageIds.contains(messageId);
+        // Consider message as new if it's within last 30 seconds
+        boolean isRecent = timeDifference < 30 * 1000; // 30 seconds
 
-        // Message is new if: not processed AND recent (within 2 minutes)
-        boolean isRecent = timeDifference < 120 * 1000; // 2 minutes
+        Log.d(TAG, "⏰ Message time check:");
+        Log.d(TAG, "   - Current time: " + currentTime);
+        Log.d(TAG, "   - Message time: " + messageTime);
+        Log.d(TAG, "   - Time difference: " + timeDifference + "ms");
+        Log.d(TAG, "   - Is recent (< 30s): " + isRecent);
 
-        Log.d(TAG, "⏰ Message analysis:");
-        Log.d(TAG, "   - Message ID: " + messageId);
-        Log.d(TAG, "   - Time difference: " + timeDifference + "ms (" + (timeDifference/1000) + "s)");
-        Log.d(TAG, "   - Already processed: " + alreadyProcessed);
-        Log.d(TAG, "   - Is recent (< 2min): " + isRecent);
-        Log.d(TAG, "   - Is initial load: " + isInitialLoad);
-
-        // Message is new if not processed + recent + not initial load
-        boolean isNew = !alreadyProcessed && isRecent && !isInitialLoad;
-        Log.d(TAG, "   - 🎯 RESULT: Is new message: " + isNew);
-
-        // Mark initial load as complete after first check
-        if (isInitialLoad) {
-            isInitialLoad = false;
-            Log.d(TAG, "🎯 Initial load completed - future messages will be treated as new");
-        }
-
-        return isNew;
+        return isRecent;
     }
 
     private void sendNotificationForMessage(Message message) {
@@ -185,7 +173,7 @@ public class BackgroundMessageService extends Service {
             return;
         }
 
-        // Don't send notification if sender is current user
+        // Don't send notification if sender is current user (shouldn't happen in this service)
         if (currentUserId.equals(message.getSenderId())) {
             Log.d(TAG, "⭕ Skip notification - message from current user");
             return;
@@ -242,9 +230,6 @@ public class BackgroundMessageService extends Service {
                     message.getContent(),
                     message.getReceiverId()
                 );
-
-                // Mark as processed even if name lookup failed
-                processedMessageIds.add(message.getId());
             }
         });
     }
@@ -253,29 +238,17 @@ public class BackgroundMessageService extends Service {
      * Static method to start the service
      */
     public static void startService(android.content.Context context) {
-        Log.d(TAG, "🚀 BackgroundMessageService start requested from: " + context.getClass().getSimpleName());
-
-        try {
-            Intent intent = new Intent(context, BackgroundMessageService.class);
-            context.startService(intent);
-            Log.d(TAG, "✅ Service start command sent successfully");
-        } catch (Exception e) {
-            Log.e(TAG, "❌ Failed to start service: " + e.getMessage());
-        }
+        Intent intent = new Intent(context, BackgroundMessageService.class);
+        context.startService(intent);
+        Log.d(TAG, "🚀 BackgroundMessageService start requested");
     }
 
     /**
      * Static method to stop the service
      */
     public static void stopService(android.content.Context context) {
-        Log.d(TAG, "🛑 BackgroundMessageService stop requested from: " + context.getClass().getSimpleName());
-
-        try {
-            Intent intent = new Intent(context, BackgroundMessageService.class);
-            context.stopService(intent);
-            Log.d(TAG, "✅ Service stop command sent successfully");
-        } catch (Exception e) {
-            Log.e(TAG, "❌ Failed to stop service: " + e.getMessage());
-        }
+        Intent intent = new Intent(context, BackgroundMessageService.class);
+        context.stopService(intent);
+        Log.d(TAG, "🛑 BackgroundMessageService stop requested");
     }
 }
