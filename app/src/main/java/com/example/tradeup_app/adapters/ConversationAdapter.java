@@ -72,7 +72,75 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
         String timeText = sdf.format(new Date(conversation.getLastMessageTime()));
         holder.textViewTime.setText(timeText);
 
-        // Set unread count
+        // Check if conversation has unread messages for current user
+        // Simple and reliable logic: compare lastMessageTime with user's lastReadTime
+        boolean hasUnread = false;
+
+        // Check if there's a last message
+        if (conversation.getLastMessage() != null && !conversation.getLastMessage().trim().isEmpty()) {
+
+            if (conversation.getLastReadTimes() == null ||
+                !conversation.getLastReadTimes().containsKey(currentUserId)) {
+                // User has never read this conversation -> unread
+                hasUnread = true;
+            } else {
+                // User has read before, check if there are new messages
+                Long userLastReadTime = conversation.getLastReadTimes().get(currentUserId);
+
+                if (userLastReadTime != null && conversation.getLastMessageTime() > userLastReadTime) {
+                    // There's a new message after user's last read time -> unread
+                    hasUnread = true;
+                }
+                // else: no new messages -> read
+            }
+        }
+
+        // Fallback: also check unreadCount for compatibility
+        if (!hasUnread && conversation.getUnreadCount() > 0) {
+            hasUnread = true;
+        }
+
+        // Tạo biến final để sử dụng trong lambda
+        final boolean isUnread = hasUnread;
+
+        // Debug log để kiểm tra
+        android.util.Log.d("ConversationAdapter", "Conversation " + conversation.getId() +
+            " - hasUnread: " + isUnread +
+            " - unreadCount: " + conversation.getUnreadCount() +
+            " - lastMessage: " + conversation.getLastMessage() +
+            " - lastReadTimes: " + (conversation.getLastReadTimes() != null ? conversation.getLastReadTimes().size() : "null") +
+            " - lastMessageSenderId: " + conversation.getLastMessageSenderId() +
+            " - currentUserId: " + currentUserId);
+
+        // Set visual indicators for read/unread status
+        if (isUnread) {
+            // Unread conversation - make text bold and show unread indicator
+            holder.textViewProductTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+            holder.textViewLastMessage.setTypeface(null, android.graphics.Typeface.BOLD);
+            holder.textViewLastMessage.setTextColor(context.getResources().getColor(android.R.color.black));
+            holder.textViewParticipantName.setTextColor(context.getResources().getColor(android.R.color.black));
+
+            // Show unread indicator
+            holder.imageViewReadStatus.setVisibility(View.VISIBLE);
+            holder.imageViewReadStatus.setImageResource(R.drawable.ic_message_unread);
+
+            // Set background to slightly highlighted với màu rõ ràng hơn
+            holder.itemView.setBackgroundColor(0xFFE3F2FD); // Light blue background
+        } else {
+            // Read conversation - normal text style
+            holder.textViewProductTitle.setTypeface(null, android.graphics.Typeface.NORMAL);
+            holder.textViewLastMessage.setTypeface(null, android.graphics.Typeface.NORMAL);
+            holder.textViewLastMessage.setTextColor(0xFF757575); // Gray color
+            holder.textViewParticipantName.setTextColor(0xFF757575); // Gray color
+
+            // Hide read indicator for simplicity
+            holder.imageViewReadStatus.setVisibility(View.GONE);
+
+            // Normal background
+            holder.itemView.setBackgroundColor(0xFFFFFFFF); // White background
+        }
+
+        // Set unread count (legacy support)
         if (conversation.getUnreadCount() > 0) {
             holder.textViewUnreadCount.setVisibility(View.VISIBLE);
             holder.textViewUnreadCount.setText(String.valueOf(conversation.getUnreadCount()));
@@ -94,6 +162,14 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
         // Set click listeners
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
+                // Mark conversation as read when clicked
+                if (isUnread) {
+                    conversation.markAsRead(currentUserId);
+                    // Update in Firebase
+                    updateConversationReadStatus(conversation);
+                    // Refresh the item to update UI
+                    notifyItemChanged(position);
+                }
                 listener.onConversationClick(conversation);
             }
         });
@@ -286,6 +362,22 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
         }
     }
 
+    // Method to update conversation read status in Firebase
+    private void updateConversationReadStatus(Conversation conversation) {
+        FirebaseManager.getInstance().getDatabase()
+                .getReference(FirebaseManager.CONVERSATIONS_NODE)
+                .child(conversation.getId())
+                .child("lastReadTimes")
+                .child(currentUserId)
+                .setValue(System.currentTimeMillis())
+                .addOnSuccessListener(aVoid -> {
+                    android.util.Log.d("ConversationAdapter", "Read status updated successfully");
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.e("ConversationAdapter", "Failed to update read status", e);
+                });
+    }
+
     @Override
     public int getItemCount() {
         return conversationList.size();
@@ -298,6 +390,7 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
         TextView textViewLastMessage;
         TextView textViewTime;
         TextView textViewUnreadCount;
+        ImageView imageViewReadStatus;
 
         ConversationViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -307,6 +400,7 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
             textViewLastMessage = itemView.findViewById(R.id.textViewLastMessage);
             textViewTime = itemView.findViewById(R.id.textViewTime);
             textViewUnreadCount = itemView.findViewById(R.id.textViewUnreadCount);
+            imageViewReadStatus = itemView.findViewById(R.id.imageViewReadStatus);
         }
     }
 }

@@ -320,9 +320,21 @@ public class MessagingService {
         Map<String, Object> updates = new HashMap<>();
         updates.put("lastMessage", message.getContent());
         updates.put("lastMessageTime", message.getTimestamp());
+        updates.put("lastMessageSenderId", message.getSenderId()); // Thêm thông tin người gửi
         updates.put("updatedAt", System.currentTimeMillis());
 
-        conversationRef.updateChildren(updates);
+        // QUAN TRỌNG: Tự động cập nhật lastReadTimes cho người gửi
+        // Điều này đảm bảo người gửi luôn thấy conversation là "đã đọc"
+        String senderLastReadPath = "lastReadTimes/" + message.getSenderId();
+        updates.put(senderLastReadPath, System.currentTimeMillis());
+
+        conversationRef.updateChildren(updates)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Conversation updated successfully. Sender marked as read.");
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to update conversation", e);
+                });
     }
 
     // Upload image to Firebase Storage

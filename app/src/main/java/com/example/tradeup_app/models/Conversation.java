@@ -21,6 +21,8 @@ public class Conversation {
 
     // New fields for blocking and reporting
     private Map<String, Boolean> blockedUsers; // userId -> blocked status
+    private Map<String, Long> lastReadTimes; // userId -> timestamp of last read message
+    private String lastMessageSenderId; // ID of user who sent the last message
     private boolean isReported;
     private String reportedBy;
     private String reportReason;
@@ -121,7 +123,9 @@ public class Conversation {
     public void setBlockedUsers(Map<String, Boolean> blockedUsers) { this.blockedUsers = blockedUsers; }
 
     public boolean isReported() { return isReported; }
-    public void setReported(boolean reported) { isReported = reported; }
+    public void setReported(boolean reported) {
+        this.isReported = reported;
+    }
 
     public String getReportedBy() { return reportedBy; }
     public void setReportedBy(String reportedBy) { this.reportedBy = reportedBy; }
@@ -167,5 +171,58 @@ public class Conversation {
     public void setBlocked(boolean blocked) {
         // This is a convenience method for UI updates
         // The actual blocking logic should use blockUser/unblockUser methods
+    }
+
+    public Map<String, Long> getLastReadTimes() {
+        return lastReadTimes;
+    }
+
+    public void setLastReadTimes(Map<String, Long> lastReadTimes) {
+        this.lastReadTimes = lastReadTimes;
+    }
+
+    public String getLastMessageSenderId() {
+        return lastMessageSenderId;
+    }
+
+    public void setLastMessageSenderId(String lastMessageSenderId) {
+        this.lastMessageSenderId = lastMessageSenderId;
+    }
+
+    // Methods for read/unread status
+    public boolean hasUnreadMessages(String userId) {
+        // Nếu không có thời gian đọc cuối hoặc thời gian tin nhắn cuối mới hơn thời gian đọc cuối
+        if (lastReadTimes == null || !lastReadTimes.containsKey(userId)) {
+            return lastMessageSenderId != null && !lastMessageSenderId.equals(userId);
+        }
+
+        Long lastReadTime = lastReadTimes.get(userId);
+        return lastMessageTime > lastReadTime && !userId.equals(lastMessageSenderId);
+    }
+
+    public void markAsRead(String userId) {
+        if (lastReadTimes == null) {
+            lastReadTimes = new java.util.HashMap<>();
+        }
+        lastReadTimes.put(userId, System.currentTimeMillis());
+        this.updatedAt = System.currentTimeMillis();
+    }
+
+    public long getLastReadTime(String userId) {
+        if (lastReadTimes == null || !lastReadTimes.containsKey(userId)) {
+            return 0;
+        }
+        return lastReadTimes.get(userId);
+    }
+
+    // Thêm các setter cho Firebase compatibility
+    public void setRead(boolean read) {
+        // Setter cho field "read" để tương thích với Firebase
+        // Có thể để trống hoặc xử lý logic tùy theo nhu cầu
+    }
+
+    public void setMessages(Object messages) {
+        // Setter cho field "messages" để tương thích với Firebase
+        // Có thể để trống vì không cần xử lý
     }
 }
