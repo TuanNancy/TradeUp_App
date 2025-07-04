@@ -430,7 +430,17 @@ public class ProductDetailActivity extends AppCompatActivity {
 
         // Make offer - hidden for owner, disabled if sold or not negotiable
         makeOfferButton.setVisibility(isOwner ? View.GONE : View.VISIBLE);
-        makeOfferButton.setEnabled(isAvailable && currentProduct.isNegotiable() && isLoggedIn);
+        // TEMPORARY FIX: Ignore negotiable check for testing
+        makeOfferButton.setEnabled(isAvailable && isLoggedIn);
+
+        // Log for debugging
+        android.util.Log.d("ProductDetailActivity",
+            "Make Offer Button - Visible: " + (makeOfferButton.getVisibility() == View.VISIBLE) +
+            ", Enabled: " + makeOfferButton.isEnabled() +
+            ", isOwner: " + isOwner +
+            ", isAvailable: " + isAvailable +
+            ", isLoggedIn: " + isLoggedIn +
+            ", isNegotiable: " + currentProduct.isNegotiable());
 
         // Report - hidden for owner
         reportButton.setVisibility(isOwner ? View.GONE : View.VISIBLE);
@@ -617,25 +627,42 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
     private void showMakeOfferDialog(Product product) {
+        // Log để debug
+        android.util.Log.d("ProductDetailActivity", "showMakeOfferDialog called for product: " +
+            (product != null ? product.getTitle() : "null"));
+
         if (currentUserId == null) {
             Toast.makeText(this, "Please login to make an offer", Toast.LENGTH_SHORT).show();
+            android.util.Log.d("ProductDetailActivity", "User not logged in");
             return;
         }
 
         if (currentUserId.equals(product.getSellerId())) {
             Toast.makeText(this, "You cannot make an offer on your own product", Toast.LENGTH_SHORT).show();
+            android.util.Log.d("ProductDetailActivity", "User is the seller");
             return;
         }
 
-        if (!product.isNegotiable()) {
-            Toast.makeText(this, "This product is not open for offers", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        // TEMPORARY: Remove negotiable check for testing
+        // if (!product.isNegotiable()) {
+        //     Toast.makeText(this, "This product is not open for offers", Toast.LENGTH_SHORT).show();
+        //     android.util.Log.d("ProductDetailActivity", "Product not negotiable");
+        //     return;
+        // }
 
-        MakeOfferDialog dialog = new MakeOfferDialog(this, product, (offerPrice, message) -> {
-            submitOffer(product, offerPrice, message);
-        });
-        dialog.show();
+        android.util.Log.d("ProductDetailActivity", "All checks passed, showing MakeOfferDialog");
+
+        try {
+            MakeOfferDialog dialog = new MakeOfferDialog(this, product, (offerPrice, message) -> {
+                android.util.Log.d("ProductDetailActivity", "Offer submitted: " + offerPrice + ", " + message);
+                submitOffer(product, offerPrice, message);
+            });
+            dialog.show();
+            android.util.Log.d("ProductDetailActivity", "MakeOfferDialog shown successfully");
+        } catch (Exception e) {
+            android.util.Log.e("ProductDetailActivity", "Error showing MakeOfferDialog", e);
+            Toast.makeText(this, "Error opening offer dialog: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private void submitOffer(Product product, double offerPrice, String message) {

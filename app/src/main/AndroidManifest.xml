@@ -116,6 +116,20 @@
             android:parentActivityName=".auth.MainActivity"
             android:label="Admin Dashboard" />
 
+        <!-- Data Migration Activity -->
+        <activity
+            android:name=".activities.DataMigrationActivity"
+            android:exported="false"
+            android:parentActivityName=".auth.MainActivity"
+            android:label="Data Migration" />
+
+        <!-- Debug Make Offer Activity -->
+        <activity
+            android:name=".activities.DebugMakeOfferActivity"
+            android:exported="false"
+            android:parentActivityName=".auth.MainActivity"
+            android:label="Debug Make Offer" />
+
         <!-- Login Activity as Launcher -->
         <activity
             android:name=".auth.LoginActivity"

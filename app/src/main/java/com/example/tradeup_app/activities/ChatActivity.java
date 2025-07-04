@@ -48,6 +48,7 @@ public class ChatActivity extends AppCompatActivity {
     private ImageButton buttonSend;
     private ImageButton buttonAttach;
     private ImageButton buttonEmoji;
+    private ImageButton buttonOffer; // NEW: Offer button
     private TextView textViewTyping;
     private Toolbar toolbar;
 
@@ -122,6 +123,7 @@ public class ChatActivity extends AppCompatActivity {
         buttonSend = findViewById(R.id.buttonSend);
         buttonAttach = findViewById(R.id.buttonAttach);
         buttonEmoji = findViewById(R.id.buttonEmoji);
+        buttonOffer = findViewById(R.id.buttonOffer); // Initialize offer button
         textViewTyping = findViewById(R.id.textViewTyping);
 
         textViewTyping.setVisibility(View.GONE);
@@ -173,6 +175,9 @@ public class ChatActivity extends AppCompatActivity {
 
         // Emoji button click
         buttonEmoji.setOnClickListener(v -> showEmojiPicker());
+
+        // Offer button click - NEW
+        buttonOffer.setOnClickListener(v -> makeOffer());
 
         // Enable send button only when text is entered
         editTextMessage.addTextChangedListener(new android.text.TextWatcher() {
@@ -603,5 +608,137 @@ public class ChatActivity extends AppCompatActivity {
             receiverId,
             isBlocked -> runOnUiThread(() -> updateUIForBlockedUser(isBlocked))
         );
+    }
+
+    private void makeOffer() {
+        Log.d(TAG, "makeOffer called");
+
+        // Check if product information is available
+        if (productTitle == null) {
+            Toast.makeText(this, "Product information not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Get product details for the offer
+        String productId = getIntent().getStringExtra("productId");
+        if (productId == null) {
+            Toast.makeText(this, "Product ID not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Load product details using existing method
+        FirebaseManager.getInstance().getDatabase()
+            .getReference("products")
+            .child(productId)
+            .get()
+            .addOnSuccessListener(dataSnapshot -> {
+                com.example.tradeup_app.models.Product product =
+                    dataSnapshot.getValue(com.example.tradeup_app.models.Product.class);
+                if (product != null) {
+                    product.setId(dataSnapshot.getKey());
+                    runOnUiThread(() -> showChatOfferDialog(product));
+                } else {
+                    runOnUiThread(() ->
+                        Toast.makeText(ChatActivity.this, "Product not found", Toast.LENGTH_SHORT).show());
+                }
+            })
+            .addOnFailureListener(e ->
+                runOnUiThread(() ->
+                    Toast.makeText(ChatActivity.this, "Error loading product: " + e.getMessage(),
+                                 Toast.LENGTH_SHORT).show())
+            );
+    }
+
+    private void showChatOfferDialog(com.example.tradeup_app.models.Product product) {
+        Log.d(TAG, "Showing ChatOfferDialog for product: " + product.getTitle());
+
+        // Create and show offer dialog
+        com.example.tradeup_app.dialogs.ChatOfferDialog dialog =
+            new com.example.tradeup_app.dialogs.ChatOfferDialog(this, product,
+                (offerPrice, message) -> {
+                    Log.d(TAG, "Offer submitted: " + offerPrice + " for " + product.getTitle());
+                    submitChatOffer(product, offerPrice, message);
+                });
+        dialog.show();
+    }
+
+    private void submitChatOffer(com.example.tradeup_app.models.Product product,
+                                double offerPrice, String message) {
+        Log.d(TAG, "Submitting chat offer: " + offerPrice + " for " + product.getTitle());
+
+        // Get current user info
+        String currentUserId = FirebaseManager.getInstance().getCurrentUserId();
+        if (currentUserId == null) {
+            Toast.makeText(this, "Please login to make an offer", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Get current user name
+        String currentUserName = getCurrentUsername();
+
+        // Show progress
+        Toast.makeText(this, "Sending offer...", Toast.LENGTH_SHORT).show();
+
+        // Use ChatOfferService to send offer
+        com.example.tradeup_app.services.ChatOfferService chatOfferService =
+            new com.example.tradeup_app.services.ChatOfferService();
+
+        chatOfferService.sendOfferInChat(
+            conversationId,
+            product.getId(),
+            product.getTitle(),
+            currentUserId,
+            currentUserName,
+            receiverId,
+            product.getPrice(),
+            offerPrice,
+            message,
+            new com.example.tradeup_app.services.ChatOfferService.ChatOfferCallback() {
+                @Override
+                public void onOfferSent(com.example.tradeup_app.models.ChatOffer chatOffer) {
+                    runOnUiThread(() -> {
+                        Log.d(TAG, "Offer sent successfully: " + chatOffer.getId());
+                        Toast.makeText(ChatActivity.this, "💰 Offer sent!", Toast.LENGTH_SHORT).show();
+                        // The offer message will appear in chat via real-time listener
+                    });
+                }
+
+                @Override
+                public void onOfferResponded(com.example.tradeup_app.models.ChatOffer chatOffer, String response) {
+                    // This callback is for responses, not initial sends
+                }
+
+                @Override
+                public void onError(String error) {
+                    runOnUiThread(() -> {
+                        Log.e(TAG, "Failed to send offer: " + error);
+                        Toast.makeText(ChatActivity.this, "Failed to send offer: " + error,
+                                     Toast.LENGTH_LONG).show();
+                    });
+                }
+            }
+        );
+    }
+
+    private String getCurrentUsername() {
+        try {
+            // Try to get username from CurrentUser helper
+            com.example.tradeup_app.auth.Domain.UserModel userModel =
+                com.example.tradeup_app.auth.Helper.CurrentUser.getUser();
+            if (userModel != null && userModel.getName() != null) {
+                return userModel.getName();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to get username from CurrentUser", e);
+        }
+
+        // Fallback: use Firebase Auth display name
+        com.google.firebase.auth.FirebaseAuth auth = com.google.firebase.auth.FirebaseAuth.getInstance();
+        if (auth.getCurrentUser() != null && auth.getCurrentUser().getDisplayName() != null) {
+            return auth.getCurrentUser().getDisplayName();
+        }
+
+        // Final fallback
+        return "User";
     }
 }

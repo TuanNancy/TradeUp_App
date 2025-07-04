@@ -42,6 +42,7 @@ public class Product implements Serializable {
         this.interactionCount = 0;
         this.interactionHistory = new ArrayList<>();
         this.lastViewedAt = 0L;
+        this.isNegotiable = true; // ✅ Set mặc định là true để cho phép make offer
     }
 
     public Product(String title, String description, double price, String category, String condition, String location, String sellerId) {

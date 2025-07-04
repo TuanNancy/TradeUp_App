@@ -94,11 +94,22 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
+
+        // Add debug menu item
+        menu.add(Menu.NONE, 9999, Menu.NONE, "Debug Make Offer");
+
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == 9999) {
+            // Open debug activity
+            Intent intent = new Intent(this, com.example.tradeup_app.activities.DebugMakeOfferActivity.class);
+            startActivity(intent);
+            return true;
+        }
+
         int id = item.getItemId();
 
         if (id == R.id.action_blocked_users) {

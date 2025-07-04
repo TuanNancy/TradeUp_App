@@ -24,6 +24,12 @@ public class Message {
     private String reportReason; // Reason for reporting
     private boolean isEncrypted; // For future encryption support
 
+    // OFFER INTEGRATION FIELDS
+    private String offerId; // Reference to ChatOffer
+    private String offerStatus; // PENDING, ACCEPTED, DECLINED, COUNTERED
+    private double originalPrice; // Original product price
+    private String offerMessage; // Custom message with offer
+
     public Message() {
         this.timestamp = System.currentTimeMillis();
         this.isRead = false;
@@ -33,6 +39,7 @@ public class Message {
         this.isReported = false;
         this.isEncrypted = false;
         this.deletedAt = 0;
+        this.offerStatus = null;
     }
 
     public Message(String conversationId, String senderId, String receiverId, String content) {
@@ -116,4 +123,16 @@ public class Message {
 
     public boolean isEncrypted() { return isEncrypted; }
     public void setEncrypted(boolean encrypted) { isEncrypted = encrypted; }
+
+    public String getOfferId() { return offerId; }
+    public void setOfferId(String offerId) { this.offerId = offerId; }
+
+    public String getOfferStatus() { return offerStatus; }
+    public void setOfferStatus(String offerStatus) { this.offerStatus = offerStatus; }
+
+    public double getOriginalPrice() { return originalPrice; }
+    public void setOriginalPrice(double originalPrice) { this.originalPrice = originalPrice; }
+
+    public String getOfferMessage() { return offerMessage; }
+    public void setOfferMessage(String offerMessage) { this.offerMessage = offerMessage; }
 }
