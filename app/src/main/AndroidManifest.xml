@@ -46,6 +46,12 @@
             </intent-filter>
         </service>
 
+        <!-- ✅ Background Message Service for real-time notifications -->
+        <service
+            android:name=".services.BackgroundMessageService"
+            android:exported="false"
+            android:enabled="true" />
+
         <!-- Offer Action Receiver for notification actions -->
         <receiver
             android:name=".receivers.OfferActionReceiver"
