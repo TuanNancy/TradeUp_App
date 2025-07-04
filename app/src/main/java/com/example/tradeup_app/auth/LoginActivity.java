@@ -15,7 +15,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.tradeup_app.auth.Domain.UserModel;
 import com.example.tradeup_app.auth.Helper.CurrentUser;
-import com.example.tradeup_app.services.BackgroundMessageService;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.android.gms.auth.api.identity.BeginSignInRequest;
 import com.google.android.gms.auth.api.identity.Identity;
@@ -207,10 +206,6 @@ public class LoginActivity extends AppCompatActivity {
                         if (userModel != null) {
                             // Set user data in singleton before navigating
                             CurrentUser.setUser(userModel);
-
-                            // ✅ Start BackgroundMessageService for real-time notifications
-                            BackgroundMessageService.startService(this);
-
                             // Now navigate to MainActivity
                             startActivity(new Intent(this, MainActivity.class));
                             finish();
@@ -251,10 +246,6 @@ public class LoginActivity extends AppCompatActivity {
                         if (userModel != null) {
                             // Set user data in singleton before navigating
                             CurrentUser.setUser(userModel);
-
-                            // ✅ Start BackgroundMessageService for real-time notifications
-                            BackgroundMessageService.startService(this);
-
                             // Now navigate to MainActivity
                             startActivity(new Intent(this, MainActivity.class));
                             finish();

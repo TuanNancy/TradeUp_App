@@ -5,13 +5,11 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.util.Log;
 
-import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -28,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.Map;
 
 public class NotificationService {
@@ -45,25 +44,22 @@ public class NotificationService {
     public static final String TYPE_PRICE_OFFER = "price_offer";
     public static final String TYPE_LISTING_UPDATE = "listing_update";
     public static final String TYPE_PROMOTION = "promotion";
+    public static final String TYPE_GENERAL = "general";
 
     private final Context context;
     private final NotificationManagerCompat notificationManager;
     private final FirebaseManager firebaseManager;
+
+    public interface NotificationCallback {
+        void onNotificationSent(boolean success);
+        void onError(String error);
+    }
 
     public NotificationService(Context context) {
         this.context = context;
         this.notificationManager = NotificationManagerCompat.from(context);
         this.firebaseManager = FirebaseManager.getInstance();
         createNotificationChannels();
-    }
-
-    // ✅ SỬA: Đổi tên method để logic rõ ràng hơn
-    private boolean isNotificationPermissionDenied() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            return ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS)
-                   != PackageManager.PERMISSION_GRANTED;
-        }
-        return !notificationManager.areNotificationsEnabled();
     }
 
     private void createNotificationChannels() {
@@ -128,70 +124,71 @@ public class NotificationService {
                                       String messageContent, String receiverId) {
         Log.d(TAG, "🔔 Processing message notification - From: " + senderName + " (" + senderId + ") To: " + receiverId);
 
-        // ✅ SỬA: Kiểm tra quyền thông báo trước
-        if (isNotificationPermissionDenied()) {
-            Log.w(TAG, "❌ Notification permission not granted");
+        // ✅ SỬA: Sử dụng logic mới - chỉ check permission và không gửi cho chính người gửi
+        String currentUserId = firebaseManager.getCurrentUserId();
+
+        // ✅ LOGIC MỚI: Chỉ gửi thông báo nếu user hiện tại KHÔNG phải là người gửi
+        if (currentUserId != null && currentUserId.equals(senderId)) {
+            Log.d(TAG, "❌ Skipping notification - current user is the sender: " + senderId);
             return;
         }
 
-        // ✅ SỬA: Kiểm tra logic gửi thông báo với logging chi tiết
-        if (shouldSendNotification(receiverId, senderId)) {
-            Intent intent = new Intent(context, ChatActivity.class);
-            intent.putExtra("conversationId", conversationId);
-            intent.putExtra("receiverId", senderId);
-            intent.putExtra("receiverName", senderName);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        // ✅ Kiểm tra quyền notification
+        if (!notificationManager.areNotificationsEnabled()) {
+            Log.w(TAG, "❌ Notifications are disabled");
+            return;
+        }
 
-            PendingIntent pendingIntent = PendingIntent.getActivity(
-                context,
-                conversationId.hashCode(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-            );
+        Log.d(TAG, "✅ Sending notification to receiver: " + receiverId);
 
-            // Truncate long messages
-            String displayMessage = messageContent.length() > 100 ?
-                messageContent.substring(0, 97) + "..." : messageContent;
+        Intent intent = new Intent(context, ChatActivity.class);
+        intent.putExtra("conversationId", conversationId);
+        intent.putExtra("receiverId", senderId);
+        intent.putExtra("receiverName", senderName);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_MESSAGES)
-                .setSmallIcon(R.drawable.ic_message)
-                .setContentTitle(senderName)
-                .setContentText(displayMessage)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(messageContent))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setDefaults(NotificationCompat.DEFAULT_ALL) // ✅ Thêm để đảm bảo hiển thị
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
-                .setGroup("messages")
-                .setWhen(System.currentTimeMillis()) // ✅ Thêm timestamp
-                .setShowWhen(true)
-                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE) // ✅ Đảm bảo hiển thị
-                .setSound(android.provider.Settings.System.DEFAULT_NOTIFICATION_URI);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            context,
+            conversationId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
-            // ✅ SỬA: Thêm try-catch với logging chi tiết
-            try {
-                int notificationId = conversationId.hashCode();
-                Log.d(TAG, "🔔 Sending notification with ID: " + notificationId + " to user: " + receiverId);
-                notificationManager.notify(notificationId, builder.build());
-                saveNotificationToDatabase(receiverId, TYPE_NEW_MESSAGE, senderName, messageContent, conversationId);
-                Log.d(TAG, "✅ Notification sent successfully");
-            } catch (SecurityException e) {
-                Log.e(TAG, "❌ Failed to send notification: " + e.getMessage());
-            }
-        } else {
-            Log.d(TAG, "❌ Notification blocked by shouldSendNotification logic");
+        // Truncate long messages
+        String displayMessage = messageContent.length() > 100 ?
+            messageContent.substring(0, 97) + "..." : messageContent;
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_MESSAGES)
+            .setSmallIcon(R.drawable.ic_message)
+            .setContentTitle(senderName)
+            .setContentText(displayMessage)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(messageContent))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setGroup("messages")
+            .setWhen(System.currentTimeMillis())
+            .setShowWhen(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setSound(android.provider.Settings.System.DEFAULT_NOTIFICATION_URI);
+
+        // ✅ SỬA: Thêm try-catch để xử lý SecurityException
+        try {
+            int notificationId = conversationId.hashCode();
+            Log.d(TAG, "🔔 Sending notification with ID: " + notificationId + " to user: " + receiverId);
+            notificationManager.notify(notificationId, builder.build());
+            saveNotificationToDatabase(receiverId, TYPE_NEW_MESSAGE, senderName, messageContent, conversationId);
+            Log.d(TAG, "✅ Notification sent successfully");
+        } catch (SecurityException e) {
+            Log.e(TAG, "❌ Failed to send notification: " + e.getMessage());
         }
     }
 
     // Send notification for price offer
     public void sendPriceOfferNotification(String productId, String productTitle, String offerAmount,
                                          String buyerName, String sellerId) {
-        if (isNotificationPermissionDenied()) {
-            Log.w(TAG, "Notification permission not granted");
-            return;
-        }
-
-        if (shouldSendNotification(sellerId, null)) {
+        if (shouldSendNotification(sellerId, TYPE_PRICE_OFFER)) {
             Intent intent = new Intent(context, ProductDetailActivity.class);
             intent.putExtra("productId", productId);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -218,6 +215,7 @@ public class NotificationService {
                 .addAction(R.drawable.ic_check, "Accept", createOfferActionIntent(productId, "accept"))
                 .addAction(R.drawable.ic_close, "Decline", createOfferActionIntent(productId, "decline"));
 
+            // Sửa lỗi SecurityException cho sendPriceOfferNotification
             try {
                 notificationManager.notify(("offer_" + productId).hashCode(), builder.build());
                 saveNotificationToDatabase(sellerId, TYPE_PRICE_OFFER, title, message, productId);
@@ -230,12 +228,7 @@ public class NotificationService {
     // Send notification for listing update
     public void sendListingUpdateNotification(String productId, String productTitle, String updateType,
                                             String userId) {
-        if (isNotificationPermissionDenied()) {
-            Log.w(TAG, "Notification permission not granted");
-            return;
-        }
-
-        if (shouldSendNotification(userId, null)) {
+        if (shouldSendNotification(userId, TYPE_LISTING_UPDATE)) {
             Intent intent = new Intent(context, ProductDetailActivity.class);
             intent.putExtra("productId", productId);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -270,12 +263,7 @@ public class NotificationService {
 
     // Send promotional notification
     public void sendPromotionalNotification(String title, String message, String actionUrl, String userId) {
-        if (isNotificationPermissionDenied()) {
-            Log.w(TAG, "Notification permission not granted");
-            return;
-        }
-
-        if (shouldSendNotification(userId, null)) {
+        if (shouldSendNotification(userId, TYPE_PROMOTION)) {
             Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             if (intent != null) {
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -342,29 +330,18 @@ public class NotificationService {
         }
     }
 
-    // ✅ SỬA: Cải thiện method shouldSendNotification với logging chi tiết
-    private boolean shouldSendNotification(String userId, String excludeUserId) {
-        Log.d(TAG, "📋 Checking notification permissions for userId: " + userId + ", excludeUserId: " + excludeUserId);
+    private boolean shouldSendNotification(String userId, String notificationType) {
+        // Check user notification preferences
+        // This can be enhanced to check user settings from Firebase
+        String currentUserId = firebaseManager.getCurrentUserId();
 
-        if (userId == null) {
-            Log.w(TAG, "❌ No userId provided - skipping notification");
+        // Don't send notification to self
+        if (currentUserId != null && currentUserId.equals(userId)) {
             return false;
         }
 
-        // ✅ KIỂM TRA: Không gửi thông báo cho chính người gửi
-        if (excludeUserId != null && excludeUserId.equals(userId)) {
-            Log.d(TAG, "❌ Skipping notification - user is the sender: " + excludeUserId);
-            return false;
-        }
-
-        // ✅ KIỂM TRA: Không gửi thông báo nếu user ID trống
-        if (userId.trim().isEmpty()) {
-            Log.w(TAG, "❌ Empty userId - skipping notification");
-            return false;
-        }
-
-        // ✅ GỬI THÔNG BÁO CHO NGƯỜI NHẬN
-        Log.d(TAG, "✅ Sending notification to receiver: " + userId);
+        // Check if user has disabled this type of notification
+        // For now, return true, but this should check user preferences
         return true;
     }
 
@@ -476,11 +453,6 @@ public class NotificationService {
 
     // Make showGeneralNotification public so FCMService can access it
     public void showGeneralNotification(String title, String message) {
-        if (isNotificationPermissionDenied()) {
-            Log.w(TAG, "Notification permission not granted");
-            return;
-        }
-
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         if (intent != null) {
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -515,5 +487,20 @@ public class NotificationService {
 
     public void clearAllNotifications() {
         notificationManager.cancelAll();
+    }
+
+    // Load image from URL for rich notifications
+    private Bitmap loadImageFromUrl(String imageUrl) {
+        try {
+            URL url = new URL(imageUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoInput(true);
+            connection.connect();
+            InputStream input = connection.getInputStream();
+            return BitmapFactory.decodeStream(input);
+        } catch (IOException e) {
+            Log.e(TAG, "Error loading notification image", e);
+            return null;
+        }
     }
 }

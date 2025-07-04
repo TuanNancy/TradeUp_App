@@ -17,6 +17,7 @@ import com.example.tradeup_app.fragments.MessagesFragment;
 import com.example.tradeup_app.fragments.ProfileFragment;
 import com.example.tradeup_app.fragments.SearchFragment;
 import com.example.tradeup_app.fragments.SellFragment;
+import com.example.tradeup_app.services.BackgroundMessageService;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 
@@ -48,11 +49,9 @@ public class MainActivity extends AppCompatActivity {
         // Add this for testing messaging system (remove after testing)
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             android.util.Log.d("MainActivity", "User authenticated, ready for messaging");
-            // Uncomment below line to create test conversation
-            // createTestConversationIfNeeded();
 
-            // TEMPORARY: Add notification test button for easy access
-            addTemporaryNotificationTestButton();
+            // ✅ FORCE RESTART BackgroundMessageService để đảm bảo nó chạy
+            restartBackgroundMessageService();
         }
     }
 
@@ -159,5 +158,13 @@ public class MainActivity extends AppCompatActivity {
         // Logic to add a temporary button for testing notifications
         // This could be a simple button that, when clicked, triggers a test notification
         android.util.Log.d("MainActivity", "Temporary notification test button added");
+    }
+
+    // Method to restart BackgroundMessageService
+    private void restartBackgroundMessageService() {
+        Intent serviceIntent = new Intent(this, BackgroundMessageService.class);
+        stopService(serviceIntent);
+        startService(serviceIntent);
+        android.util.Log.d("MainActivity", "BackgroundMessageService restarted");
     }
 }
