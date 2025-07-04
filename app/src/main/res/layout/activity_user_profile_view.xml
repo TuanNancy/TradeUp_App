@@ -238,16 +238,17 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/reportButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="56dp"
                     android:layout_marginStart="8dp"
                     android:text="Report"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    app:strokeColor="@color/error"
+                    android:textColor="@color/error"
                     app:cornerRadius="28dp"
                     app:icon="@drawable/ic_flag"
                     app:iconTint="@color/error"
-                    android:textColor="@color/error" />
+                    app:strokeColor="@color/error"
+                    tools:textSize="12sp" />
 
             </LinearLayout>
 

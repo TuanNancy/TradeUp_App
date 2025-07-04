@@ -168,8 +168,7 @@
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
             app:cardElevation="4dp"
-            app:cardBackgroundColor="@color/warning"
-            android:alpha="0.1">
+            app:cardBackgroundColor="@color/warning">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -180,11 +179,13 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
                     android:text="⚠️ Important"
+                    android:textColor="@color/text_secondary"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="@color/warning"
-                    android:layout_marginBottom="8dp" />
+                    android:visibility="visible"
+                    tools:visibility="visible" />
 
                 <TextView
                     android:layout_width="wrap_content"

@@ -22,6 +22,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -63,7 +64,7 @@ public class SellFragment extends Fragment {
 
     private EditText titleEditText, descriptionEditText, priceEditText, locationEditText, behaviorEditText, addTagEditText;
     private Spinner categorySpinner, conditionSpinner;
-    private MaterialSwitch negotiableSwitch;
+    private Switch negotiableSwitch; // Changed from MaterialSwitch to Switch
     private ChipGroup tagsChipGroup;
     private RecyclerView imagesRecyclerView;
     private Button addImagesButton, previewButton, publishButton;
@@ -92,7 +93,7 @@ public class SellFragment extends Fragment {
         initViews(view);
         setupSpinners();
         setupLocationFeatures();
-        setupImageUpload();
+        setupImageUpload(view); // Pass view parameter
         setupTagSystem();
         setupPreviewAndPublish();
 
@@ -335,7 +336,7 @@ public class SellFragment extends Fragment {
     }
 
 
-    private void setupImageUpload() {
+    private void setupImageUpload(View view) {
         imagePreviewAdapter = new ImagePreviewAdapter(getContext(), selectedImages, uri -> {
             selectedImages.remove(uri);
             imagePreviewAdapter.notifyDataSetChanged();
@@ -345,6 +346,21 @@ public class SellFragment extends Fragment {
         imagesRecyclerView.setLayoutManager(new GridLayoutManager(getContext(), 3));
         imagesRecyclerView.setAdapter(imagePreviewAdapter);
 
+        // Setup click listener for the new add images card
+        com.google.android.material.card.MaterialCardView addImagesCard = view.findViewById(R.id.add_images_card);
+        addImagesCard.setOnClickListener(v -> {
+            if (selectedImages.size() >= MAX_IMAGES) {
+                Toast.makeText(getContext(), "Tối đa 10 hình ảnh", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            startActivityForResult(Intent.createChooser(intent, "Chọn hình ảnh"), PICK_IMAGES_REQUEST);
+        });
+
+        // Keep the old button listener as backup (hidden button)
         addImagesButton.setOnClickListener(v -> {
             if (selectedImages.size() >= MAX_IMAGES) {
                 Toast.makeText(getContext(), "Tối đa 10 hình ảnh", Toast.LENGTH_SHORT).show();
