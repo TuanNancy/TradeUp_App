@@ -121,6 +121,68 @@
                     android:layout_marginBottom="16dp"
                     android:background="@drawable/dashed_border_background" />
 
+                <!-- Enhanced Add Images Button -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/add_images_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="@color/primary"
+                    app:strokeWidth="1dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp"
+                        android:gravity="center">
+
+                        <!-- Icon -->
+                        <ImageView
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginBottom="12dp"
+                            android:src="@drawable/ic_add_photo"
+                            android:tint="@color/primary"
+                            android:padding="12dp" />
+
+                        <!-- Title -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Thêm hình ảnh sản phẩm"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/primary"
+                            android:layout_marginBottom="4dp" />
+
+                        <!-- Subtitle -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Tối đa 10 ảnh • JPG, PNG"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_secondary"
+                            android:alpha="0.8" />
+
+                        <!-- Hidden MaterialButton for functionality -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/add_images_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_marginTop="8dp"
+                            android:visibility="gone"
+                            style="@style/Widget.Material3.Button.TonalButton" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -209,15 +271,6 @@
                         android:gravity="top"
                         android:inputType="textCapSentences|textMultiLine" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/add_images_button"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:text="Thêm hình ảnh (Tối đa 10)"
-                        app:cornerRadius="12dp"
-                        app:icon="@drawable/ic_add_photo"
-                        app:iconGravity="textStart" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Category and Condition Row -->
@@ -378,13 +431,16 @@
                                 android:layout_marginTop="2dp" />
                         </LinearLayout>
 
-                        <com.google.android.material.materialswitch.MaterialSwitch
+                        <!-- Simple Switch that will definitely work -->
+                        <Switch
                             android:id="@+id/negotiable_switch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text=""
-                            android:textOff=""
-                            android:textOn="" />
+                            android:checked="true"
+                            android:layout_marginStart="12dp"
+                            android:minWidth="48dp"
+                            android:minHeight="48dp"
+                            android:contentDescription="Bật/tắt tính năng thương lượng giá" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -595,15 +651,16 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/preview_button"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
-                android:layout_weight="1"
                 android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:textSize="10dp"
                 android:text="Xem trước"
+                app:cornerRadius="12dp"
                 app:icon="@drawable/ic_preview"
-                app:iconGravity="textStart"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                app:cornerRadius="12dp" />
+                app:iconGravity="textStart" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/publish_button"
@@ -612,12 +669,12 @@
                 android:layout_weight="2"
                 android:layout_marginStart="8dp"
                 android:text="Đăng bán"
+                android:textSize="10dp"
                 app:icon="@drawable/ic_publish"
                 app:iconGravity="textStart"
                 style="@style/Widget.Material3.Button"
                 app:cornerRadius="12dp" />
         </LinearLayout>
-
         <!-- Hide old spinners - will be replaced by dropdowns -->
         <Spinner
             android:id="@+id/category_spinner"
@@ -630,6 +687,7 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:visibility="gone" />
+
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

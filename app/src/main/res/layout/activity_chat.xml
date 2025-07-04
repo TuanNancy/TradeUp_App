@@ -31,20 +31,24 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <!-- Messages RecyclerView -->
+
+    <!-- Typing Indicator -->
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewMessages"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:padding="8dp"
         android:clipToPadding="false"
+        android:padding="8dp"
         android:scrollbars="vertical"
-        app:layout_constraintTop_toBottomOf="@id/appBarLayout"
         app:layout_constraintBottom_toTopOf="@id/inputContainer"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/appBarLayout"
+        app:layout_constraintVertical_bias="0.0"
         tools:listitem="@layout/item_message_sent" />
 
-    <!-- Typing Indicator -->
     <TextView
         android:id="@+id/textViewTyping"
         android:layout_width="wrap_content"

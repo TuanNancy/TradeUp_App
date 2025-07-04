@@ -181,11 +181,11 @@
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
                         android:layout_weight="1"
                         android:text="I agree to the Terms of Service and Privacy Policy"
                         android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:layout_marginStart="8dp" />
+                        android:textSize="14sp" />
 
                 </LinearLayout>
 

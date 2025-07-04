@@ -283,7 +283,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="View Profile"
-                        android:textSize="12sp" />
+                        android:textSize="12sp"
+                        tools:textSize="12sp" />
 
                 </LinearLayout>
 
@@ -347,11 +348,12 @@
                             style="@style/Widget.Material3.Button.OutlinedButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
                             android:layout_marginStart="4dp"
-                            android:text="Offer"
+                            android:layout_weight="1"
                             android:drawableStart="@drawable/ic_offer"
-                            android:drawablePadding="8dp" />
+                            android:drawablePadding="8dp"
+                            android:text="Offer"
+                            android:textSize="12sp" />
 
                     </LinearLayout>
 
@@ -366,23 +368,25 @@
                             style="@style/Widget.Material3.Button.OutlinedButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
                             android:layout_marginEnd="8dp"
-                            android:text="Share"
+                            android:layout_weight="1"
                             android:drawableStart="@drawable/ic_share"
-                            android:drawablePadding="8dp" />
+                            android:drawablePadding="8dp"
+                            android:text="Share"
+                            android:textSize="12sp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/report_button"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
                             android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:drawableStart="@drawable/ic_report"
+                            android:drawablePadding="8dp"
                             android:text="Report"
                             android:textColor="@color/error_color"
-                            android:drawableStart="@drawable/ic_report"
-                            android:drawablePadding="8dp" />
+                            tools:textSize="12sp" />
 
                     </LinearLayout>
 
