@@ -545,6 +545,7 @@ public class ProductDetailActivity extends AppCompatActivity {
                     intent.putExtra("receiverId", currentProduct.getSellerId());
                     intent.putExtra("receiverName", currentProduct.getSellerName());
                     intent.putExtra("productTitle", currentProduct.getTitle());
+                    intent.putExtra("productId", currentProduct.getId()); // Add missing productId
                     startActivity(intent);
                 } else {
                     Toast.makeText(this, "Failed to start conversation", Toast.LENGTH_SHORT).show();

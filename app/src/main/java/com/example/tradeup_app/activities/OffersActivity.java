@@ -192,6 +192,8 @@ public class OffersActivity extends AppCompatActivity implements OfferAdapter.On
         firebaseManager.updateOfferStatus(offer.getId(), "ACCEPTED", task -> {
             if (task.isSuccessful()) {
                 createTransaction(offer);
+                // Send notification to buyer
+                sendOfferResponseNotification(offer, "ACCEPTED", "Your offer has been accepted!");
                 Toast.makeText(this, "Offer accepted!", Toast.LENGTH_SHORT).show();
                 loadOffers(); // Refresh the list
             } else {
@@ -204,6 +206,8 @@ public class OffersActivity extends AppCompatActivity implements OfferAdapter.On
     public void onRejectOffer(Offer offer) {
         firebaseManager.updateOfferStatus(offer.getId(), "REJECTED", task -> {
             if (task.isSuccessful()) {
+                // Send notification to buyer
+                sendOfferResponseNotification(offer, "REJECTED", "Your offer has been rejected.");
                 Toast.makeText(this, "Offer rejected", Toast.LENGTH_SHORT).show();
                 loadOffers(); // Refresh the list
             } else {
@@ -218,6 +222,9 @@ public class OffersActivity extends AppCompatActivity implements OfferAdapter.On
         MakeOfferDialog dialog = new MakeOfferDialog(this, product, (counterPrice, counterMessage) -> {
             firebaseManager.counterOffer(offer.getId(), counterPrice, counterMessage, task -> {
                 if (task.isSuccessful()) {
+                    // Send notification to buyer
+                    sendOfferResponseNotification(offer, "COUNTER",
+                        "Seller sent a counter offer: " + formatVNDPrice(counterPrice));
                     Toast.makeText(this, "Counter offer sent!", Toast.LENGTH_SHORT).show();
                     loadOffers(); // Refresh the list
                 } else {
@@ -230,8 +237,38 @@ public class OffersActivity extends AppCompatActivity implements OfferAdapter.On
 
     @Override
     public void onViewOffer(Offer offer) {
-        // TODO: Show offer details dialog
-        Toast.makeText(this, "Offer details: $" + offer.getOfferPrice(), Toast.LENGTH_SHORT).show();
+        // Show offer details dialog or navigate to offer detail screen
+        showOfferDetailsDialog(offer);
+    }
+
+    private void showOfferDetailsDialog(Offer offer) {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+
+        String details = "Offer Details:\n\n" +
+                "Product: " + product.getTitle() + "\n" +
+                "Original Price: " + formatVNDPrice(product.getPrice()) + "\n" +
+                "Offer Price: " + formatVNDPrice(offer.getOfferPrice()) + "\n" +
+                "From: " + offer.getBuyerName() + "\n" +
+                "Status: " + offer.getStatus() + "\n" +
+                "Date: " + formatDate(offer.getCreatedAt()) + "\n\n" +
+                "Message:\n" + (offer.getMessage() != null ? offer.getMessage() : "No message");
+
+        builder.setTitle("Offer Details")
+                .setMessage(details)
+                .setPositiveButton("Close", null);
+
+        // Add action buttons if seller is viewing
+        if (isSellerView && "PENDING".equals(offer.getStatus())) {
+            builder.setNegativeButton("Accept", (dialog, which) -> onAcceptOffer(offer))
+                    .setNeutralButton("Reject", (dialog, which) -> onRejectOffer(offer));
+        }
+
+        builder.show();
+    }
+
+    private String formatDate(long timestamp) {
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault());
+        return sdf.format(new java.util.Date(timestamp));
     }
 
     private void createTransaction(Offer offer) {
@@ -308,5 +345,52 @@ public class OffersActivity extends AppCompatActivity implements OfferAdapter.On
                 Toast.makeText(this, "Failed to submit rating", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    // Add method to send notification when offer is responded
+    private void sendOfferResponseNotification(Offer offer, String response, String message) {
+        try {
+            // Create conversation if needed and send notification message
+            com.example.tradeup_app.services.MessagingService messagingService =
+                new com.example.tradeup_app.services.MessagingService();
+
+            String productImageUrl = (product.getImageUrls() != null && !product.getImageUrls().isEmpty())
+                ? product.getImageUrls().get(0) : "";
+
+            messagingService.createOrGetConversation(
+                product.getId(),
+                offer.getBuyerId(), // buyerId
+                product.getSellerId(), // sellerId
+                product.getTitle(),
+                productImageUrl,
+                new com.example.tradeup_app.services.MessagingService.ConversationCallback() {
+                    @Override
+                    public void onConversationCreated(String conversationId) {
+                        // Send notification message to chat
+                        String notificationText = "📢 Offer Response: " + message;
+                        messagingService.sendTextMessage(conversationId, offer.getBuyerId(),
+                            notificationText, null);
+                    }
+
+                    @Override
+                    public void onConversationsLoaded(List<com.example.tradeup_app.models.Conversation> conversations) {
+                        // Not used
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        android.util.Log.e("OffersActivity", "Failed to send notification: " + error);
+                    }
+                }
+            );
+        } catch (Exception e) {
+            android.util.Log.e("OffersActivity", "Error sending offer response notification", e);
+        }
+    }
+
+    // Add method to format VND price
+    private String formatVNDPrice(double price) {
+        java.text.DecimalFormat formatter = new java.text.DecimalFormat("#,###");
+        return formatter.format(price) + " VND";
     }
 }

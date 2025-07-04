@@ -113,7 +113,6 @@
     <color name="lightGrey">#D3D3D3</color>
     <color name="orange">#FF9800</color>
     <color name="accent">#FF4081</color>
-    <color name="offer_rejected">#F44336</color>
     <color name="warning_light">#FFE0B2</color>
 
     <!-- Material Design 3 Container Colors -->
@@ -124,9 +123,10 @@
     <color name="on_surface_variant">#757575</color>
 
     <!-- Màu trạng thái offer -->
-    <color name="offer_countered">#FF9800</color>
+    <color name="offer_pending">#FF9800</color>
     <color name="offer_accepted">#4CAF50</color>
-    <color name="offer_pending">#FFC107</color>
+    <color name="offer_rejected">#F44336</color>
+    <color name="offer_countered">#2196F3</color>
     <color name="star_filled">#FFD700</color>
     <color name="star_empty">#E0E0E0</color>
     <color name="warning_color">#FF9800</color>
@@ -143,5 +143,10 @@
     <color name="notification_error">#F44336</color>
     <color name="notification_warning">#FF9800</color>
     <color name="notification_info">#2196F3</color>
+
+    <!-- Màu cho Offer Messages -->
+    <color name="offer_received_background">#E8F5E8</color>
+    <color name="offer_sent_background">#E3F2FD</color>
+    <color name="offer_border">#81C784</color>
 
 </resources>

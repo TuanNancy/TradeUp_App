@@ -78,48 +78,78 @@ public class ChatOfferService {
     private void sendOfferMessage(String conversationId, String senderId, String receiverId,
                                  ChatOffer chatOffer, ChatOfferCallback callback) {
 
-        // Create special offer message
+        // Create special offer message with proper fields
         Message offerMessage = new Message();
         offerMessage.setConversationId(conversationId);
         offerMessage.setSenderId(senderId);
         offerMessage.setReceiverId(receiverId);
-        offerMessage.setMessageType("offer");
+        offerMessage.setMessageType("CHAT_OFFER"); // Set proper message type for recognition
         offerMessage.setOfferId(chatOffer.getId());
         offerMessage.setOfferAmount(chatOffer.getOfferPrice());
         offerMessage.setOriginalPrice(chatOffer.getOriginalPrice());
         offerMessage.setOfferStatus("PENDING");
         offerMessage.setOfferMessage(chatOffer.getMessage());
+        offerMessage.setProductId(chatOffer.getProductId());
 
-        // Format offer content
-        String offerContent = String.format("💰 Price Offer: %,.0f VNĐ\n📦 %s\n💬 %s",
-                chatOffer.getOfferPrice(), chatOffer.getProductTitle(),
-                chatOffer.getMessage() != null ? chatOffer.getMessage() : "");
+        // Format offer content with structured data for easy parsing
+        String offerContent = String.format("💰 Offer: %s VND (Original: %s VND)\n📦 %s\n💬 %s",
+                formatVNDPrice(chatOffer.getOfferPrice()),
+                formatVNDPrice(chatOffer.getOriginalPrice()),
+                chatOffer.getProductTitle(),
+                chatOffer.getMessage() != null ? chatOffer.getMessage() : "No additional message");
         offerMessage.setContent(offerContent);
 
-        // Send message through messaging service using public method
-        messagingService.sendTextMessage(conversationId, receiverId, offerContent,
-            new MessagingService.MessageCallback() {
-                @Override
-                public void onMessagesLoaded(List<Message> messages) {
-                    // Not used
-                }
+        // Generate message ID - FIX: Use correct path
+        DatabaseReference messagesRef = firebaseManager.getDatabase()
+                .getReference(FirebaseManager.MESSAGES_NODE);
+        String messageId = messagesRef.push().getKey();
 
-                @Override
-                public void onMessageSent(String messageId) {
+        if (messageId == null) {
+            callback.onError("Failed to generate message ID");
+            return;
+        }
+
+        offerMessage.setId(messageId);
+
+        // Save offer message directly to Firebase - FIX: Use correct path
+        Map<String, Object> messageData = new HashMap<>();
+        messageData.put("id", messageId);
+        messageData.put("conversationId", conversationId);
+        messageData.put("senderId", senderId);
+        messageData.put("receiverId", receiverId);
+        messageData.put("content", offerContent);
+        messageData.put("messageType", "CHAT_OFFER");
+        messageData.put("timestamp", System.currentTimeMillis());
+        messageData.put("isRead", false);
+        messageData.put("offerId", chatOffer.getId());
+        messageData.put("offerAmount", chatOffer.getOfferPrice());
+        messageData.put("originalPrice", chatOffer.getOriginalPrice());
+        messageData.put("offerStatus", "PENDING");
+        messageData.put("offerMessage", chatOffer.getMessage());
+        messageData.put("productId", chatOffer.getProductId());
+
+        // Save to correct Firebase path
+        messagesRef.child(messageId).setValue(messageData)
+                .addOnSuccessListener(aVoid -> {
                     Log.d(TAG, "Offer message sent successfully");
-
-                    // Send notification
-                    sendOfferNotification(chatOffer);
-
                     callback.onOfferSent(chatOffer);
-                }
 
-                @Override
-                public void onError(String error) {
-                    Log.e(TAG, "Failed to send offer message: " + error);
-                    callback.onError("Failed to send offer message: " + error);
-                }
-            });
+                    // Update conversation's last message
+                    updateConversationLastMessage(conversationId, offerContent);
+
+                    // Send notification to receiver
+                    sendOfferNotification(receiverId, chatOffer);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to send offer message", e);
+                    callback.onError("Failed to send offer message: " + e.getMessage());
+                });
+    }
+
+    // Helper method to format VND price
+    private String formatVNDPrice(double price) {
+        java.text.DecimalFormat formatter = new java.text.DecimalFormat("#,###");
+        return formatter.format(price);
     }
 
     /**
@@ -279,18 +309,35 @@ public class ChatOfferService {
     /**
      * Send offer notification
      */
-    private void sendOfferNotification(ChatOffer chatOffer) {
+    private void sendOfferNotification(String receiverId, ChatOffer chatOffer) {
         try {
-            notificationManager.sendPriceOfferNotification(
-                    chatOffer.getProductId(),
-                    chatOffer.getProductTitle(),
-                    String.valueOf(chatOffer.getOfferPrice()),
-                    chatOffer.getSenderName(),
-                    chatOffer.getReceiverId()
-            );
+            if (notificationManager != null) {
+                notificationManager.sendPriceOfferNotification(
+                        chatOffer.getProductId(),
+                        chatOffer.getProductTitle(),
+                        String.valueOf(chatOffer.getOfferPrice()),
+                        chatOffer.getSenderName(),
+                        receiverId
+                );
+            }
         } catch (Exception e) {
             Log.e(TAG, "Failed to send offer notification", e);
         }
+    }
+
+    /**
+     * Update conversation's last message
+     */
+    private void updateConversationLastMessage(String conversationId, String lastMessage) {
+        Map<String, Object> conversationUpdates = new HashMap<>();
+        conversationUpdates.put("lastMessage", lastMessage);
+        conversationUpdates.put("lastMessageTime", System.currentTimeMillis());
+
+        firebaseManager.getDatabase()
+                .getReference("conversations")
+                .child(conversationId)
+                .updateChildren(conversationUpdates)
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to update conversation", e));
     }
 
     /**

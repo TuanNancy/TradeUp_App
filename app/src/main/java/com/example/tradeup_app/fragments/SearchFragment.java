@@ -362,8 +362,14 @@ public class SearchFragment extends Fragment {
     }
 
     private void showMakeOfferDialog(Product product) {
+        android.util.Log.d("SearchFragment", "showMakeOfferDialog called for product: " + product.getTitle());
+
         String currentUserId = firebaseManager.getCurrentUserId();
+        android.util.Log.d("SearchFragment", "Current user ID: " + currentUserId);
+        android.util.Log.d("SearchFragment", "Product seller ID: " + product.getSellerId());
+
         if (currentUserId == null) {
+            android.util.Log.d("SearchFragment", "User not logged in - showing login message");
             if (getContext() != null) {
                 Toast.makeText(getContext(), "Please login to make an offer", Toast.LENGTH_SHORT).show();
             }
@@ -371,26 +377,31 @@ public class SearchFragment extends Fragment {
         }
 
         if (currentUserId.equals(product.getSellerId())) {
+            android.util.Log.d("SearchFragment", "User trying to make offer on own product");
             if (getContext() != null) {
                 Toast.makeText(getContext(), "You cannot make an offer on your own product", Toast.LENGTH_SHORT).show();
             }
             return;
         }
 
-        if (!product.isNegotiable()) {
-            if (getContext() != null) {
-                Toast.makeText(getContext(), "This product is not open for offers", Toast.LENGTH_SHORT).show();
-            }
-            return;
-        }
-
         if (getContext() != null) {
-            com.example.tradeup_app.dialogs.MakeOfferDialog dialog = new com.example.tradeup_app.dialogs.MakeOfferDialog(
-                getContext(),
-                product,
-                (offerPrice, message) -> submitOffer(product, offerPrice, message)
-            );
-            dialog.show();
+            try {
+                android.util.Log.d("SearchFragment", "Creating and showing MakeOfferDialog");
+                com.example.tradeup_app.dialogs.MakeOfferDialog dialog = new com.example.tradeup_app.dialogs.MakeOfferDialog(
+                    getContext(),
+                    product,
+                    (offerPrice, message) -> submitOffer(product, offerPrice, message)
+                );
+                dialog.show();
+                android.util.Log.d("SearchFragment", "MakeOfferDialog shown successfully");
+            } catch (Exception e) {
+                android.util.Log.e("SearchFragment", "Error showing MakeOfferDialog", e);
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "Error opening offer dialog", Toast.LENGTH_SHORT).show();
+                }
+            }
+        } else {
+            android.util.Log.e("SearchFragment", "Context is null, cannot show dialog");
         }
     }
 

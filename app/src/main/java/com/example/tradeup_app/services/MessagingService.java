@@ -486,29 +486,55 @@ public class MessagingService {
 
     // Listen for messages in real-time
     public void listenForMessages(String conversationId, MessageCallback callback) {
+        android.util.Log.d("MessagingService", "🔍 listenForMessages called for conversation: " + conversationId);
+
+        if (conversationId == null || conversationId.isEmpty()) {
+            android.util.Log.e("MessagingService", "❌ Invalid conversationId: " + conversationId);
+            callback.onError("Invalid conversation ID");
+            return;
+        }
+
         DatabaseReference messagesRef = firebaseManager.getDatabase()
                 .getReference(FirebaseManager.MESSAGES_NODE);
+
+        android.util.Log.d("MessagingService", "📡 Setting up query for messages at path: " + FirebaseManager.MESSAGES_NODE);
+        android.util.Log.d("MessagingService", "🔎 Query filter: conversationId == " + conversationId);
 
         Query query = messagesRef.orderByChild("conversationId").equalTo(conversationId);
         query.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
+                android.util.Log.d("MessagingService", "📨 onDataChange triggered, snapshot count: " + dataSnapshot.getChildrenCount());
+
                 List<Message> messages = new ArrayList<>();
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    android.util.Log.d("MessagingService", "Processing message snapshot: " + snapshot.getKey());
+
                     Message message = snapshot.getValue(Message.class);
                     if (message != null) {
                         message.setId(snapshot.getKey());
                         messages.add(message);
+
+                        android.util.Log.d("MessagingService", "✅ Message loaded: " + message.getMessageType() +
+                                          ", ConvId: " + message.getConversationId() +
+                                          ", OfferId: " + message.getOfferId());
+                    } else {
+                        android.util.Log.w("MessagingService", "⚠️ Null message from snapshot: " + snapshot.getKey());
                     }
                 }
+
+                android.util.Log.d("MessagingService", "🎯 Total messages loaded: " + messages.size());
                 callback.onMessagesLoaded(messages);
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
+                android.util.Log.e("MessagingService", "❌ Database error in listenForMessages: " + databaseError.getMessage());
                 callback.onError(databaseError.getMessage());
             }
         });
+
+        android.util.Log.d("MessagingService", "🎪 ValueEventListener attached successfully");
     }
 
     // Load user conversations

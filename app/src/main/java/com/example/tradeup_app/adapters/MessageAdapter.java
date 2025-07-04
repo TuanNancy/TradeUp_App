@@ -27,11 +27,20 @@ import java.util.Locale;
 public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int VIEW_TYPE_SENT = 1;
     private static final int VIEW_TYPE_RECEIVED = 2;
+    private static final int VIEW_TYPE_OFFER_SENT = 3;
+    private static final int VIEW_TYPE_OFFER_RECEIVED = 4;
 
     private Context context;
     private List<Message> messageList;
     private String currentUserId;
     private MessagingService messagingService;
+    private OnOfferActionListener offerActionListener;
+
+    public interface OnOfferActionListener {
+        void onAcceptOffer(Message offerMessage);
+        void onRejectOffer(Message offerMessage);
+        void onCounterOffer(Message offerMessage);
+    }
 
     public MessageAdapter(Context context, List<Message> messageList) {
         this.context = context;
@@ -40,14 +49,36 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         this.messagingService = new MessagingService();
     }
 
+    public void setOnOfferActionListener(OnOfferActionListener listener) {
+        this.offerActionListener = listener;
+    }
+
     @Override
     public int getItemViewType(int position) {
         Message message = messageList.get(position);
+
+        // Check if message is an offer
+        if (isOfferMessage(message)) {
+            if (message.getSenderId().equals(currentUserId)) {
+                return VIEW_TYPE_OFFER_SENT;
+            } else {
+                return VIEW_TYPE_OFFER_RECEIVED;
+            }
+        }
+
+        // Regular messages
         if (message.getSenderId().equals(currentUserId)) {
             return VIEW_TYPE_SENT;
         } else {
             return VIEW_TYPE_RECEIVED;
         }
+    }
+
+    private boolean isOfferMessage(Message message) {
+        return message.getMessageType() != null &&
+               ("OFFER".equals(message.getMessageType()) ||
+                "CHAT_OFFER".equals(message.getMessageType()) ||
+                "offer".equals(message.getMessageType().toLowerCase()));
     }
 
     @NonNull
@@ -56,6 +87,12 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         if (viewType == VIEW_TYPE_SENT) {
             View view = LayoutInflater.from(context).inflate(R.layout.item_message_sent, parent, false);
             return new SentMessageViewHolder(view);
+        } else if (viewType == VIEW_TYPE_OFFER_SENT) {
+            View view = LayoutInflater.from(context).inflate(R.layout.item_offer_sent, parent, false);
+            return new SentOfferViewHolder(view);
+        } else if (viewType == VIEW_TYPE_OFFER_RECEIVED) {
+            View view = LayoutInflater.from(context).inflate(R.layout.item_offer_received, parent, false);
+            return new ReceivedOfferViewHolder(view);
         } else {
             View view = LayoutInflater.from(context).inflate(R.layout.item_message_received, parent, false);
             return new ReceivedMessageViewHolder(view);
@@ -64,12 +101,23 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        if (position < 0 || position >= messageList.size()) {
+            return; // Prevent out of bounds access
+        }
+
         Message message = messageList.get(position);
+        if (message == null) {
+            return; // Prevent null message binding
+        }
 
         if (holder instanceof SentMessageViewHolder) {
             bindSentMessage((SentMessageViewHolder) holder, message);
         } else if (holder instanceof ReceivedMessageViewHolder) {
             bindReceivedMessage((ReceivedMessageViewHolder) holder, message);
+        } else if (holder instanceof SentOfferViewHolder) {
+            bindSentOffer((SentOfferViewHolder) holder, message);
+        } else if (holder instanceof ReceivedOfferViewHolder) {
+            bindReceivedOffer((ReceivedOfferViewHolder) holder, message);
         }
     }
 
@@ -90,6 +138,95 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private void bindReceivedMessage(ReceivedMessageViewHolder holder, Message message) {
         bindCommonMessageData(holder.textViewMessage, holder.textViewTime,
                              holder.imageViewMessage, message);
+
+        // Set sender name if available
+        if (holder.textViewSenderName != null && message.getSenderName() != null) {
+            holder.textViewSenderName.setText(message.getSenderName());
+        }
+
+        // Long click for message options
+        holder.itemView.setOnLongClickListener(v -> {
+            showMessageOptions(message, false);
+            return true;
+        });
+    }
+
+    private void bindSentOffer(SentOfferViewHolder holder, Message message) {
+        // Bind common data
+        bindCommonMessageData(holder.textViewMessage, holder.textViewTime,
+                             holder.imageViewMessage, message);
+
+        // Set offer-specific UI elements
+        if (holder.textViewOfferStatus != null) {
+            holder.textViewOfferStatus.setText("Offer Sent");
+        }
+
+        // Hide action buttons with null checks (sent offers don't need action buttons)
+        if (holder.buttonAccept != null) {
+            holder.buttonAccept.setVisibility(View.GONE);
+        }
+        if (holder.buttonReject != null) {
+            holder.buttonReject.setVisibility(View.GONE);
+        }
+        if (holder.buttonCounter != null) {
+            holder.buttonCounter.setVisibility(View.GONE);
+        }
+
+        // Long click for message options
+        holder.itemView.setOnLongClickListener(v -> {
+            showMessageOptions(message, true);
+            return true;
+        });
+    }
+
+    private void bindReceivedOffer(ReceivedOfferViewHolder holder, Message message) {
+        android.util.Log.d("MessageAdapter", "Binding received offer message: " + message.getContent());
+
+        // Bind common data
+        bindCommonMessageData(holder.textViewMessage, holder.textViewTime,
+                             holder.imageViewMessage, message);
+
+        // Set offer-specific UI elements
+        holder.textViewOfferStatus.setText("New Offer Received");
+        holder.textViewOfferStatus.setBackgroundColor(ContextCompat.getColor(context, R.color.offer_pending));
+
+        // Show action buttons for received offers with PENDING status
+        String offerStatus = message.getOfferStatus();
+        android.util.Log.d("MessageAdapter", "Offer status: " + offerStatus);
+
+        if ("PENDING".equals(offerStatus)) {
+            android.util.Log.d("MessageAdapter", "Showing action buttons for PENDING offer");
+            holder.buttonAccept.setVisibility(View.VISIBLE);
+            holder.buttonReject.setVisibility(View.VISIBLE);
+            holder.buttonCounter.setVisibility(View.VISIBLE);
+
+            // Set up button click listeners
+            holder.buttonAccept.setOnClickListener(v -> {
+                android.util.Log.d("MessageAdapter", "Accept button clicked");
+                if (offerActionListener != null) {
+                    offerActionListener.onAcceptOffer(message);
+                }
+            });
+
+            holder.buttonReject.setOnClickListener(v -> {
+                android.util.Log.d("MessageAdapter", "Reject button clicked");
+                if (offerActionListener != null) {
+                    offerActionListener.onRejectOffer(message);
+                }
+            });
+
+            holder.buttonCounter.setOnClickListener(v -> {
+                android.util.Log.d("MessageAdapter", "Counter button clicked");
+                if (offerActionListener != null) {
+                    offerActionListener.onCounterOffer(message);
+                }
+            });
+        } else {
+            android.util.Log.d("MessageAdapter", "Hiding action buttons for status: " + offerStatus);
+            holder.buttonAccept.setVisibility(View.GONE);
+            holder.buttonReject.setVisibility(View.GONE);
+            holder.buttonCounter.setVisibility(View.GONE);
+        }
 
         // Set sender name if available
         if (holder.textViewSenderName != null && message.getSenderName() != null) {
@@ -368,7 +505,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     @Override
     public int getItemCount() {
-        return messageList.size();
+        return messageList != null ? messageList.size() : 0;
     }
 
     // ViewHolder for sent messages
@@ -400,6 +537,52 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             textViewTime = itemView.findViewById(R.id.textViewTime);
             textViewSenderName = itemView.findViewById(R.id.textViewSenderName);
             imageViewMessage = itemView.findViewById(R.id.imageViewMessage);
+        }
+    }
+
+    // ViewHolder for sent offer messages
+    static class SentOfferViewHolder extends RecyclerView.ViewHolder {
+        TextView textViewMessage;
+        TextView textViewTime;
+        TextView textViewOfferStatus;
+        ImageView imageViewMessage;
+        View buttonAccept;
+        View buttonReject;
+        View buttonCounter;
+
+        public SentOfferViewHolder(@NonNull View itemView) {
+            super(itemView);
+            textViewMessage = itemView.findViewById(R.id.textViewMessage);
+            textViewTime = itemView.findViewById(R.id.textViewTime);
+            textViewOfferStatus = itemView.findViewById(R.id.textViewOfferStatus);
+            imageViewMessage = itemView.findViewById(R.id.imageViewMessage);
+            buttonAccept = itemView.findViewById(R.id.buttonAccept);
+            buttonReject = itemView.findViewById(R.id.buttonReject);
+            buttonCounter = itemView.findViewById(R.id.buttonCounter);
+        }
+    }
+
+    // ViewHolder for received offer messages
+    static class ReceivedOfferViewHolder extends RecyclerView.ViewHolder {
+        TextView textViewMessage;
+        TextView textViewTime;
+        TextView textViewOfferStatus;
+        TextView textViewSenderName; // Added missing field
+        ImageView imageViewMessage;
+        View buttonAccept;
+        View buttonReject;
+        View buttonCounter;
+
+        public ReceivedOfferViewHolder(@NonNull View itemView) {
+            super(itemView);
+            textViewMessage = itemView.findViewById(R.id.textViewMessage);
+            textViewTime = itemView.findViewById(R.id.textViewTime);
+            textViewOfferStatus = itemView.findViewById(R.id.textViewOfferStatus);
+            textViewSenderName = itemView.findViewById(R.id.textViewSenderName); // Added missing initialization
+            imageViewMessage = itemView.findViewById(R.id.imageViewMessage);
+            buttonAccept = itemView.findViewById(R.id.buttonAccept);
+            buttonReject = itemView.findViewById(R.id.buttonReject);
+            buttonCounter = itemView.findViewById(R.id.buttonCounter);
         }
     }
 

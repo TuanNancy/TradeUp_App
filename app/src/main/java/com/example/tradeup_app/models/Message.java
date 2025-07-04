@@ -87,6 +87,10 @@ public class Message {
     public boolean isRead() { return isRead; }
     public void setRead(boolean read) { isRead = read; }
 
+    // Add Firebase-compatible setter for isRead field
+    public void setIsRead(boolean isRead) { this.isRead = isRead; }
+    public boolean getIsRead() { return isRead; }
+
     public String getProductId() { return productId; }
     public void setProductId(String productId) { this.productId = productId; }
 

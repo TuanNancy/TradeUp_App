@@ -316,6 +316,7 @@ public class HomeFragment extends Fragment {
                         intent.putExtra("receiverId", product.getSellerId());
                         intent.putExtra("receiverName", product.getSellerName());
                         intent.putExtra("productTitle", product.getTitle());
+                        intent.putExtra("productId", product.getId()); // Add missing productId
                         startActivity(intent);
 
                         // Increment view count
@@ -416,35 +417,52 @@ public class HomeFragment extends Fragment {
     }
 
     private void showMakeOfferDialog(Product product) {
+        android.util.Log.d("HomeFragment", "showMakeOfferDialog called for product: " + product.getTitle());
+
         String currentUserId = firebaseManager.getCurrentUserId();
+        android.util.Log.d("HomeFragment", "Current user ID: " + currentUserId);
+        android.util.Log.d("HomeFragment", "Product seller ID: " + product.getSellerId());
+
         if (currentUserId == null) {
-            if (getContext() != null) {
-                Toast.makeText(getContext(), "Please login to make an offer", Toast.LENGTH_SHORT).show();
-            }
+            android.util.Log.d("HomeFragment", "User not logged in - showing login message");
+            showToastOnce("Please login to make an offer");
             return;
         }
 
         if (currentUserId.equals(product.getSellerId())) {
-            if (getContext() != null) {
-                Toast.makeText(getContext(), "You cannot make an offer on your own product", Toast.LENGTH_SHORT).show();
-            }
-            return;
-        }
-
-        if (!product.isNegotiable()) {
-            if (getContext() != null) {
-                Toast.makeText(getContext(), "This product is not open for offers", Toast.LENGTH_SHORT).show();
-            }
+            android.util.Log.d("HomeFragment", "User trying to make offer on own product");
+            showToastOnce("You cannot make an offer on your own product");
             return;
         }
 
         if (getContext() != null) {
-            com.example.tradeup_app.dialogs.MakeOfferDialog dialog = new com.example.tradeup_app.dialogs.MakeOfferDialog(
-                getContext(),
-                product,
-                (offerPrice, message) -> submitOffer(product, offerPrice, message)
-            );
-            dialog.show();
+            try {
+                android.util.Log.d("HomeFragment", "Creating and showing MakeOfferDialog");
+                com.example.tradeup_app.dialogs.MakeOfferDialog dialog = new com.example.tradeup_app.dialogs.MakeOfferDialog(
+                    getContext(),
+                    product,
+                    (offerPrice, message) -> submitOffer(product, offerPrice, message)
+                );
+                dialog.show();
+                android.util.Log.d("HomeFragment", "MakeOfferDialog shown successfully");
+            } catch (Exception e) {
+                android.util.Log.e("HomeFragment", "Error showing MakeOfferDialog", e);
+                showToastOnce("Error opening offer dialog");
+            }
+        } else {
+            android.util.Log.e("HomeFragment", "Context is null, cannot show dialog");
+        }
+    }
+
+    // Utility method to prevent toast spam
+    private static long lastToastTime = 0;
+    private void showToastOnce(String message) {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastToastTime > 2000) { // Show toast only if 2 seconds have passed
+            lastToastTime = currentTime;
+            if (getContext() != null) {
+                Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -481,10 +499,159 @@ public class HomeFragment extends Fragment {
             message
         );
 
-        // TODO: Implement submitOffer method in FirebaseManager
-        // For now, show a placeholder message
-        if (getContext() != null) {
-            Toast.makeText(getContext(), "Offer feature will be implemented soon", Toast.LENGTH_SHORT).show();
+        // Submit offer to database
+        firebaseManager.submitOffer(offer, task -> {
+            if (task.isSuccessful()) {
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "Offer submitted successfully!", Toast.LENGTH_SHORT).show();
+
+                    // Also create/send chat message for the offer
+                    createChatMessageForOffer(product, offerPrice, message);
+                }
+            } else {
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "Failed to submit offer", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+
+    private void createChatMessageForOffer(Product product, double offerPrice, String message) {
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) {
+            android.util.Log.e("HomeFragment", "Current user ID is null, cannot create chat message");
+            return;
+        }
+
+        android.util.Log.d("HomeFragment", "Creating chat message for offer: " + offerPrice + " for product: " + product.getTitle());
+
+        // Create conversation first if it doesn't exist
+        com.example.tradeup_app.services.MessagingService messagingService =
+            new com.example.tradeup_app.services.MessagingService();
+
+        String productImageUrl = (product.getImageUrls() != null && !product.getImageUrls().isEmpty())
+            ? product.getImageUrls().get(0) : "";
+
+        android.util.Log.d("HomeFragment", "Creating conversation between buyer: " + currentUserId + " and seller: " + product.getSellerId());
+
+        messagingService.createOrGetConversation(
+            product.getId(),
+            currentUserId, // buyerId
+            product.getSellerId(), // sellerId
+            product.getTitle(),
+            productImageUrl,
+            new com.example.tradeup_app.services.MessagingService.ConversationCallback() {
+                @Override
+                public void onConversationCreated(String conversationId) {
+                    android.util.Log.d("HomeFragment", "Conversation created/found: " + conversationId);
+                    // Send offer message to chat
+                    sendOfferToChatConversation(conversationId, product, offerPrice, message);
+                }
+
+                @Override
+                public void onConversationsLoaded(List<com.example.tradeup_app.models.Conversation> conversations) {
+                    // Not used in this context
+                }
+
+                @Override
+                public void onError(String error) {
+                    android.util.Log.e("HomeFragment", "Failed to create conversation for offer: " + error);
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "Failed to create chat conversation: " + error, Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+        );
+    }
+
+    private void sendOfferToChatConversation(String conversationId, Product product, double offerPrice, String message) {
+        android.util.Log.d("HomeFragment", "Sending offer to chat conversation: " + conversationId);
+        android.util.Log.d("HomeFragment", "Offer details - Price: " + offerPrice + ", Message: " + message);
+
+        try {
+            // Use ChatOfferService to send offer in chat
+            com.example.tradeup_app.services.ChatOfferService chatOfferService =
+                new com.example.tradeup_app.services.ChatOfferService();
+
+            String currentUserId = firebaseManager.getCurrentUserId();
+            String currentUserName = com.example.tradeup_app.auth.Helper.CurrentUser.getUser() != null ?
+                com.example.tradeup_app.auth.Helper.CurrentUser.getUser().getUsername() : "Anonymous";
+
+            android.util.Log.d("HomeFragment", "Sending offer with ChatOfferService - User: " + currentUserName);
+
+            chatOfferService.sendOfferInChat(
+                conversationId,
+                product.getId(),
+                product.getTitle(),
+                currentUserId,
+                currentUserName,
+                product.getSellerId(),
+                product.getPrice(),
+                offerPrice,
+                message,
+                new com.example.tradeup_app.services.ChatOfferService.ChatOfferCallback() {
+                    @Override
+                    public void onOfferSent(com.example.tradeup_app.models.ChatOffer chatOffer) {
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                android.util.Log.d("HomeFragment", "✅ Offer sent to chat successfully! OfferId: " + chatOffer.getId());
+
+                                // Show success message
+                                Toast.makeText(getContext(), "💰 Offer sent to chat successfully!", Toast.LENGTH_SHORT).show();
+
+                                // Optionally open the chat to show the sent offer
+                                openChatWithOffer(conversationId, product);
+                            });
+                        }
+                    }
+
+                    @Override
+                    public void onOfferResponded(com.example.tradeup_app.models.ChatOffer chatOffer, String response) {
+                        // Not used for sending offers
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                android.util.Log.e("HomeFragment", "❌ Failed to send offer to chat: " + error);
+                                Toast.makeText(getContext(), "Failed to send offer to chat: " + error, Toast.LENGTH_LONG).show();
+                            });
+                        }
+                    }
+                }
+            );
+        } catch (Exception e) {
+            android.util.Log.e("HomeFragment", "Exception in sendOfferToChatConversation", e);
+            if (getContext() != null) {
+                Toast.makeText(getContext(), "Error sending offer to chat: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    // Helper method to open chat and show the offer that was just sent
+    private void openChatWithOffer(String conversationId, Product product) {
+        android.util.Log.d("HomeFragment", "Opening chat with offer - ConversationId: " + conversationId);
+
+        try {
+            Intent chatIntent = new Intent(getContext(), ChatActivity.class);
+            chatIntent.putExtra("conversationId", conversationId);
+            chatIntent.putExtra("receiverId", product.getSellerId());
+            chatIntent.putExtra("receiverName", product.getSellerName());
+            chatIntent.putExtra("productTitle", product.getTitle());
+            chatIntent.putExtra("productId", product.getId());
+
+            // Add a flag to indicate this is from an offer
+            chatIntent.putExtra("fromOffer", true);
+
+            startActivity(chatIntent);
+            android.util.Log.d("HomeFragment", "Chat activity started successfully");
+
+        } catch (Exception e) {
+            android.util.Log.e("HomeFragment", "Error opening chat activity", e);
+            if (getContext() != null) {
+                Toast.makeText(getContext(), "Error opening chat: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         }
     }
 

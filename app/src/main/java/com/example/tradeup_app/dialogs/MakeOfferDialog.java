@@ -68,7 +68,9 @@ public class MakeOfferDialog extends Dialog {
     private void setupViews() {
         // Set product info
         productTitleText.setText(product.getTitle());
-        originalPriceText.setText(String.format("$%.2f", product.getPrice()));
+
+        // Format price in VND instead of USD
+        originalPriceText.setText(formatVNDPrice(product.getPrice()));
 
         // Load product image
         if (product.getImageUrls() != null && !product.getImageUrls().isEmpty()) {
@@ -80,6 +82,12 @@ public class MakeOfferDialog extends Dialog {
 
         // Disable send button initially
         sendOfferButton.setEnabled(false);
+    }
+
+    // Add method to format price in VND
+    private String formatVNDPrice(double price) {
+        java.text.DecimalFormat formatter = new java.text.DecimalFormat("#,###");
+        return formatter.format(price) + " VND";
     }
 
     private void setupListeners() {

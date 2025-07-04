@@ -105,9 +105,9 @@ public class OfferAdapter extends RecyclerView.Adapter<OfferAdapter.OfferViewHol
                 userNameText.setText("Offer to seller");
             }
 
-            // Set prices
-            offerPriceText.setText(String.format("$%.2f", offer.getOfferPrice()));
-            originalPriceText.setText(String.format("Original: $%.2f", offer.getOriginalPrice()));
+            // Set prices in VND format instead of USD
+            offerPriceText.setText(formatVNDPrice(offer.getOfferPrice()));
+            originalPriceText.setText("Original: " + formatVNDPrice(offer.getOriginalPrice()));
 
             // Set message
             if (offer.getMessage() != null && !offer.getMessage().isEmpty()) {
@@ -122,15 +122,17 @@ public class OfferAdapter extends RecyclerView.Adapter<OfferAdapter.OfferViewHol
             setStatusColor(offer.getStatus());
 
             // Set date
-            SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
             dateText.setText(sdf.format(new Date(offer.getCreatedAt())));
 
             // Show/hide action buttons based on status and view type
             if (isSellerView && "PENDING".equals(offer.getStatus())) {
                 actionButtonsLayout.setVisibility(View.VISIBLE);
                 setupActionButtons(offer);
+                android.util.Log.d("OfferAdapter", "Showing action buttons for PENDING offer from: " + offer.getBuyerName());
             } else {
                 actionButtonsLayout.setVisibility(View.GONE);
+                android.util.Log.d("OfferAdapter", "Hiding action buttons - isSellerView: " + isSellerView + ", status: " + offer.getStatus());
             }
 
             // Set click listener for the card
@@ -139,6 +141,12 @@ public class OfferAdapter extends RecyclerView.Adapter<OfferAdapter.OfferViewHol
                     listener.onViewOffer(offer);
                 }
             });
+        }
+
+        // Add method to format VND price
+        private String formatVNDPrice(double price) {
+            java.text.DecimalFormat formatter = new java.text.DecimalFormat("#,###");
+            return formatter.format(price) + " VND";
         }
 
         private void setStatusColor(String status) {

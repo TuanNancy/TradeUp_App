@@ -64,6 +64,7 @@ public class MessagesFragment extends Fragment {
                 intent.putExtra("receiverId", otherUserId);
                 intent.putExtra("receiverName", otherUserName);
                 intent.putExtra("productTitle", conversation.getProductTitle());
+                intent.putExtra("productId", conversation.getProductId()); // Add missing productId
                 startActivity(intent);
             }
 

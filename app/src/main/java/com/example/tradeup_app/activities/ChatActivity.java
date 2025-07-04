@@ -62,6 +62,7 @@ public class ChatActivity extends AppCompatActivity {
     private String receiverId;
     private String receiverName;
     private String productTitle;
+    private String productId; // Add this missing field
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,24 +97,31 @@ public class ChatActivity extends AppCompatActivity {
         receiverId = intent.getStringExtra("receiverId");
         receiverName = intent.getStringExtra("receiverName");
         productTitle = intent.getStringExtra("productTitle");
+        productId = intent.getStringExtra("productId"); // Add this missing line
     }
 
     private void initializeUI() {
         // Setup toolbar
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
 
         // Set initial title, load actual name if needed
         if (receiverName != null && !receiverName.equals("Unknown")) {
-            getSupportActionBar().setTitle(receiverName);
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setTitle(receiverName);
+            }
         } else {
-            getSupportActionBar().setTitle("Loading...");
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setTitle("Loading...");
+            }
             // Load receiver name from Firebase if not provided
             loadReceiverName();
         }
 
-        if (productTitle != null) {
+        if (productTitle != null && getSupportActionBar() != null) {
             getSupportActionBar().setSubtitle("About: " + productTitle);
         }
 
@@ -126,7 +134,22 @@ public class ChatActivity extends AppCompatActivity {
         buttonOffer = findViewById(R.id.buttonOffer); // Initialize offer button
         textViewTyping = findViewById(R.id.textViewTyping);
 
-        textViewTyping.setVisibility(View.GONE);
+        // Show/hide offer button based on product availability
+        if (buttonOffer != null) {
+            if (productId != null && !productId.isEmpty()) {
+                buttonOffer.setVisibility(View.VISIBLE);
+                Log.d(TAG, "Offer button shown - ProductID: " + productId);
+            } else {
+                buttonOffer.setVisibility(View.VISIBLE); // Show for testing
+                Log.d(TAG, "Offer button shown for testing - No ProductID");
+            }
+        } else {
+            Log.e(TAG, "Offer button is null!");
+        }
+
+        if (textViewTyping != null) {
+            textViewTyping.setVisibility(View.GONE);
+        }
     }
 
     private void loadReceiverName() {
@@ -158,6 +181,24 @@ public class ChatActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         messageList = new ArrayList<>();
         messageAdapter = new MessageAdapter(this, messageList);
+
+        // Set up offer action listener
+        messageAdapter.setOnOfferActionListener(new MessageAdapter.OnOfferActionListener() {
+            @Override
+            public void onAcceptOffer(Message offerMessage) {
+                handleAcceptOffer(offerMessage);
+            }
+
+            @Override
+            public void onRejectOffer(Message offerMessage) {
+                handleRejectOffer(offerMessage);
+            }
+
+            @Override
+            public void onCounterOffer(Message offerMessage) {
+                handleCounterOffer(offerMessage);
+            }
+        });
 
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         layoutManager.setStackFromEnd(true); // Start from bottom
@@ -306,31 +347,66 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void loadMessages() {
+        Log.d(TAG, "🔍 Loading messages for conversation: " + conversationId);
+
+        if (conversationId == null || conversationId.isEmpty()) {
+            Log.e(TAG, "❌ ConversationId is null or empty, cannot load messages");
+            Toast.makeText(this, "Invalid conversation ID", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (messagingService == null) {
+            Log.e(TAG, "❌ MessagingService is null");
+            return;
+        }
+
+        Log.d(TAG, "📡 Setting up message listener for conversation: " + conversationId);
+
         messagingService.listenForMessages(conversationId, new MessagingService.MessageCallback() {
             @Override
             public void onMessagesLoaded(List<Message> messages) {
+                Log.d(TAG, "📨 Messages loaded: " + messages.size() + " messages");
+
+                // Log each message for debugging
+                for (int i = 0; i < messages.size(); i++) {
+                    Message msg = messages.get(i);
+                    Log.d(TAG, "Message " + i + ": Type=" + msg.getMessageType() +
+                         ", Content=" + (msg.getContent() != null ? msg.getContent().substring(0, Math.min(50, msg.getContent().length())) : "null") +
+                         ", OfferId=" + msg.getOfferId() +
+                         ", OfferStatus=" + msg.getOfferStatus());
+                }
+
                 runOnUiThread(() -> {
+                    Log.d(TAG, "🔄 Updating UI with " + messages.size() + " messages");
                     messageList.clear();
                     messageList.addAll(messages);
                     messageAdapter.notifyDataSetChanged();
 
                     // Scroll to bottom
                     if (!messageList.isEmpty()) {
+                        Log.d(TAG, "📜 Scrolling to bottom, total messages: " + messageList.size());
                         recyclerViewMessages.scrollToPosition(messageList.size() - 1);
+                    } else {
+                        Log.d(TAG, "📭 No messages to display");
                     }
                 });
             }
 
             @Override
-            public void onMessageSent(String messageId) {}
+            public void onMessageSent(String messageId) {
+                Log.d(TAG, "✅ Message sent with ID: " + messageId);
+            }
 
             @Override
             public void onError(String error) {
+                Log.e(TAG, "❌ Error loading messages: " + error);
                 runOnUiThread(() -> {
                     Toast.makeText(ChatActivity.this, "Error loading messages: " + error, Toast.LENGTH_LONG).show();
                 });
             }
         });
+
+        Log.d(TAG, "🎯 Message listener setup completed");
     }
 
     @Override
@@ -613,18 +689,45 @@ public class ChatActivity extends AppCompatActivity {
     private void makeOffer() {
         Log.d(TAG, "makeOffer called");
 
-        // Check if product information is available
-        if (productTitle == null) {
-            Toast.makeText(this, "Product information not available", Toast.LENGTH_SHORT).show();
+        // Test simple dialog first
+        Toast.makeText(this, "🔥 Make Offer button clicked!", Toast.LENGTH_SHORT).show();
+
+        // Show simple test dialog to confirm button works
+        new AlertDialog.Builder(this)
+            .setTitle("💰 Make Offer Test")
+            .setMessage("Offer button is working! Do you want to continue with real offer?")
+            .setPositiveButton("Yes, Continue", (dialog, which) -> {
+                proceedWithRealOffer();
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void proceedWithRealOffer() {
+        // Debug logging
+        Log.d(TAG, "ProductTitle: " + productTitle);
+        Log.d(TAG, "ProductId: " + productId);
+        Log.d(TAG, "ConversationId: " + conversationId);
+        Log.d(TAG, "ReceiverId: " + receiverId);
+
+        // For testing, create a dummy product if no productId
+        if (productId == null || productId.isEmpty()) {
+            Log.w(TAG, "No productId, creating test offer");
+            showTestOfferDialog();
             return;
         }
 
-        // Get product details for the offer
-        String productId = getIntent().getStringExtra("productId");
-        if (productId == null) {
-            Toast.makeText(this, "Product ID not available", Toast.LENGTH_SHORT).show();
+        // Check if conversation data is available
+        if (conversationId == null || receiverId == null) {
+            Log.e(TAG, "Conversation or receiver data missing");
+            Toast.makeText(this, "Dữ liệu cuộc trò chuyện không đầy đủ", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        Log.d(TAG, "All checks passed, loading product details...");
+
+        // Show loading indicator
+        Toast.makeText(this, "Đang tải thông tin sản phẩm...", Toast.LENGTH_SHORT).show();
 
         // Load product details using existing method
         FirebaseManager.getInstance().getDatabase()
@@ -632,34 +735,53 @@ public class ChatActivity extends AppCompatActivity {
             .child(productId)
             .get()
             .addOnSuccessListener(dataSnapshot -> {
+                Log.d(TAG, "Product data received from Firebase");
                 com.example.tradeup_app.models.Product product =
                     dataSnapshot.getValue(com.example.tradeup_app.models.Product.class);
                 if (product != null) {
                     product.setId(dataSnapshot.getKey());
+                    Log.d(TAG, "Product loaded successfully: " + product.getTitle());
                     runOnUiThread(() -> showChatOfferDialog(product));
                 } else {
+                    Log.e(TAG, "Product data is null");
                     runOnUiThread(() ->
-                        Toast.makeText(ChatActivity.this, "Product not found", Toast.LENGTH_SHORT).show());
+                        Toast.makeText(ChatActivity.this, "Không tìm thấy sản phẩm", Toast.LENGTH_SHORT).show());
                 }
             })
-            .addOnFailureListener(e ->
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Failed to load product data", e);
                 runOnUiThread(() ->
-                    Toast.makeText(ChatActivity.this, "Error loading product: " + e.getMessage(),
-                                 Toast.LENGTH_SHORT).show())
-            );
+                    Toast.makeText(ChatActivity.this, "Lỗi khi tải sản phẩm: " + e.getMessage(),
+                                 Toast.LENGTH_SHORT).show());
+            });
+    }
+
+    private void showTestOfferDialog() {
+        // Create a test product for demo
+        com.example.tradeup_app.models.Product testProduct = new com.example.tradeup_app.models.Product();
+        testProduct.setId("test-product-123");
+        testProduct.setTitle("Test Product - iPhone 15");
+        testProduct.setPrice(20000000); // 20 million VND
+
+        showChatOfferDialog(testProduct);
     }
 
     private void showChatOfferDialog(com.example.tradeup_app.models.Product product) {
-        Log.d(TAG, "Showing ChatOfferDialog for product: " + product.getTitle());
+        Log.d(TAG, "Showing MakeOfferDialog for product: " + product.getTitle());
 
-        // Create and show offer dialog
-        com.example.tradeup_app.dialogs.ChatOfferDialog dialog =
-            new com.example.tradeup_app.dialogs.ChatOfferDialog(this, product,
-                (offerPrice, message) -> {
-                    Log.d(TAG, "Offer submitted: " + offerPrice + " for " + product.getTitle());
-                    submitChatOffer(product, offerPrice, message);
-                });
-        dialog.show();
+        try {
+            // Use the same MakeOfferDialog as HomeFragment for consistency
+            com.example.tradeup_app.dialogs.MakeOfferDialog dialog =
+                new com.example.tradeup_app.dialogs.MakeOfferDialog(this, product,
+                    (offerPrice, message) -> {
+                        Log.d(TAG, "Offer submitted: " + offerPrice + " for " + product.getTitle());
+                        submitChatOffer(product, offerPrice, message);
+                    });
+            dialog.show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing offer dialog", e);
+            Toast.makeText(this, "Lỗi hiển thị dialog offer: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void submitChatOffer(com.example.tradeup_app.models.Product product,
@@ -669,7 +791,7 @@ public class ChatActivity extends AppCompatActivity {
         // Get current user info
         String currentUserId = FirebaseManager.getInstance().getCurrentUserId();
         if (currentUserId == null) {
-            Toast.makeText(this, "Please login to make an offer", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Vui lòng đăng nhập để gửi chào giá", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -677,47 +799,52 @@ public class ChatActivity extends AppCompatActivity {
         String currentUserName = getCurrentUsername();
 
         // Show progress
-        Toast.makeText(this, "Sending offer...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Đang gửi chào giá...", Toast.LENGTH_SHORT).show();
 
-        // Use ChatOfferService to send offer
-        com.example.tradeup_app.services.ChatOfferService chatOfferService =
-            new com.example.tradeup_app.services.ChatOfferService();
+        try {
+            // Use ChatOfferService to send offer
+            com.example.tradeup_app.services.ChatOfferService chatOfferService =
+                new com.example.tradeup_app.services.ChatOfferService();
 
-        chatOfferService.sendOfferInChat(
-            conversationId,
-            product.getId(),
-            product.getTitle(),
-            currentUserId,
-            currentUserName,
-            receiverId,
-            product.getPrice(),
-            offerPrice,
-            message,
-            new com.example.tradeup_app.services.ChatOfferService.ChatOfferCallback() {
-                @Override
-                public void onOfferSent(com.example.tradeup_app.models.ChatOffer chatOffer) {
-                    runOnUiThread(() -> {
-                        Log.d(TAG, "Offer sent successfully: " + chatOffer.getId());
-                        Toast.makeText(ChatActivity.this, "💰 Offer sent!", Toast.LENGTH_SHORT).show();
-                        // The offer message will appear in chat via real-time listener
-                    });
+            chatOfferService.sendOfferInChat(
+                conversationId,
+                product.getId(),
+                product.getTitle(),
+                currentUserId,
+                currentUserName,
+                receiverId,
+                product.getPrice(),
+                offerPrice,
+                message,
+                new com.example.tradeup_app.services.ChatOfferService.ChatOfferCallback() {
+                    @Override
+                    public void onOfferSent(com.example.tradeup_app.models.ChatOffer chatOffer) {
+                        runOnUiThread(() -> {
+                            Log.d(TAG, "Offer sent successfully: " + chatOffer.getId());
+                            Toast.makeText(ChatActivity.this, "💰 Chào giá đã được gửi!", Toast.LENGTH_SHORT).show();
+                            // The offer message will appear in chat via real-time listener
+                        });
+                    }
+
+                    @Override
+                    public void onOfferResponded(com.example.tradeup_app.models.ChatOffer chatOffer, String response) {
+                        // This callback is for responses, not initial sends
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        runOnUiThread(() -> {
+                            Log.e(TAG, "Failed to send offer: " + error);
+                            Toast.makeText(ChatActivity.this, "Lỗi gửi chào giá: " + error,
+                                         Toast.LENGTH_LONG).show();
+                        });
+                    }
                 }
-
-                @Override
-                public void onOfferResponded(com.example.tradeup_app.models.ChatOffer chatOffer, String response) {
-                    // This callback is for responses, not initial sends
-                }
-
-                @Override
-                public void onError(String error) {
-                    runOnUiThread(() -> {
-                        Log.e(TAG, "Failed to send offer: " + error);
-                        Toast.makeText(ChatActivity.this, "Failed to send offer: " + error,
-                                     Toast.LENGTH_LONG).show();
-                    });
-                }
-            }
-        );
+            );
+        } catch (Exception e) {
+            Log.e(TAG, "Error submitting offer", e);
+            Toast.makeText(this, "Lỗi gửi chào giá: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private String getCurrentUsername() {
@@ -725,8 +852,8 @@ public class ChatActivity extends AppCompatActivity {
             // Try to get username from CurrentUser helper
             com.example.tradeup_app.auth.Domain.UserModel userModel =
                 com.example.tradeup_app.auth.Helper.CurrentUser.getUser();
-            if (userModel != null && userModel.getName() != null) {
-                return userModel.getName();
+            if (userModel != null && userModel.getUsername() != null) {
+                return userModel.getUsername();
             }
         } catch (Exception e) {
             Log.w(TAG, "Failed to get username from CurrentUser", e);
@@ -740,5 +867,206 @@ public class ChatActivity extends AppCompatActivity {
 
         // Final fallback
         return "User";
+    }
+
+    // Handle offer actions directly in chat
+    private void handleAcceptOffer(Message offerMessage) {
+        Log.d(TAG, "Accepting offer: " + offerMessage.getOfferId());
+
+        new AlertDialog.Builder(this)
+            .setTitle("Accept Offer")
+            .setMessage("Are you sure you want to accept this offer of " +
+                       formatVNDPrice(offerMessage.getOfferAmount()) + " VND?")
+            .setPositiveButton("Accept", (dialog, which) -> {
+                showProgressDialog("Accepting offer...");
+
+                com.example.tradeup_app.services.ChatOfferService chatOfferService =
+                    new com.example.tradeup_app.services.ChatOfferService();
+
+                chatOfferService.respondToOffer(
+                    offerMessage.getOfferId(),
+                    "ACCEPTED",
+                    0, // No counter price needed
+                    null, // No counter message needed
+                    FirebaseManager.getInstance().getCurrentUserId(),
+                    new com.example.tradeup_app.services.ChatOfferService.ChatOfferCallback() {
+                        @Override
+                        public void onOfferSent(com.example.tradeup_app.models.ChatOffer chatOffer) {
+                            // Not used for responses
+                        }
+
+                        @Override
+                        public void onOfferResponded(com.example.tradeup_app.models.ChatOffer chatOffer, String response) {
+                            runOnUiThread(() -> {
+                                hideProgressDialog();
+                                Toast.makeText(ChatActivity.this, "Offer accepted successfully!", Toast.LENGTH_SHORT).show();
+
+                                // Update the message status locally for immediate feedback
+                                offerMessage.setOfferStatus("ACCEPTED");
+                                messageAdapter.notifyDataSetChanged();
+                            });
+                        }
+
+                        @Override
+                        public void onError(String error) {
+                            runOnUiThread(() -> {
+                                hideProgressDialog();
+                                Toast.makeText(ChatActivity.this, "Failed to accept offer: " + error, Toast.LENGTH_LONG).show();
+                            });
+                        }
+                    });
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void handleRejectOffer(Message offerMessage) {
+        Log.d(TAG, "Rejecting offer: " + offerMessage.getOfferId());
+
+        new AlertDialog.Builder(this)
+            .setTitle("Reject Offer")
+            .setMessage("Are you sure you want to reject this offer?")
+            .setPositiveButton("Reject", (dialog, which) -> {
+                showProgressDialog("Rejecting offer...");
+
+                com.example.tradeup_app.services.ChatOfferService chatOfferService =
+                    new com.example.tradeup_app.services.ChatOfferService();
+
+                chatOfferService.respondToOffer(
+                    offerMessage.getOfferId(),
+                    "DECLINED",
+                    0, // No counter price needed
+                    null, // No counter message needed
+                    FirebaseManager.getInstance().getCurrentUserId(),
+                    new com.example.tradeup_app.services.ChatOfferService.ChatOfferCallback() {
+                        @Override
+                        public void onOfferSent(com.example.tradeup_app.models.ChatOffer chatOffer) {
+                            // Not used for responses
+                        }
+
+                        @Override
+                        public void onOfferResponded(com.example.tradeup_app.models.ChatOffer chatOffer, String response) {
+                            runOnUiThread(() -> {
+                                hideProgressDialog();
+                                Toast.makeText(ChatActivity.this, "Offer rejected", Toast.LENGTH_SHORT).show();
+
+                                // Update the message status locally for immediate feedback
+                                offerMessage.setOfferStatus("DECLINED");
+                                messageAdapter.notifyDataSetChanged();
+                            });
+                        }
+
+                        @Override
+                        public void onError(String error) {
+                            runOnUiThread(() -> {
+                                hideProgressDialog();
+                                Toast.makeText(ChatActivity.this, "Failed to reject offer: " + error, Toast.LENGTH_LONG).show();
+                            });
+                        }
+                    });
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void handleCounterOffer(Message offerMessage) {
+        Log.d(TAG, "Making counter offer for: " + offerMessage.getOfferId());
+
+        // Create a dialog to input counter offer details
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_counter_offer, null);
+        EditText editCounterPrice = dialogView.findViewById(R.id.editTextCounterPrice);
+        EditText editCounterMessage = dialogView.findViewById(R.id.editTextCounterMessage);
+
+        // Pre-fill with current offer amount
+        editCounterPrice.setText(String.valueOf((int)offerMessage.getOfferAmount()));
+
+        new AlertDialog.Builder(this)
+            .setTitle("Make Counter Offer")
+            .setView(dialogView)
+            .setPositiveButton("Send Counter", (dialog, which) -> {
+                String counterPriceStr = editCounterPrice.getText().toString().trim();
+                String counterMessage = editCounterMessage.getText().toString().trim();
+
+                if (TextUtils.isEmpty(counterPriceStr)) {
+                    Toast.makeText(this, "Please enter a counter offer amount", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                try {
+                    double counterPrice = Double.parseDouble(counterPriceStr);
+                    if (counterPrice <= 0) {
+                        Toast.makeText(this, "Please enter a valid amount", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    showProgressDialog("Sending counter offer...");
+
+                    com.example.tradeup_app.services.ChatOfferService chatOfferService =
+                        new com.example.tradeup_app.services.ChatOfferService();
+
+                    chatOfferService.respondToOffer(
+                        offerMessage.getOfferId(),
+                        "COUNTERED",
+                        counterPrice,
+                        counterMessage.isEmpty() ? "Counter offer" : counterMessage,
+                        FirebaseManager.getInstance().getCurrentUserId(),
+                        new com.example.tradeup_app.services.ChatOfferService.ChatOfferCallback() {
+                            @Override
+                            public void onOfferSent(com.example.tradeup_app.models.ChatOffer chatOffer) {
+                                runOnUiThread(() -> {
+                                    hideProgressDialog();
+                                    Toast.makeText(ChatActivity.this, "Counter offer sent!", Toast.LENGTH_SHORT).show();
+
+                                    // Update the message status locally for immediate feedback
+                                    offerMessage.setOfferStatus("COUNTERED");
+                                    messageAdapter.notifyDataSetChanged();
+                                });
+                            }
+
+                            @Override
+                            public void onOfferResponded(com.example.tradeup_app.models.ChatOffer chatOffer, String response) {
+                                // Not used for counter offers
+                            }
+
+                            @Override
+                            public void onError(String error) {
+                                runOnUiThread(() -> {
+                                    hideProgressDialog();
+                                    Toast.makeText(ChatActivity.this, "Failed to send counter offer: " + error, Toast.LENGTH_LONG).show();
+                                });
+                            }
+                        });
+
+                } catch (NumberFormatException e) {
+                    Toast.makeText(this, "Please enter a valid number", Toast.LENGTH_SHORT).show();
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    // Helper methods for progress dialog
+    private AlertDialog progressDialog;
+
+    private void showProgressDialog(String message) {
+        if (progressDialog == null) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setCancelable(false);
+            progressDialog = builder.create();
+        }
+        progressDialog.setMessage(message);
+        progressDialog.show();
+    }
+
+    private void hideProgressDialog() {
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
+        }
+    }
+
+    // Helper method to format VND price
+    private String formatVNDPrice(double price) {
+        java.text.DecimalFormat formatter = new java.text.DecimalFormat("#,###");
+        return formatter.format(price);
     }
 }

@@ -1,113 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:padding="4dp">
 
-    <!-- Received Message Container -->
-    <LinearLayout
-        android:layout_width="match_parent"
+    <!-- Avatar -->
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/imageAvatar"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="8dp"
+        android:src="@drawable/ic_person_placeholder"
+        app:civ_border_color="@color/avatar_border_color"
+        app:civ_border_width="1dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Sender Name (for group chats) -->
+    <TextView
+        android:id="@+id/textViewSenderName"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="start"
-        android:orientation="horizontal">
+        android:layout_marginStart="12dp"
+        android:layout_marginBottom="2dp"
+        android:textColor="@color/sender_name_color"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintStart_toEndOf="@id/imageAvatar"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="John Doe"
+        tools:visibility="visible" />
 
-        <!-- Avatar -->
-        <de.hdodenhof.circleimageview.CircleImageView
-            android:id="@+id/imageAvatar"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginTop="4dp"
-            android:src="@drawable/ic_person_placeholder"
-            app:civ_border_color="@color/avatar_border_color"
-            app:civ_border_width="1dp" />
+    <!-- Message Bubble -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/messageBubble"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        app:cardBackgroundColor="@color/message_received_background"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="1dp"
+        app:layout_constraintStart_toEndOf="@id/imageAvatar"
+        app:layout_constraintTop_toBottomOf="@id/textViewSenderName"
+        app:layout_constraintWidth_max="280dp">
 
-        <!-- Message Content -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="0.7"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="12dp">
 
-            <!-- Sender Name (for group chats) -->
+            <!-- Message Text -->
             <TextView
-                android:id="@+id/textViewSenderName"
+                android:id="@+id/textViewMessage"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="2dp"
-                android:layout_marginStart="12dp"
-                android:textColor="@color/sender_name_color"
-                android:textSize="12sp"
-                android:textStyle="bold"
+                android:textColor="@color/message_received_text"
+                android:textSize="16sp"
+                android:textIsSelectable="true"
+                tools:text="Hi there! I'm interested in your product." />
+
+            <!-- Message Image (for image messages) -->
+            <ImageView
+                android:id="@+id/imageViewMessage"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:layout_marginTop="4dp"
+                android:adjustViewBounds="true"
+                android:scaleType="centerCrop"
+                android:background="@drawable/message_image_background"
                 android:visibility="gone"
-                tools:text="John Doe"
-                tools:visibility="visible" />
-
-            <!-- Message Bubble -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="start"
-                android:layout_marginBottom="2dp"
-                app:cardBackgroundColor="@color/message_received_background"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="1dp">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="12dp">
-
-                    <!-- Message Text -->
-                    <TextView
-                        android:id="@+id/textViewMessage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:maxWidth="280dp"
-                        android:textColor="@color/message_received_text"
-                        android:textSize="16sp"
-                        android:textIsSelectable="true"
-                        tools:text="Hi there! I'm interested in your product. Is it still available?" />
-
-                    <!-- Message Image (for image messages) -->
-                    <ImageView
-                        android:id="@+id/imageViewMessage"
-                        android:layout_width="200dp"
-                        android:layout_height="200dp"
-                        android:layout_marginTop="4dp"
-                        android:adjustViewBounds="true"
-                        android:scaleType="centerCrop"
-                        android:background="@drawable/message_image_background"
-                        android:visibility="gone"
-                        tools:visibility="gone"
-                        tools:src="@drawable/ic_image_placeholder" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Timestamp -->
-            <TextView
-                android:id="@+id/textViewTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                tools:text="14:28" />
+                tools:visibility="visible"
+                tools:src="@drawable/ic_image_placeholder" />
 
         </LinearLayout>
 
-        <!-- Spacer -->
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="0.3" />
+    </com.google.android.material.card.MaterialCardView>
 
-    </LinearLayout>
+    <!-- Timestamp -->
+    <TextView
+        android:id="@+id/textViewTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        app:layout_constraintStart_toEndOf="@id/imageAvatar"
+        app:layout_constraintTop_toBottomOf="@id/messageBubble"
+        tools:text="14:32" />
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

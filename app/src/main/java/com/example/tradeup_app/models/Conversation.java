@@ -25,6 +25,8 @@ public class Conversation {
     private String reportedBy;
     private String reportReason;
     private long reportedAt;
+    private long lastReportedAt; // Add this missing field
+    private int reportCount; // Add this missing field
     private boolean isEncrypted; // For secure messaging
     private int messageCount; // Total messages in conversation
 
@@ -36,6 +38,8 @@ public class Conversation {
         this.isReported = false;
         this.isEncrypted = true; // Enable encryption by default
         this.messageCount = 0;
+        this.reportCount = 0; // Initialize report count
+        this.lastReportedAt = 0; // Initialize last reported timestamp
     }
 
     // Utility methods for blocking
@@ -127,6 +131,12 @@ public class Conversation {
 
     public long getReportedAt() { return reportedAt; }
     public void setReportedAt(long reportedAt) { this.reportedAt = reportedAt; }
+
+    public long getLastReportedAt() { return lastReportedAt; }
+    public void setLastReportedAt(long lastReportedAt) { this.lastReportedAt = lastReportedAt; }
+
+    public int getReportCount() { return reportCount; }
+    public void setReportCount(int reportCount) { this.reportCount = reportCount; }
 
     public boolean isEncrypted() { return isEncrypted; }
     public void setEncrypted(boolean encrypted) { isEncrypted = encrypted; }

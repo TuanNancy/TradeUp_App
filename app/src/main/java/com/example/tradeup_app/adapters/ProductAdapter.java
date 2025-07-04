@@ -201,10 +201,20 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 }
             });
 
-            // Make offer button click
+            // Make offer button click with debounce protection
             btnMakeOffer.setOnClickListener(v -> {
+                // Prevent multiple rapid clicks
+                if (!v.isEnabled()) return;
+
+                v.setEnabled(false);
+                android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+                handler.postDelayed(() -> v.setEnabled(true), 1000); // Re-enable after 1 second
+
+                android.util.Log.d("ProductAdapter", "Make Offer button clicked for product: " + product.getTitle());
                 if (adapter.listener != null) {
                     adapter.listener.onMakeOffer(product);
+                } else {
+                    android.util.Log.w("ProductAdapter", "OnProductClickListener is null");
                 }
             });
         }
