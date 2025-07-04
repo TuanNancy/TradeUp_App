@@ -21,6 +21,8 @@ import com.example.tradeup_app.models.Conversation;
 import com.example.tradeup_app.activities.ChatActivity;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class MessagesFragment extends Fragment {
@@ -166,6 +168,9 @@ public class MessagesFragment extends Fragment {
     private void updateConversations(List<Conversation> conversations) {
         if (getActivity() != null) {
             getActivity().runOnUiThread(() -> {
+                // Sắp xếp conversations theo thời gian tin nhắn mới nhất (giảm dần)
+                conversations.sort((c1, c2) -> Long.compare(c2.getLastMessageTime(), c1.getLastMessageTime()));
+
                 conversationList.clear();
                 conversationList.addAll(conversations);
                 conversationAdapter.notifyDataSetChanged();
