@@ -13,11 +13,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.tradeup_app.R;
 import com.example.tradeup_app.models.Product;
-import com.example.tradeup_app.utils.VNDPriceFormatter;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import de.hdodenhof.circleimageview.CircleImageView;
 
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -229,7 +229,8 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         }
 
         private String formatPrice(double price) {
-            return VNDPriceFormatter.formatVND(price);
+            NumberFormat formatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+            return formatter.format(price);
         }
 
         private String formatTimeAgo(long timestamp) {

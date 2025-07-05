@@ -20,7 +20,6 @@ import com.example.tradeup_app.adapters.ProductAdapter;
 import com.example.tradeup_app.auth.Domain.UserModel;
 import com.example.tradeup_app.models.Product;
 import com.example.tradeup_app.utils.ReportUtils;
-import com.example.tradeup_app.utils.VNDPriceFormatter;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -501,7 +500,8 @@ public class UserProfileViewActivity extends AppCompatActivity {
     }
 
     private String formatPrice(double price) {
-        return VNDPriceFormatter.formatVND(price);
+        java.text.NumberFormat formatter = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
+        return formatter.format(price);
     }
 
     // Static method to start this activity

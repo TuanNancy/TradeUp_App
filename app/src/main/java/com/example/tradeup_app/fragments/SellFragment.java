@@ -54,7 +54,6 @@ import java.util.List;
 
 import com.example.tradeup_app.utils.LocationUtils;
 import com.example.tradeup_app.utils.ImageUploadManager;
-import com.example.tradeup_app.utils.VNDPriceFormatter;
 import com.example.tradeup_app.adapters.ImagePreviewAdapter;
 
 public class SellFragment extends Fragment {
@@ -120,19 +119,8 @@ public class SellFragment extends Fragment {
 
         firebaseManager = FirebaseManager.getInstance();
 
-        // Setup VND price formatting
-        setupPriceFormatting();
-
         // Setup image preview recycler view
         setupImagePreviewRecyclerView();
-    }
-
-    private void setupPriceFormatting() {
-        // Thêm TextWatcher để format giá VNĐ tự động khi nhập
-        priceEditText.addTextChangedListener(new VNDPriceFormatter.VNDTextWatcher(priceEditText));
-
-        // Set hint cho price EditText
-        priceEditText.setHint("Nhập giá (VNĐ)");
     }
 
     private void setupImagePreviewRecyclerView() {
@@ -309,8 +297,7 @@ public class SellFragment extends Fragment {
         float[] results = new float[1];
         Location.distanceBetween(location.getLatitude(), location.getLongitude(), googleLat, googleLng, results);
 
-        if (results[0] < 1000) // Within 1km of Google HQ
-        {
+        if (results[0] < 1000) { // Within 1km of Google HQ
             locationGpsButton.setEnabled(true);
             new AlertDialog.Builder(getContext())
                 .setTitle("Vị trí không chính xác")
@@ -334,8 +321,7 @@ public class SellFragment extends Fragment {
         }
 
         // Check accuracy
-        if (location.getAccuracy() > 100) // More than 100 meters accuracy
-        {
+        if (location.getAccuracy() > 100) { // More than 100 meters accuracy
             Toast.makeText(getContext(), String.format("Độ chính xác thấp (±%.0fm). Đang thử cải thiện...", location.getAccuracy()), Toast.LENGTH_SHORT).show();
             // Continue trying for better accuracy, but don't return immediately
         }
@@ -458,11 +444,6 @@ public class SellFragment extends Fragment {
             priceEditText.setError("Vui lòng nhập giá");
             return false;
         }
-        // Validate giá VNĐ với định dạng
-        if (!VNDPriceFormatter.isValidVNDPrice(priceEditText.getText().toString().trim())) {
-            priceEditText.setError("Giá không hợp lệ (tối đa 999 tỷ VNĐ)");
-            return false;
-        }
         if (locationEditText.getText().toString().trim().isEmpty()) {
             locationEditText.setError("Vui lòng nhập địa chỉ");
             return false;
@@ -478,8 +459,7 @@ public class SellFragment extends Fragment {
         Product product = new Product();
         product.setTitle(titleEditText.getText().toString().trim());
         product.setDescription(descriptionEditText.getText().toString().trim());
-        // Sử dụng VNDPriceFormatter để parse giá có định dạng VNĐ
-        product.setPrice(VNDPriceFormatter.parseVND(priceEditText.getText().toString().trim()));
+        product.setPrice(Double.parseDouble(priceEditText.getText().toString().trim()));
         product.setCategory(categorySpinner.getSelectedItem().toString());
         product.setCondition(conditionSpinner.getSelectedItem().toString());
         product.setLocation(locationEditText.getText().toString().trim());

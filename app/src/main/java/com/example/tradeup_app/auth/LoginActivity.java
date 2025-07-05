@@ -15,7 +15,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.tradeup_app.auth.Domain.UserModel;
 import com.example.tradeup_app.auth.Helper.CurrentUser;
-import com.example.tradeup_app.activities.MainActivity;
 import com.example.tradeup_app.services.BackgroundMessageService;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.android.gms.auth.api.identity.BeginSignInRequest;

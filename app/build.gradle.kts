@@ -126,7 +126,4 @@ dependencies {
 
     // Add SwipeRefreshLayout for conversations activity
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
-
-    // Stripe Android SDK for payment processing
-    implementation("com.stripe:stripe-android:20.37.3")
 }
