@@ -2,8 +2,15 @@ const express = require('express');
 // Load environment variables from .env file
 require('dotenv').config();
 
-// Use the actual Stripe secret key - fallback to hardcoded for development
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_your_secret_key_here';
+// Use environment variable for Stripe secret key
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+
+if (!STRIPE_SECRET_KEY) {
+    console.error('❌ STRIPE_SECRET_KEY not found in environment variables');
+    console.error('📋 Please create a .env file with your Stripe API key');
+    console.error('📋 Copy .env.example to .env and update with your keys');
+    process.exit(1);
+}
 
 const stripe = require('stripe')(STRIPE_SECRET_KEY);
 const app = express();
