@@ -15,6 +15,7 @@ import androidx.annotation.NonNull;
 import com.bumptech.glide.Glide;
 import com.example.tradeup_app.R;
 import com.example.tradeup_app.models.Product;
+import com.example.tradeup_app.utils.VNDPriceFormatter;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -221,7 +222,6 @@ public class ChatOfferDialog extends Dialog {
     }
 
     private String formatPrice(double price) {
-        DecimalFormat formatter = new DecimalFormat("#,###");
-        return formatter.format(price) + " VNĐ";
+        return VNDPriceFormatter.formatVND(price);
     }
 }

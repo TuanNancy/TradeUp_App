@@ -46,140 +46,118 @@
             </intent-filter>
         </service>
 
-        <!-- ✅ Background Message Service for real-time notifications -->
+        <!-- Background Message Service for real-time notifications -->
         <service
             android:name=".services.BackgroundMessageService"
-            android:exported="false"
-            android:enabled="true" />
-
-        <!-- Offer Action Receiver for notification actions -->
-        <receiver
-            android:name=".receivers.OfferActionReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.example.tradeup_app.OFFER_ACTION" />
-            </intent-filter>
-        </receiver>
+            android:enabled="true"
+            android:exported="false" />
 
         <!-- Main Activity -->
         <activity
-            android:name=".auth.MainActivity"
-            android:exported="false"
-            android:launchMode="singleTop" />
+            android:name=".activities.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.TradeUp_App">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
-        <!-- Auth Activities -->
+        <!-- Authentication Activities -->
+        <activity
+            android:name=".auth.LoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App" />
+
         <activity
             android:name=".auth.RegisterActivity"
             android:exported="false"
-            android:parentActivityName=".auth.LoginActivity" />
+            android:theme="@style/Theme.TradeUp_App" />
 
         <activity
             android:name=".auth.ForgotPasswordActivity"
             android:exported="false"
-            android:parentActivityName=".auth.LoginActivity" />
+            android:theme="@style/Theme.TradeUp_App" />
 
-        <activity
-            android:name=".auth.UserProfileActivity"
-            android:exported="false"
-            android:parentActivityName=".auth.MainActivity" />
-
-        <!-- User Management Activities -->
-        <activity
-            android:name=".auth.AccountSettingsActivity"
-            android:exported="false"
-            android:parentActivityName=".auth.MainActivity" />
-
+        <!-- User Profile Activities -->
         <activity
             android:name=".auth.UserProfileViewActivity"
             android:exported="false"
-            android:parentActivityName=".auth.MainActivity" />
+            android:theme="@style/Theme.TradeUp_App" />
 
-        <!-- Chat Activity -->
         <activity
-            android:name=".activities.ChatActivity"
+            android:name=".activities.UserProfileActivity"
             android:exported="false"
-            android:parentActivityName=".auth.MainActivity" />
+            android:theme="@style/Theme.TradeUp_App" />
 
-        <!-- Product Detail Activity - NEW -->
+        <activity
+            android:name=".activities.AccountSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App" />
+
+        <activity
+            android:name=".activities.BlockedUsersActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App" />
+
+        <!-- Product Activities -->
         <activity
             android:name=".activities.ProductDetailActivity"
             android:exported="false"
-            android:parentActivityName=".auth.MainActivity"
-            android:label="Product Details"
             android:theme="@style/Theme.TradeUp_App" />
 
-        <!-- NEW ACTIVITIES - Offers & Transactions System -->
+        <!-- Chat and Communication Activities -->
+        <activity
+            android:name=".activities.ChatActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App" />
+
+        <activity
+            android:name=".activities.ConversationsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App" />
+
+        <!-- Trading Activities -->
         <activity
             android:name=".activities.OffersActivity"
             android:exported="false"
-            android:parentActivityName=".auth.MainActivity"
-            android:label="Offers" />
+            android:theme="@style/Theme.TradeUp_App" />
 
-        <!-- Admin Dashboard -->
+        <!-- Payment Activities - NEW -->
+        <activity
+            android:name=".activities.PaymentActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".activities.PaymentHistoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App" />
+
+        <!-- Admin Activities -->
         <activity
             android:name=".activities.AdminDashboardActivity"
             android:exported="false"
-            android:parentActivityName=".auth.MainActivity"
-            android:label="Admin Dashboard" />
+            android:theme="@style/Theme.TradeUp_App" />
 
-        <!-- Data Migration Activity -->
+        <!-- Image Cropping Activity -->
         <activity
-            android:name=".activities.DataMigrationActivity"
+            android:name="com.yalantis.ucrop.UCropActivity"
             android:exported="false"
-            android:parentActivityName=".auth.MainActivity"
-            android:label="Data Migration" />
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
-        <!-- Debug Make Offer Activity -->
-        <activity
-            android:name=".activities.DebugMakeOfferActivity"
-            android:exported="false"
-            android:parentActivityName=".auth.MainActivity"
-            android:label="Debug Make Offer" />
-
-        <!-- Login Activity as Launcher -->
-        <activity
-            android:name=".auth.LoginActivity"
-            android:exported="true"
-            android:launchMode="singleTop">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity>
-
-        <!-- Provider cho việc chụp ảnh và crop ảnh -->
+        <!-- File Provider for sharing files -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.provider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/provider_paths" />
+                android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Activity cho UCrop -->
-        <activity
-            android:name="com.yalantis.ucrop.UCropActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar" />
-
-        <!-- Blocked Users Activity -->
-        <activity
-            android:name=".activities.BlockedUsersActivity"
-            android:parentActivityName=".activities.ChatActivity"
-            android:theme="@style/Theme.TradeUp_App">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".activities.ChatActivity" />
-        </activity>
-
-        <!-- Notification Test Activity -->
-        <activity
-            android:name=".activities.NotificationTestActivity"
-            android:exported="false"
-            android:parentActivityName=".auth.MainActivity"
-            android:label="Notification Test" />
-
     </application>
+
 </manifest>
