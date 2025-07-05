@@ -32,6 +32,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         void onProductClick(Product product);
         void onProductLongClick(Product product);
         void onMakeOffer(Product product);
+        void onBuyProduct(Product product);
         void onReportProduct(Product product);
         void onViewSellerProfile(String sellerId);
     }
@@ -120,7 +121,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         private final TextView sellerName, sellerRating, viewCount, timePosted;
         private final Chip statusChip, categoryChip, conditionChip;
         private final CircleImageView sellerAvatar;
-        private final MaterialButton btnChat, btnMakeOffer;
+        private final MaterialButton btnChat, btnMakeOffer, btnBuy;
         private final ProductAdapter adapter;
 
         public ProductViewHolder(@NonNull View itemView, ProductAdapter adapter) {
@@ -142,6 +143,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             sellerAvatar = itemView.findViewById(R.id.seller_avatar);
             btnChat = itemView.findViewById(R.id.btn_chat);
             btnMakeOffer = itemView.findViewById(R.id.btn_make_offer);
+            btnBuy = itemView.findViewById(R.id.btn_buy);
         }
 
         public void bind(Product product) {
@@ -215,6 +217,13 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                     adapter.listener.onMakeOffer(product);
                 } else {
                     android.util.Log.w("ProductAdapter", "OnProductClickListener is null");
+                }
+            });
+
+            // Buy button click
+            btnBuy.setOnClickListener(v -> {
+                if (adapter.listener != null) {
+                    adapter.listener.onBuyProduct(product);
                 }
             });
         }

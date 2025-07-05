@@ -218,6 +218,11 @@ public class HomeFragment extends Fragment {
             }
 
             @Override
+            public void onBuyProduct(Product product) {
+                showBuyProductDialog(product);
+            }
+
+            @Override
             public void onReportProduct(Product product) {
                 showReportDialog(product);
             }
@@ -783,5 +788,38 @@ public class HomeFragment extends Fragment {
                 Toast.makeText(getContext(), "Cannot open seller profile", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    private void showBuyProductDialog(Product product) {
+        // Implement the dialog to handle product buying
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Buy Product")
+            .setMessage("Do you want to buy this product?")
+            .setPositiveButton("Yes", (dialog, which) -> {
+                // Handle the buy action
+                handleBuyProduct(product);
+            })
+            .setNegativeButton("No", null)
+            .show();
+    }
+
+    private void handleBuyProduct(Product product) {
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) {
+            Toast.makeText(getContext(), "Vui lòng đăng nhập để mua sản phẩm", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Check if the product is already sold
+        if ("Sold".equals(product.getStatus())) {
+            Toast.makeText(getContext(), "Sản phẩm này đã được bán", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Proceed with the buying process
+        // For now, just show a toast message
+        Toast.makeText(getContext(), "Bạn đã mua sản phẩm: " + product.getTitle(), Toast.LENGTH_SHORT).show();
+
+        // TODO: Implement actual buying logic (e.g., payment, order confirmation, etc.)
     }
 }

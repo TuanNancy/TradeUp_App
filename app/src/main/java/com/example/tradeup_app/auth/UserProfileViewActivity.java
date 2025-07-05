@@ -80,6 +80,9 @@ public class UserProfileViewActivity extends AppCompatActivity {
         productAdapter = new ProductAdapter(this, userProducts);
         userListingsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         userListingsRecyclerView.setAdapter(productAdapter);
+
+        // Setup product click listeners
+        setupProductClickListeners();
     }
 
     private void setupListeners() {
@@ -271,6 +274,234 @@ public class UserProfileViewActivity extends AppCompatActivity {
             targetUserId,
             targetUser.getUsername() != null ? targetUser.getUsername() : "Unknown User"
         );
+    }
+
+    private void setupProductClickListeners() {
+        productAdapter.setOnProductClickListener(new ProductAdapter.OnProductClickListener() {
+            @Override
+            public void onProductClick(Product product) {
+                // Navigate to product detail
+                com.example.tradeup_app.activities.ProductDetailActivity.startActivity(
+                    UserProfileViewActivity.this, product.getId());
+            }
+
+            @Override
+            public void onProductLongClick(Product product) {
+                // Show product options
+                showProductOptionsMenu(product);
+            }
+
+            @Override
+            public void onMakeOffer(Product product) {
+                showMakeOfferDialog(product);
+            }
+
+            @Override
+            public void onBuyProduct(Product product) {
+                showBuyProductDialog(product);
+            }
+
+            @Override
+            public void onReportProduct(Product product) {
+                showReportProductDialog(product);
+            }
+
+            @Override
+            public void onViewSellerProfile(String sellerId) {
+                // Already viewing this seller's profile
+                Toast.makeText(UserProfileViewActivity.this, "You are already viewing this seller's profile", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showProductOptionsMenu(Product product) {
+        String currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
+        boolean isOwner = currentUserId != null && currentUserId.equals(product.getSellerId());
+
+        String[] options;
+        if (isOwner) {
+            options = new String[]{"View Offers", "Edit Product", "Mark as Sold", "Delete Product"};
+        } else {
+            options = new String[]{"Make Offer", "Buy Product", "Report Product"};
+        }
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(product.getTitle())
+            .setItems(options, (dialog, which) -> {
+                if (isOwner) {
+                    handleOwnerAction(product, which);
+                } else {
+                    handleBuyerAction(product, which);
+                }
+            })
+            .show();
+    }
+
+    private void handleOwnerAction(Product product, int actionIndex) {
+        switch (actionIndex) {
+            case 0: // View Offers
+                Toast.makeText(this, "View Offers feature coming soon", Toast.LENGTH_SHORT).show();
+                break;
+            case 1: // Edit Product
+                Toast.makeText(this, "Edit Product feature coming soon", Toast.LENGTH_SHORT).show();
+                break;
+            case 2: // Mark as Sold
+                markProductAsSold(product);
+                break;
+            case 3: // Delete Product
+                deleteProduct(product);
+                break;
+        }
+    }
+
+    private void handleBuyerAction(Product product, int actionIndex) {
+        switch (actionIndex) {
+            case 0: // Make Offer
+                showMakeOfferDialog(product);
+                break;
+            case 1: // Buy Product
+                showBuyProductDialog(product);
+                break;
+            case 2: // Report Product
+                showReportProductDialog(product);
+                break;
+        }
+    }
+
+    private void showMakeOfferDialog(Product product) {
+        String currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (currentUserId == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để đưa ra lời đề xuất", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUserId.equals(product.getSellerId())) {
+            Toast.makeText(this, "Bạn không thể đưa ra lời đề xuất cho sản phẩm của chính mình", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            com.example.tradeup_app.dialogs.MakeOfferDialog dialog = new com.example.tradeup_app.dialogs.MakeOfferDialog(
+                this,
+                product,
+                (offerPrice, message) -> submitOffer(product, offerPrice, message)
+            );
+            dialog.show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Lỗi mở hộp thoại đề xuất", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showBuyProductDialog(Product product) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Mua sản phẩm")
+            .setMessage("Bạn có muốn mua sản phẩm này không?\n\nTên: " + product.getTitle() + "\nGiá: " + formatPrice(product.getPrice()))
+            .setPositiveButton("Mua ngay", (dialog, which) -> {
+                handleBuyProduct(product);
+            })
+            .setNegativeButton("Hủy", null)
+            .show();
+    }
+
+    private void handleBuyProduct(Product product) {
+        String currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (currentUserId == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để mua sản phẩm", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Check if user is trying to buy their own product
+        if (currentUserId.equals(product.getSellerId())) {
+            Toast.makeText(this, "Bạn không thể mua sản phẩm của chính mình", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Check if the product is already sold
+        if ("Sold".equals(product.getStatus())) {
+            Toast.makeText(this, "Sản phẩm này đã được bán", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Proceed with the buying process
+        Toast.makeText(this, "Đã mua sản phẩm: " + product.getTitle(), Toast.LENGTH_SHORT).show();
+
+        // TODO: Implement actual buying logic (e.g., payment, order confirmation, etc.)
+        // For now, just mark the product as sold
+        markProductAsSold(product);
+    }
+
+    private void showReportProductDialog(Product product) {
+        String currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (currentUserId == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để báo cáo", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            com.example.tradeup_app.dialogs.ReportDialog dialog = new com.example.tradeup_app.dialogs.ReportDialog(
+                this,
+                (reason, description) -> submitReport(product, reason, description)
+            );
+            dialog.show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Lỗi mở hộp thoại báo cáo", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void submitOffer(Product product, double offerPrice, String message) {
+        // TODO: Implement offer submission logic
+        Toast.makeText(this, "Lời đề xuất đã được gửi!", Toast.LENGTH_SHORT).show();
+    }
+
+    private void submitReport(Product product, String reason, String description) {
+        // TODO: Implement report submission logic
+        Toast.makeText(this, "Báo cáo đã được gửi!", Toast.LENGTH_SHORT).show();
+    }
+
+    private void markProductAsSold(Product product) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Đánh dấu đã bán")
+            .setMessage("Bạn có chắc chắn muốn đánh dấu sản phẩm này đã được bán?")
+            .setPositiveButton("Có", (dialog, which) ->
+                FirebaseDatabase.getInstance().getReference("Products")
+                    .child(product.getId())
+                    .child("status")
+                    .setValue("Sold")
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Sản phẩm đã được đánh dấu là đã bán", Toast.LENGTH_SHORT).show();
+                        loadUserListings(); // Refresh listings
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Lỗi cập nhật sản phẩm", Toast.LENGTH_SHORT).show();
+                    })
+            )
+            .setNegativeButton("Hủy", null)
+            .show();
+    }
+
+    private void deleteProduct(Product product) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Xóa sản phẩm")
+            .setMessage("Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này không thể hoàn tác.")
+            .setPositiveButton("Xóa", (dialog, which) ->
+                FirebaseDatabase.getInstance().getReference("Products")
+                    .child(product.getId())
+                    .removeValue()
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Sản phẩm đã được xóa thành công", Toast.LENGTH_SHORT).show();
+                        loadUserListings(); // Refresh listings
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Lỗi xóa sản phẩm", Toast.LENGTH_SHORT).show();
+                    })
+            )
+            .setNegativeButton("Hủy", null)
+            .show();
+    }
+
+    private String formatPrice(double price) {
+        java.text.NumberFormat formatter = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
+        return formatter.format(price);
     }
 
     // Static method to start this activity

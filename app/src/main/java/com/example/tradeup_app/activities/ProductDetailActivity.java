@@ -212,6 +212,11 @@ public class ProductDetailActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onBuyProduct(Product product) {
+                showBuyProductDialog(product);
+            }
+
+            @Override
             public void onReportProduct(Product product) {
                 showReportDialog(product);
             }
@@ -813,6 +818,72 @@ public class ProductDetailActivity extends AppCompatActivity {
             })
             .setNegativeButton("Cancel", null)
             .show();
+    }
+
+    private void showBuyProductDialog(Product product) {
+        if (currentUserId == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để mua sản phẩm", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUserId.equals(product.getSellerId())) {
+            Toast.makeText(this, "Bạn không thể mua sản phẩm của chính mình", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if ("Sold".equals(product.getStatus())) {
+            Toast.makeText(this, "Sản phẩm này đã được bán", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("Mua sản phẩm")
+            .setMessage("Bạn có muốn mua sản phẩm này không?\n\nTên: " + product.getTitle() + "\nGiá: " + formatPrice(product.getPrice()))
+            .setPositiveButton("Mua ngay", (dialog, which) -> {
+                handleBuyProduct(product);
+            })
+            .setNegativeButton("Hủy", null)
+            .show();
+    }
+
+    private void handleBuyProduct(Product product) {
+        // Proceed with the buying process
+        Toast.makeText(this, "Đã mua sản phẩm: " + product.getTitle(), Toast.LENGTH_SHORT).show();
+
+        // TODO: Implement actual buying logic (e.g., payment, order confirmation, etc.)
+        // For now, just mark the product as sold
+        firebaseManager.updateProductStatus(product.getId(), Constants.PRODUCT_STATUS_SOLD, task -> {
+            if (task.isSuccessful()) {
+                // If this is the current product being viewed, update the UI
+                if (product.getId().equals(productId)) {
+                    currentProduct.setStatus(Constants.PRODUCT_STATUS_SOLD);
+                    updateUI();
+                }
+
+                // Send notification about purchase
+                sendPurchaseNotification(product);
+            } else {
+                Toast.makeText(this, "Lỗi cập nhật trạng thái sản phẩm", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void sendPurchaseNotification(Product product) {
+        try {
+            NotificationManager notificationManager = NotificationManager.getInstance(this);
+            String currentUserName = CurrentUser.getUser() != null ?
+                CurrentUser.getUser().getUsername() : "Someone";
+
+            // Use sendListingUpdateNotification with "purchased" type instead of sendPurchaseNotification
+            notificationManager.sendListingUpdateNotification(
+                product.getId(),
+                product.getTitle(),
+                "purchased",
+                product.getSellerId()
+            );
+        } catch (Exception e) {
+            android.util.Log.e("ProductDetailActivity", "Failed to send purchase notification", e);
+        }
     }
 
     // Utility methods

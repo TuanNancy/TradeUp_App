@@ -136,6 +136,11 @@ public class SearchFragment extends Fragment {
             }
 
             @Override
+            public void onBuyProduct(Product product) {
+                showBuyProductDialog(product);
+            }
+
+            @Override
             public void onReportProduct(Product product) {
                 showReportDialog(product);
             }
@@ -556,5 +561,50 @@ public class SearchFragment extends Fragment {
                 break;
             }
         }
+    }
+
+    private void showBuyProductDialog(Product product) {
+        // Implement the dialog to handle product buying
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Mua sản phẩm")
+            .setMessage("Bạn có muốn mua sản phẩm này không?\n\nTên: " + product.getTitle() + "\nGiá: " + formatPrice(product.getPrice()))
+            .setPositiveButton("Mua ngay", (dialog, which) -> {
+                // Handle the buy action
+                handleBuyProduct(product);
+            })
+            .setNegativeButton("Hủy", null)
+            .show();
+    }
+
+    private void handleBuyProduct(Product product) {
+        String currentUserId = firebaseManager.getCurrentUserId();
+        if (currentUserId == null) {
+            Toast.makeText(getContext(), "Vui lòng đăng nhập để mua sản phẩm", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Check if user is trying to buy their own product
+        if (currentUserId.equals(product.getSellerId())) {
+            Toast.makeText(getContext(), "Bạn không thể mua sản phẩm của chính mình", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Check if the product is already sold
+        if ("Sold".equals(product.getStatus())) {
+            Toast.makeText(getContext(), "Sản phẩm này đã được bán", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Proceed with the buying process
+        Toast.makeText(getContext(), "Đã mua sản phẩm: " + product.getTitle(), Toast.LENGTH_SHORT).show();
+
+        // TODO: Implement actual buying logic (e.g., payment, order confirmation, etc.)
+        // For now, just mark the product as sold
+        markProductAsSold(product);
+    }
+
+    private String formatPrice(double price) {
+        java.text.NumberFormat formatter = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
+        return formatter.format(price);
     }
 }
