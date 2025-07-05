@@ -53,6 +53,22 @@ public class FirebaseManager {
         void onError(String error);
     }
 
+    // Payment-related callback interfaces
+    public interface OnTransactionSavedListener {
+        void onSuccess(String transactionId);
+        void onError(String error);
+    }
+
+    public interface OnTransactionsLoadedListener {
+        void onSuccess(List<Transaction> transactions);
+        void onError(String error);
+    }
+
+    public interface OnStatusUpdateListener {
+        void onSuccess();
+        void onError(String error);
+    }
+
     public interface RatingCallback {
         void onRatingsLoaded(List<Rating> ratings);
         void onError(String error);
@@ -655,7 +671,70 @@ public class FirebaseManager {
         reportRef.child("reviewedAt").setValue(System.currentTimeMillis())
             .addOnCompleteListener(listener);
     }
+
+    // ==================== PAYMENT-SPECIFIC METHODS ====================
+
+    public void saveTransaction(Transaction transaction, OnTransactionSavedListener listener) {
+        String key = database.getReference(TRANSACTIONS_NODE).push().getKey();
+        if (key != null) {
+            transaction.setId(key);
+            database.getReference(TRANSACTIONS_NODE)
+                .child(key)
+                .setValue(transaction)
+                .addOnSuccessListener(aVoid -> listener.onSuccess(key))
+                .addOnFailureListener(e -> listener.onError(e.getMessage()));
+        } else {
+            listener.onError("Failed to generate transaction ID");
+        }
+    }
+
+    public void getUserTransactions(String userId, OnTransactionsLoadedListener listener) {
+        database.getReference(TRANSACTIONS_NODE)
+            .orderByChild("createdAt")
+            .get()
+            .addOnSuccessListener(snapshot -> {
+                List<Transaction> transactions = new java.util.ArrayList<>();
+                for (com.google.firebase.database.DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                    Transaction transaction = dataSnapshot.getValue(Transaction.class);
+                    if (transaction != null &&
+                        (userId.equals(transaction.getBuyerId()) || userId.equals(transaction.getSellerId()))) {
+                        transaction.setId(dataSnapshot.getKey());
+                        transactions.add(transaction);
+                    }
+                }
+                // Sort by most recent first
+                transactions.sort((a, b) -> Long.compare(b.getCreatedAt(), a.getCreatedAt()));
+                listener.onSuccess(transactions);
+            })
+            .addOnFailureListener(e -> listener.onError(e.getMessage()));
+    }
+
+    public void updateProductStatus(String productId, String status, OnStatusUpdateListener listener) {
+        DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
+        productRef.child("status").setValue(status);
+        productRef.child("updatedAt").setValue(System.currentTimeMillis())
+            .addOnSuccessListener(aVoid -> listener.onSuccess())
+            .addOnFailureListener(e -> listener.onError(e.getMessage()));
+    }
+
+    public void checkPendingOffers(String productId, String userId, OnCompleteListener<Boolean> listener) {
+        database.getReference(OFFERS_NODE)
+            .orderByChild("productId")
+            .equalTo(productId)
+            .get()
+            .addOnSuccessListener(snapshot -> {
+                boolean hasPendingOffers = false;
+                for (com.google.firebase.database.DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                    Offer offer = dataSnapshot.getValue(Offer.class);
+                    if (offer != null && userId.equals(offer.getBuyerId()) &&
+                        "PENDING".equals(offer.getStatus())) {
+                        hasPendingOffers = true;
+                        break;
+                    }
+                }
+                listener.onComplete(com.google.android.gms.tasks.Tasks.forResult(hasPendingOffers));
+            })
+            .addOnFailureListener(e ->
+                listener.onComplete(com.google.android.gms.tasks.Tasks.forException(e)));
+    }
 }
-
-
-

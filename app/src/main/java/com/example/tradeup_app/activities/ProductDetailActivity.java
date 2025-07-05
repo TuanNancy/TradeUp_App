@@ -33,6 +33,7 @@ import com.example.tradeup_app.utils.Constants;
 import com.example.tradeup_app.utils.DataValidator;
 import com.example.tradeup_app.utils.NotificationManager;
 import com.example.tradeup_app.utils.ReportUtils;
+import com.example.tradeup_app.utils.VNDPriceFormatter;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
@@ -74,7 +75,7 @@ public class ProductDetailActivity extends AppCompatActivity {
     private MaterialButton viewProfileButton;
 
     // Action Buttons
-    private MaterialButton contactSellerButton, chatButton, makeOfferButton, shareButton, reportButton;
+    private MaterialButton contactSellerButton, chatButton, makeOfferButton, buyNowButton, shareButton, reportButton;
 
     // Owner Actions
     private MaterialCardView ownerActionsCard;
@@ -145,6 +146,7 @@ public class ProductDetailActivity extends AppCompatActivity {
         contactSellerButton = findViewById(R.id.contact_seller_button);
         chatButton = findViewById(R.id.chat_button);
         makeOfferButton = findViewById(R.id.make_offer_button);
+        buyNowButton = findViewById(R.id.buy_now_button);
         shareButton = findViewById(R.id.share_button);
         reportButton = findViewById(R.id.report_button);
 
@@ -240,6 +242,9 @@ public class ProductDetailActivity extends AppCompatActivity {
 
         // Make offer
         makeOfferButton.setOnClickListener(v -> showMakeOfferDialog(currentProduct));
+
+        // Buy now
+        buyNowButton.setOnClickListener(v -> showBuyProductDialog(currentProduct));
 
         // Share product
         shareButton.setOnClickListener(v -> shareProduct());
@@ -437,6 +442,10 @@ public class ProductDetailActivity extends AppCompatActivity {
         makeOfferButton.setVisibility(isOwner ? View.GONE : View.VISIBLE);
         // TEMPORARY FIX: Ignore negotiable check for testing
         makeOfferButton.setEnabled(isAvailable && isLoggedIn);
+
+        // Buy now - hidden for owner, disabled if sold
+        buyNowButton.setVisibility(isOwner ? View.GONE : View.VISIBLE);
+        buyNowButton.setEnabled(isAvailable && isLoggedIn);
 
         // Log for debugging
         android.util.Log.d("ProductDetailActivity",
@@ -831,65 +840,77 @@ public class ProductDetailActivity extends AppCompatActivity {
             return;
         }
 
-        if ("Sold".equals(product.getStatus())) {
-            Toast.makeText(this, "Sản phẩm này đã được bán", Toast.LENGTH_SHORT).show();
+        if (!"Available".equals(product.getStatus())) {
+            Toast.makeText(this, "Sản phẩm này không còn khả dụng", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        // Check if user has pending offers for this product
+        firebaseManager.checkPendingOffers(product.getId(), currentUserId, task -> {
+            if (task.isSuccessful() && task.getResult()) {
+                // User has pending offers, ask if they want to proceed
+                new AlertDialog.Builder(this)
+                    .setTitle("Bạn có đề xuất giá đang chờ")
+                    .setMessage("Bạn có đề xuất giá đang chờ xử lý cho sản phẩm này. Bạn có muốn tiếp tục mua với giá gốc không?")
+                    .setPositiveButton("Tiếp tục mua", (dialog, which) -> proceedToPurchase(product))
+                    .setNegativeButton("Hủy", null)
+                    .show();
+            } else {
+                // No pending offers, proceed directly
+                proceedToPurchase(product);
+            }
+        });
+    }
+
+    private void proceedToPurchase(Product product) {
         new AlertDialog.Builder(this)
-            .setTitle("Mua sản phẩm")
-            .setMessage("Bạn có muốn mua sản phẩm này không?\n\nTên: " + product.getTitle() + "\nGiá: " + formatPrice(product.getPrice()))
+            .setTitle("Xác nhận mua hàng")
+            .setMessage("Bạn có muốn mua sản phẩm này không?\n\n" +
+                       "Tên: " + product.getTitle() + "\n" +
+                       "Giá: " + formatPrice(product.getPrice()) + "\n\n" +
+                       "Bạn sẽ được chuyển đến trang thanh toán.")
             .setPositiveButton("Mua ngay", (dialog, which) -> {
-                handleBuyProduct(product);
+                openPaymentActivity(product);
             })
             .setNegativeButton("Hủy", null)
             .show();
     }
 
-    private void handleBuyProduct(Product product) {
-        // Proceed with the buying process
-        Toast.makeText(this, "Đã mua sản phẩm: " + product.getTitle(), Toast.LENGTH_SHORT).show();
-
-        // TODO: Implement actual buying logic (e.g., payment, order confirmation, etc.)
-        // For now, just mark the product as sold
-        firebaseManager.updateProductStatus(product.getId(), Constants.PRODUCT_STATUS_SOLD, task -> {
-            if (task.isSuccessful()) {
-                // If this is the current product being viewed, update the UI
-                if (product.getId().equals(productId)) {
-                    currentProduct.setStatus(Constants.PRODUCT_STATUS_SOLD);
-                    updateUI();
-                }
-
-                // Send notification about purchase
-                sendPurchaseNotification(product);
-            } else {
-                Toast.makeText(this, "Lỗi cập nhật trạng thái sản phẩm", Toast.LENGTH_SHORT).show();
-            }
-        });
+    private void openPaymentActivity(Product product) {
+        Intent intent = new Intent(this, PaymentActivity.class);
+        intent.putExtra("product", product);
+        startActivityForResult(intent, 1001);
     }
 
-    private void sendPurchaseNotification(Product product) {
-        try {
-            NotificationManager notificationManager = NotificationManager.getInstance(this);
-            String currentUserName = CurrentUser.getUser() != null ?
-                CurrentUser.getUser().getUsername() : "Someone";
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
 
-            // Use sendListingUpdateNotification with "purchased" type instead of sendPurchaseNotification
-            notificationManager.sendListingUpdateNotification(
-                product.getId(),
-                product.getTitle(),
-                "purchased",
-                product.getSellerId()
-            );
-        } catch (Exception e) {
-            android.util.Log.e("ProductDetailActivity", "Failed to send purchase notification", e);
+        if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
+            boolean paymentSuccess = data.getBooleanExtra("payment_success", false);
+            String transactionId = data.getStringExtra("transaction_id");
+
+            if (paymentSuccess) {
+                // Payment successful, update UI
+                currentProduct.setStatus("Sold");
+                updateUI();
+
+                Toast.makeText(this, "Thanh toán thành công!", Toast.LENGTH_LONG).show();
+
+                // Show payment success dialog
+                new AlertDialog.Builder(this)
+                    .setTitle("Thanh toán thành công!")
+                    .setMessage("Cảm ơn bạn đã mua sản phẩm. Mã giao dịch: " +
+                               (transactionId != null ? transactionId.substring(0, 8) : "N/A"))
+                    .setPositiveButton("OK", null)
+                    .show();
+            }
         }
     }
 
     // Utility methods
     private String formatPrice(double price) {
-        DecimalFormat formatter = new DecimalFormat("#,###");
-        return formatter.format(price) + " VNĐ";
+        return VNDPriceFormatter.formatVND(price);
     }
 
     private String formatDate(long timestamp) {

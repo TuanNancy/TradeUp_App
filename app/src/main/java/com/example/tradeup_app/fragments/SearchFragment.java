@@ -24,6 +24,7 @@ import com.example.tradeup_app.adapters.ProductAdapter;
 import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Product;
 import com.example.tradeup_app.activities.ChatActivity;
+import com.example.tradeup_app.utils.VNDPriceFormatter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -604,7 +605,6 @@ public class SearchFragment extends Fragment {
     }
 
     private String formatPrice(double price) {
-        java.text.NumberFormat formatter = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
-        return formatter.format(price);
+        return VNDPriceFormatter.formatVND(price);
     }
 }

@@ -1,6 +1,8 @@
 package com.example.tradeup_app.models;
 
-public class Transaction {
+import java.io.Serializable;
+
+public class Transaction implements Serializable {
     private String id;
     private String productId;
     private String productTitle;
@@ -9,7 +11,7 @@ public class Transaction {
     private String sellerId;
     private String sellerName;
     private double finalPrice;
-    private String status; // PENDING, COMPLETED, CANCELLED
+    private String status; // PENDING, COMPLETED, CANCELLED, PAID
     private long createdAt;
     private long completedAt;
     private String offerId; // If created from an offer
@@ -17,9 +19,18 @@ public class Transaction {
     private boolean buyerRated;
     private boolean sellerRated;
 
+    // Payment related fields
+    private String paymentId;
+    private String paymentStatus; // PENDING, SUCCEEDED, FAILED, CANCELED
+    private String stripePaymentIntentId;
+    private String paymentMethod;
+    private long paidAt;
+    private String receiptUrl;
+
     public Transaction() {
         this.createdAt = System.currentTimeMillis();
         this.status = "PENDING";
+        this.paymentStatus = "PENDING";
         this.buyerRated = false;
         this.sellerRated = false;
     }
@@ -107,9 +118,6 @@ public class Transaction {
 
     public void setStatus(String status) {
         this.status = status;
-        if ("COMPLETED".equals(status)) {
-            this.completedAt = System.currentTimeMillis();
-        }
     }
 
     public long getCreatedAt() {
@@ -158,5 +166,54 @@ public class Transaction {
 
     public void setSellerRated(boolean sellerRated) {
         this.sellerRated = sellerRated;
+    }
+
+    // Payment related getters and setters
+    public String getPaymentId() {
+        return paymentId;
+    }
+
+    public void setPaymentId(String paymentId) {
+        this.paymentId = paymentId;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getStripePaymentIntentId() {
+        return stripePaymentIntentId;
+    }
+
+    public void setStripePaymentIntentId(String stripePaymentIntentId) {
+        this.stripePaymentIntentId = stripePaymentIntentId;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public long getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(long paidAt) {
+        this.paidAt = paidAt;
+    }
+
+    public String getReceiptUrl() {
+        return receiptUrl;
+    }
+
+    public void setReceiptUrl(String receiptUrl) {
+        this.receiptUrl = receiptUrl;
     }
 }

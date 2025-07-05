@@ -355,6 +355,19 @@
                             android:text="Offer"
                             android:textSize="12sp" />
 
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/buy_now_button"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="1"
+                            android:drawableStart="@drawable/ic_shopping_cart"
+                            android:drawablePadding="8dp"
+                            android:text="Buy Now"
+                            android:textSize="12sp"
+                            app:backgroundTint="@color/success_color" />
+
                     </LinearLayout>
 
                     <!-- Row 2: Share and Report -->
