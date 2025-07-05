@@ -1,4 +1,3 @@
-# Android
 *.iml
 .gradle
 /local.properties
@@ -14,37 +13,3 @@
 .externalNativeBuild
 .cxx
 local.properties
-
-# Firebase
-app/google-services.json
-
-# Sensitive Configuration
-.env
-*.keystore
-*.jks
-
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Logs
-*.log
-
-# IDE
-.vscode/
-*.swp
-*.swo
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Temporary files
-*.tmp
-*.temp
-
-# API Keys (backup protection)
-**/apikeys.properties
-**/secrets.properties
