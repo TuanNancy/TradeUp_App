@@ -257,6 +257,14 @@ public class HomeFragment extends Fragment {
         firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
             @Override
             public void onProductsLoaded(List<Product> products) {
+                // ✅ FIX: Sort products by creation time - newest first
+                products.sort((p1, p2) -> {
+                    // Compare by createdAt timestamp in descending order (newest first)
+                    long time1 = p1.getCreatedAt(); // Remove null check since getCreatedAt() returns primitive long
+                    long time2 = p2.getCreatedAt(); // Remove null check since getCreatedAt() returns primitive long
+                    return Long.compare(time2, time1); // Descending order
+                });
+
                 recentAdapter.updateProducts(products);
             }
 
@@ -361,9 +369,19 @@ public class HomeFragment extends Fragment {
 
         String[] options;
         if (isOwner) {
-            options = new String[]{"View Offers", "Edit Product", "Mark as Sold", "Delete Product"};
+            // ✅ FIX: Show different options based on product status
+            if ("Sold".equals(product.getStatus())) {
+                options = new String[]{"View Offers", "Edit Product", "Mark as Available", "Delete Product"};
+            } else {
+                options = new String[]{"View Offers", "Edit Product", "Mark as Sold", "Delete Product"};
+            }
         } else {
-            options = new String[]{"Make Offer", "Report Product", "Save Item"};
+            // Only show buyer options if product is available
+            if ("Sold".equals(product.getStatus())) {
+                options = new String[]{"Product Sold", "Report Product"};
+            } else {
+                options = new String[]{"Make Offer", "Report Product", "Save Item"};
+            }
         }
 
         androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(requireContext());
@@ -391,8 +409,12 @@ public class HomeFragment extends Fragment {
                     Toast.makeText(getContext(), "Edit Product feature coming soon", Toast.LENGTH_SHORT).show();
                 }
                 break;
-            case 2: // Mark as Sold
-                markProductAsSold(product);
+            case 2: // ✅ FIX: Handle both Mark as Sold and Mark as Available based on current status
+                if ("Sold".equals(product.getStatus())) {
+                    markProductAsAvailable(product);
+                } else {
+                    markProductAsSold(product);
+                }
                 break;
             case 3: // Delete Product
                 deleteProduct(product);
@@ -690,6 +712,31 @@ public class HomeFragment extends Fragment {
                     .addOnSuccessListener(aVoid -> {
                         if (getContext() != null) {
                             Toast.makeText(getContext(), "Product marked as sold", Toast.LENGTH_SHORT).show();
+                        }
+                        refreshData();
+                    })
+                    .addOnFailureListener(e -> {
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(), "Failed to update product", Toast.LENGTH_SHORT).show();
+                        }
+                    })
+            )
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void markProductAsAvailable(Product product) {
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Mark as Available")
+            .setMessage("Are you sure you want to mark this product as available?")
+            .setPositiveButton("Yes", (dialog, which) ->
+                firebaseManager.getDatabase().getReference(FirebaseManager.PRODUCTS_NODE)
+                    .child(product.getId())
+                    .child("status")
+                    .setValue("Available")
+                    .addOnSuccessListener(aVoid -> {
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(), "Product marked as available", Toast.LENGTH_SHORT).show();
                         }
                         refreshData();
                     })

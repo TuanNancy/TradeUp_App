@@ -199,6 +199,11 @@ public class SellFragment extends Fragment {
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
+                // ✅ FIX: Check if fragment is still attached before accessing context
+                if (!isAdded() || getContext() == null) {
+                    return;
+                }
+
                 locationGpsButton.setEnabled(true);
 
                 if (locationResult != null && !locationResult.getLocations().isEmpty()) {
@@ -215,13 +220,13 @@ public class SellFragment extends Fragment {
                         if (isValidLocation(location)) {
                             handleLocationSuccess(location);
                         } else {
-                            Toast.makeText(requireContext(), "Vị trí không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.", Toast.LENGTH_LONG).show();
+                            Toast.makeText(getContext(), "Vị trí không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.", Toast.LENGTH_LONG).show();
                         }
                     } else {
-                        Toast.makeText(requireContext(), "Không thể lấy vị trí. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getContext(), "Không thể lấy vị trí. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
                     }
                 } else {
-                    Toast.makeText(requireContext(), "Không nhận được dữ liệu vị trí. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getContext(), "Không nhận được dữ liệu vị trí. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
                 }
 
                 // Clean up
@@ -231,18 +236,22 @@ public class SellFragment extends Fragment {
 
         // Add timeout
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            if (locationCallback != null) {
+            // ✅ FIX: Check if fragment is still attached before accessing context
+            if (locationCallback != null && isAdded() && getContext() != null) {
                 fusedLocationClient.removeLocationUpdates(locationCallback);
                 locationGpsButton.setEnabled(true);
-                Toast.makeText(requireContext(), "Timeout: Không thể lấy vị trí. Vui lòng kiểm tra GPS.", Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), "Timeout: Không thể lấy vị trí. Vui lòng kiểm tra GPS.", Toast.LENGTH_LONG).show();
             }
         }, 15000); // 15 seconds timeout
 
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
                 .addOnFailureListener(e -> {
-                    locationGpsButton.setEnabled(true);
-                    Toast.makeText(requireContext(), "Lỗi GPS: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    android.util.Log.e("SellFragment", "Location request failed", e);
+                    // ✅ FIX: Check if fragment is still attached before accessing context
+                    if (isAdded() && getContext() != null) {
+                        locationGpsButton.setEnabled(true);
+                        Toast.makeText(getContext(), "Lỗi GPS: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        android.util.Log.e("SellFragment", "Location request failed", e);
+                    }
                 });
     }
 
@@ -270,10 +279,15 @@ public class SellFragment extends Fragment {
     }
 
     private void handleLocationSuccess(Location location) {
+        // ✅ FIX: Check if fragment is still attached before accessing context
+        if (!isAdded() || getContext() == null) {
+            return;
+        }
+
         // Check if this is a mock location (fake/simulated location)
         if (location.isFromMockProvider()) {
             locationGpsButton.setEnabled(true);
-            Toast.makeText(requireContext(), "Phát hiện vị trí giả lập. Vui lòng tắt mock location và thử lại.", Toast.LENGTH_LONG).show();
+            Toast.makeText(getContext(), "Phát hiện vị trí giả lập. Vui lòng tắt mock location và thử lại.", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -285,7 +299,7 @@ public class SellFragment extends Fragment {
 
         if (results[0] < 1000) { // Within 1km of Google HQ
             locationGpsButton.setEnabled(true);
-            new AlertDialog.Builder(requireContext())
+            new AlertDialog.Builder(getContext())
                 .setTitle("Vị trí không chính xác")
                 .setMessage("Ứng dụng đang lấy vị trí giả lập (Google HQ). Điều này có thể do:\n\n" +
                     "1. Bạn đang sử dụng máy ảo (emulator)\n" +
@@ -294,7 +308,7 @@ public class SellFragment extends Fragment {
                     "Bạn có muốn nhập địa chỉ thủ công không?")
                 .setPositiveButton("Nhập thủ công", (dialog, which) -> {
                     locationEditText.requestFocus();
-                    Toast.makeText(requireContext(), "Vui lòng nhập địa chỉ của bạn", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Vui lòng nhập địa chỉ của bạn", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Thử lại", (dialog, which) -> {
                     // Reset and try again
@@ -308,15 +322,20 @@ public class SellFragment extends Fragment {
 
         // Check accuracy
         if (location.getAccuracy() > 100) { // More than 100 meters accuracy
-            Toast.makeText(requireContext(), String.format("Độ chính xác thấp (±%.0fm). Đang thử cải thiện...", location.getAccuracy()), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), String.format("Độ chính xác thấp (±%.0fm). Đang thử cải thiện...", location.getAccuracy()), Toast.LENGTH_SHORT).show();
             // Continue trying for better accuracy, but don't return immediately
         }
 
-        LocationUtils.getAddressFromLocation(requireContext(), location.getLatitude(), location.getLongitude(),
+        LocationUtils.getAddressFromLocation(getContext(), location.getLatitude(), location.getLongitude(),
             address -> {
+                // ✅ FIX: Check if fragment is still attached before accessing context in callback
+                if (!isAdded() || getContext() == null) {
+                    return;
+                }
+
                 if (address == null || address.trim().isEmpty()) {
                     locationGpsButton.setEnabled(true);
-                    Toast.makeText(requireContext(), "Không thể chuyển đổi tọa độ thành địa chỉ. Vui lòng nhập thủ công.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getContext(), "Không thể chuyển đổi tọa độ thành địa chỉ. Vui lòng nhập thủ công.", Toast.LENGTH_LONG).show();
                     locationEditText.requestFocus();
                     return;
                 }
@@ -327,7 +346,7 @@ public class SellFragment extends Fragment {
                 locationGpsButton.setEnabled(true);
 
                 String successMessage = String.format("Vị trí: %s (±%.0fm)", address, location.getAccuracy());
-                Toast.makeText(requireContext(), successMessage, Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), successMessage, Toast.LENGTH_LONG).show();
 
                 // Log for debugging
                 android.util.Log.d("SellFragment", String.format("Location obtained: lat=%.6f, lng=%.6f, accuracy=%.2f, provider=%s",
