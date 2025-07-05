@@ -1,5 +1,11 @@
 const express = require('express');
-const stripe = require('stripe')('sk_test_your_secret_key_here');
+// Load environment variables from .env file
+require('dotenv').config();
+
+// Use the actual Stripe secret key - fallback to hardcoded for development
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_your_secret_key_here';
+
+const stripe = require('stripe')(STRIPE_SECRET_KEY);
 const app = express();
 
 // Add request logging middleware FIRST
