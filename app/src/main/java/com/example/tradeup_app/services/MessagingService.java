@@ -85,7 +85,7 @@ public class MessagingService {
         this.context = context;
     }
 
-    // Create or get existing conversation
+    // Create or get existing conversation based on buyer-seller pair (UNIFIED LOGIC)
     public void createOrGetConversation(String productId, String buyerId, String sellerId,
                                       String productTitle, String productImageUrl, ConversationCallback callback) {
         String currentUserId = firebaseManager.getCurrentUserId();
@@ -94,65 +94,179 @@ public class MessagingService {
             return;
         }
 
-        // Check if conversation already exists
+        // ✅ SỬA: Sử dụng logic thống nhất để tìm conversation giữa 2 user
+        findConversationBetweenUsers(buyerId, sellerId, new ConversationSearchCallback() {
+            @Override
+            public void onConversationFound(String conversationId) {
+                // Conversation đã tồn tại - cập nhật với product info nếu cần
+                if (productId != null) {
+                    updateConversationWithProduct(conversationId, productId, productTitle, productImageUrl);
+                }
+                callback.onConversationCreated(conversationId);
+            }
+
+            @Override
+            public void onConversationNotFound() {
+                // Chưa có conversation - tạo mới
+                createNewUnifiedConversation(productId, buyerId, sellerId, productTitle, productImageUrl, callback);
+            }
+
+            @Override
+            public void onError(String error) {
+                callback.onError(error);
+            }
+        });
+    }
+
+    // Add method to create conversation based on user pair only (for general chat)
+    public void createOrGetUserConversation(String userId1, String userId2, ConversationCallback callback) {
+        // ✅ SỬA: Sử dụng cùng logic thống nhất, không tạo conversation mới
+        createOrGetConversation(null, userId1, userId2, "Chat chung", null, callback);
+    }
+
+    // NEW: Interface for conversation search
+    private interface ConversationSearchCallback {
+        void onConversationFound(String conversationId);
+        void onConversationNotFound();
+        void onError(String error);
+    }
+
+    // NEW: Unified method to find conversation between any two users
+    private void findConversationBetweenUsers(String userId1, String userId2, ConversationSearchCallback callback) {
         DatabaseReference conversationsRef = firebaseManager.getDatabase()
                 .getReference(FirebaseManager.CONVERSATIONS_NODE);
 
-        Query query = conversationsRef.orderByChild("productId").equalTo(productId);
-        query.addListenerForSingleValueEvent(new ValueEventListener() {
+        // ✅ SỬA: Tìm kiếm toàn bộ conversations để tìm conversation giữa 2 user này
+        conversationsRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                Conversation existingConversation = null;
+                Log.d(TAG, "🔍 Searching for existing conversation between: " + userId1 + " and " + userId2);
+
+                String foundConversationId = null;
 
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     Conversation conversation = snapshot.getValue(Conversation.class);
-                    if (conversation != null &&
-                        ((conversation.getBuyerId().equals(buyerId) && conversation.getSellerId().equals(sellerId)) ||
-                         (conversation.getBuyerId().equals(sellerId) && conversation.getSellerId().equals(buyerId)))) {
-                        existingConversation = conversation;
-                        existingConversation.setId(snapshot.getKey());
-                        break;
+                    if (conversation != null) {
+                        String buyerId = conversation.getBuyerId();
+                        String sellerId = conversation.getSellerId();
+
+                        // Kiểm tra xem conversation có phải giữa 2 user này không (cả 2 hướng)
+                        boolean isMatch = (buyerId != null && sellerId != null) &&
+                                        ((buyerId.equals(userId1) && sellerId.equals(userId2)) ||
+                                         (buyerId.equals(userId2) && sellerId.equals(userId1)));
+
+                        if (isMatch) {
+                            foundConversationId = snapshot.getKey();
+                            Log.d(TAG, "✅ Found existing conversation: " + foundConversationId);
+                            break;
+                        }
                     }
                 }
 
-                if (existingConversation != null) {
-                    callback.onConversationCreated(existingConversation.getId());
+                if (foundConversationId != null) {
+                    callback.onConversationFound(foundConversationId);
                 } else {
-                    // Create new conversation
-                    createNewConversation(productId, buyerId, sellerId, productTitle, productImageUrl, callback);
+                    Log.d(TAG, "❌ No existing conversation found, will create new one");
+                    callback.onConversationNotFound();
                 }
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "❌ Error searching conversations: " + databaseError.getMessage());
                 callback.onError(databaseError.getMessage());
             }
         });
     }
 
-    private void createNewConversation(String productId, String buyerId, String sellerId,
-                                     String productTitle, String productImageUrl, ConversationCallback callback) {
+    // NEW: Update existing conversation with product info
+    private void updateConversationWithProduct(String conversationId, String productId,
+                                             String productTitle, String productImageUrl) {
+        if (productId == null) return;
+
+        Log.d(TAG, "📝 Updating conversation " + conversationId + " with product: " + productTitle);
+
+        // Add product to conversation's product list if not already present
+        Map<String, Object> productInfo = new HashMap<>();
+        productInfo.put("productId", productId);
+        productInfo.put("productTitle", productTitle);
+        productInfo.put("productImageUrl", productImageUrl);
+        productInfo.put("addedTime", System.currentTimeMillis());
+
+        DatabaseReference conversationRef = firebaseManager.getDatabase()
+                .getReference(FirebaseManager.CONVERSATIONS_NODE)
+                .child(conversationId);
+
+        // Update products list in conversation
+        conversationRef.child("products").child(productId).setValue(productInfo);
+
+        // Update main product info for UI compatibility
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("productTitle", productTitle);
+        updates.put("productImageUrl", productImageUrl);
+        updates.put("lastMessageTime", System.currentTimeMillis());
+        updates.put("updatedAt", System.currentTimeMillis());
+
+        conversationRef.updateChildren(updates);
+    }
+
+    // NEW: Create new unified conversation
+    private void createNewUnifiedConversation(String productId, String buyerId, String sellerId,
+                                           String productTitle, String productImageUrl, ConversationCallback callback) {
         DatabaseReference conversationsRef = firebaseManager.getDatabase()
                 .getReference(FirebaseManager.CONVERSATIONS_NODE);
 
         String conversationId = conversationsRef.push().getKey();
+        if (conversationId == null) {
+            callback.onError("Failed to generate conversation ID");
+            return;
+        }
 
-        Conversation conversation = new Conversation();
-        conversation.setId(conversationId);
-        conversation.setProductId(productId);
-        conversation.setProductTitle(productTitle);
-        conversation.setProductImageUrl(productImageUrl);
-        conversation.setBuyerId(buyerId);
-        conversation.setSellerId(sellerId);
-        conversation.setLastMessage("Conversation started");
-        conversation.setLastMessageTime(System.currentTimeMillis());
+        Log.d(TAG, "🆕 Creating new unified conversation: " + conversationId);
 
-        conversationsRef.child(conversationId).setValue(conversation)
+        // Create unified conversation data
+        Map<String, Object> conversationData = new HashMap<>();
+        conversationData.put("id", conversationId);
+        conversationData.put("buyerId", buyerId);
+        conversationData.put("sellerId", sellerId);
+        conversationData.put("lastMessage", "Cuộc trò chuyện bắt đầu");
+        conversationData.put("lastMessageTime", System.currentTimeMillis());
+        conversationData.put("createdAt", System.currentTimeMillis());
+        conversationData.put("updatedAt", System.currentTimeMillis());
+        conversationData.put("isActive", true);
+        conversationData.put("unreadCount", 0);
+
+        // Add initial product if provided
+        if (productId != null && productTitle != null) {
+            Map<String, Object> productInfo = new HashMap<>();
+            productInfo.put("productId", productId);
+            productInfo.put("productTitle", productTitle);
+            productInfo.put("productImageUrl", productImageUrl);
+            productInfo.put("addedTime", System.currentTimeMillis());
+
+            Map<String, Object> products = new HashMap<>();
+            products.put(productId, productInfo);
+            conversationData.put("products", products);
+
+            // Set main product info for backward compatibility
+            conversationData.put("productId", productId);
+            conversationData.put("productTitle", productTitle);
+            conversationData.put("productImageUrl", productImageUrl);
+        } else {
+            // General chat - no specific product
+            conversationData.put("productTitle", "Chat chung");
+            conversationData.put("productImageUrl", "");
+        }
+
+        conversationsRef.child(conversationId).setValue(conversationData)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
+                        Log.d(TAG, "✅ Successfully created unified conversation: " + conversationId);
                         callback.onConversationCreated(conversationId);
                     } else {
-                        callback.onError("Failed to create conversation: " + task.getException().getMessage());
+                        Log.e(TAG, "❌ Failed to create conversation: " + task.getException());
+                        callback.onError("Failed to create conversation: " +
+                                        (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
                     }
                 });
     }

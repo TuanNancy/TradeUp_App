@@ -5,21 +5,24 @@ import java.util.Map;
 
 public class Conversation {
     private String id;
-    private String productId;
-    private String productTitle;
-    private String productImageUrl;
+    private String productId; // Keep for backward compatibility
+    private String productTitle; // Keep for backward compatibility
+    private String productImageUrl; // Keep for backward compatibility
     private String buyerId;
     private String sellerId;
     private String buyerName;
     private String sellerName;
     private String lastMessage;
-    private long lastMessageTime; // Changed from Date to long for Firebase compatibility
+    private long lastMessageTime;
     private int unreadCount;
     private boolean isActive;
-    private long createdAt; // Added for better tracking
-    private long updatedAt; // Added for better tracking
+    private long createdAt;
+    private long updatedAt;
 
-    // New fields for blocking and reporting
+    // NEW: Support for multiple products in one conversation
+    private Map<String, Object> products; // productId -> product info (title, imageUrl, addedTime)
+
+    // Fields for blocking and reporting
     private Map<String, Boolean> blockedUsers; // userId -> blocked status
     private Map<String, Long> lastReadTimes; // userId -> timestamp of last read message
     private String lastMessageSenderId; // ID of user who sent the last message
@@ -27,8 +30,8 @@ public class Conversation {
     private String reportedBy;
     private String reportReason;
     private long reportedAt;
-    private long lastReportedAt; // Add this missing field
-    private int reportCount; // Add this missing field
+    private long lastReportedAt;
+    private int reportCount;
     private boolean isEncrypted; // For secure messaging
     private int messageCount; // Total messages in conversation
 
@@ -38,10 +41,10 @@ public class Conversation {
         this.createdAt = System.currentTimeMillis();
         this.updatedAt = System.currentTimeMillis();
         this.isReported = false;
-        this.isEncrypted = true; // Enable encryption by default
+        this.isEncrypted = true;
         this.messageCount = 0;
-        this.reportCount = 0; // Initialize report count
-        this.lastReportedAt = 0; // Initialize last reported timestamp
+        this.reportCount = 0;
+        this.lastReportedAt = 0;
     }
 
     // Utility methods for blocking
@@ -72,6 +75,37 @@ public class Conversation {
         return "Unknown";
     }
 
+    // NEW: Methods for handling multiple products
+    public boolean hasProduct(String productId) {
+        return products != null && products.containsKey(productId);
+    }
+
+    public int getProductCount() {
+        return products != null ? products.size() : (productId != null ? 1 : 0);
+    }
+
+    public String getDisplayTitle() {
+        if (products != null && products.size() > 1) {
+            return "Chat về " + products.size() + " sản phẩm";
+        } else if (productTitle != null) {
+            return "Về: " + productTitle;
+        } else {
+            return "Chat chung";
+        }
+    }
+
+    // NEW: Blocked status management
+    private boolean isBlocked = false;
+
+    public boolean isBlocked() {
+        return isBlocked;
+    }
+
+    public void setBlocked(boolean blocked) {
+        this.isBlocked = blocked;
+        this.updatedAt = System.currentTimeMillis();
+    }
+
     // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -80,7 +114,10 @@ public class Conversation {
     public void setProductId(String productId) { this.productId = productId; }
 
     public String getProductTitle() { return productTitle; }
-    public void setProductTitle(String productTitle) { this.productTitle = productTitle; }
+    public void setProductTitle(String productTitle) {
+        this.productTitle = productTitle;
+        this.updatedAt = System.currentTimeMillis();
+    }
 
     public String getProductImageUrl() { return productImageUrl; }
     public void setProductImageUrl(String productImageUrl) { this.productImageUrl = productImageUrl; }
@@ -100,17 +137,23 @@ public class Conversation {
     public String getLastMessage() { return lastMessage; }
     public void setLastMessage(String lastMessage) {
         this.lastMessage = lastMessage;
-        this.updatedAt = System.currentTimeMillis(); // Auto-update timestamp
+        this.updatedAt = System.currentTimeMillis();
     }
 
     public long getLastMessageTime() { return lastMessageTime; }
-    public void setLastMessageTime(long lastMessageTime) { this.lastMessageTime = lastMessageTime; }
+    public void setLastMessageTime(long lastMessageTime) {
+        this.lastMessageTime = lastMessageTime;
+        this.updatedAt = System.currentTimeMillis();
+    }
 
     public int getUnreadCount() { return unreadCount; }
     public void setUnreadCount(int unreadCount) { this.unreadCount = unreadCount; }
 
     public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { this.isActive = active; }
+    public void setActive(boolean active) {
+        isActive = active;
+        this.updatedAt = System.currentTimeMillis();
+    }
 
     public long getCreatedAt() { return createdAt; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
@@ -118,13 +161,30 @@ public class Conversation {
     public long getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(long updatedAt) { this.updatedAt = updatedAt; }
 
-    // New getters and setters
+    // NEW: Products getter/setter
+    public Map<String, Object> getProducts() { return products; }
+    public void setProducts(Map<String, Object> products) {
+        this.products = products;
+        this.updatedAt = System.currentTimeMillis();
+    }
+
+    // Blocking and reporting getters/setters
     public Map<String, Boolean> getBlockedUsers() { return blockedUsers; }
     public void setBlockedUsers(Map<String, Boolean> blockedUsers) { this.blockedUsers = blockedUsers; }
 
+    public Map<String, Long> getLastReadTimes() { return lastReadTimes; }
+    public void setLastReadTimes(Map<String, Long> lastReadTimes) { this.lastReadTimes = lastReadTimes; }
+
+    public String getLastMessageSenderId() { return lastMessageSenderId; }
+    public void setLastMessageSenderId(String lastMessageSenderId) { this.lastMessageSenderId = lastMessageSenderId; }
+
     public boolean isReported() { return isReported; }
     public void setReported(boolean reported) {
-        this.isReported = reported;
+        isReported = reported;
+        if (reported) {
+            this.lastReportedAt = System.currentTimeMillis();
+            this.reportCount++;
+        }
     }
 
     public String getReportedBy() { return reportedBy; }
@@ -147,82 +207,4 @@ public class Conversation {
 
     public int getMessageCount() { return messageCount; }
     public void setMessageCount(int messageCount) { this.messageCount = messageCount; }
-
-    // Additional utility methods for blocking functionality
-    public void blockUser(String userId) {
-        if (blockedUsers == null) {
-            blockedUsers = new java.util.HashMap<>();
-        }
-        blockedUsers.put(userId, true);
-        this.updatedAt = System.currentTimeMillis();
-    }
-
-    public void unblockUser(String userId) {
-        if (blockedUsers != null) {
-            blockedUsers.remove(userId);
-            this.updatedAt = System.currentTimeMillis();
-        }
-    }
-
-    public boolean isBlocked() {
-        return blockedUsers != null && !blockedUsers.isEmpty();
-    }
-
-    public void setBlocked(boolean blocked) {
-        // This is a convenience method for UI updates
-        // The actual blocking logic should use blockUser/unblockUser methods
-    }
-
-    public Map<String, Long> getLastReadTimes() {
-        return lastReadTimes;
-    }
-
-    public void setLastReadTimes(Map<String, Long> lastReadTimes) {
-        this.lastReadTimes = lastReadTimes;
-    }
-
-    public String getLastMessageSenderId() {
-        return lastMessageSenderId;
-    }
-
-    public void setLastMessageSenderId(String lastMessageSenderId) {
-        this.lastMessageSenderId = lastMessageSenderId;
-    }
-
-    // Methods for read/unread status
-    public boolean hasUnreadMessages(String userId) {
-        // Nếu không có thời gian đọc cuối hoặc thời gian tin nhắn cuối mới hơn thời gian đọc cuối
-        if (lastReadTimes == null || !lastReadTimes.containsKey(userId)) {
-            return lastMessageSenderId != null && !lastMessageSenderId.equals(userId);
-        }
-
-        Long lastReadTime = lastReadTimes.get(userId);
-        return lastMessageTime > lastReadTime && !userId.equals(lastMessageSenderId);
-    }
-
-    public void markAsRead(String userId) {
-        if (lastReadTimes == null) {
-            lastReadTimes = new java.util.HashMap<>();
-        }
-        lastReadTimes.put(userId, System.currentTimeMillis());
-        this.updatedAt = System.currentTimeMillis();
-    }
-
-    public long getLastReadTime(String userId) {
-        if (lastReadTimes == null || !lastReadTimes.containsKey(userId)) {
-            return 0;
-        }
-        return lastReadTimes.get(userId);
-    }
-
-    // Thêm các setter cho Firebase compatibility
-    public void setRead(boolean read) {
-        // Setter cho field "read" để tương thích với Firebase
-        // Có thể để trống hoặc xử lý logic tùy theo nhu cầu
-    }
-
-    public void setMessages(Object messages) {
-        // Setter cho field "messages" để tương thích với Firebase
-        // Có thể để trống vì không cần xử lý
-    }
 }

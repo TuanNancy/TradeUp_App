@@ -86,11 +86,74 @@ public class UserProfileViewActivity extends AppCompatActivity {
         backButton.setOnClickListener(v -> finish());
 
         messageButton.setOnClickListener(v -> {
-            // TODO: Navigate to chat activity
-            Toast.makeText(this, R.string.chat_feature_coming_soon, Toast.LENGTH_SHORT).show();
+            // Navigate to chat activity with the target user
+            startChatWithUser();
         });
 
         reportButton.setOnClickListener(v -> showReportDialog());
+    }
+
+    // NEW: Method to start chat with the target user using MessagingService
+    private void startChatWithUser() {
+        if (targetUser == null || targetUserId == null) {
+            Toast.makeText(this, "User information not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (currentUserId == null) {
+            Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUserId.equals(targetUserId)) {
+            Toast.makeText(this, "Cannot message yourself", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Show loading
+        Toast.makeText(this, "Starting conversation...", Toast.LENGTH_SHORT).show();
+
+        // Use MessagingService with the new logic
+        com.example.tradeup_app.services.MessagingService messagingService =
+            new com.example.tradeup_app.services.MessagingService(this);
+
+        // Create or get conversation for general chat (no specific product)
+        messagingService.createOrGetUserConversation(
+            currentUserId,
+            targetUserId,
+            new com.example.tradeup_app.services.MessagingService.ConversationCallback() {
+                @Override
+                public void onConversationsLoaded(java.util.List<com.example.tradeup_app.models.Conversation> conversations) {}
+
+                @Override
+                public void onConversationCreated(String conversationId) {
+                    runOnUiThread(() -> {
+                        // Open ChatActivity with conversation details
+                        openChatActivity(conversationId, targetUserId, targetUser.getUsername());
+                    });
+                }
+
+                @Override
+                public void onError(String error) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(UserProfileViewActivity.this,
+                            "Failed to start conversation: " + error,
+                            Toast.LENGTH_LONG).show();
+                    });
+                }
+            });
+    }
+
+    private void openChatActivity(String conversationId, String receiverId, String receiverName) {
+        Intent intent = new Intent(this, com.example.tradeup_app.activities.ChatActivity.class);
+        intent.putExtra("conversationId", conversationId);
+        intent.putExtra("receiverId", receiverId);
+        intent.putExtra("receiverName", receiverName);
+        // No product data for general messaging
+        intent.putExtra("productTitle", "");
+        intent.putExtra("productId", "");
+        startActivity(intent);
     }
 
     private void loadUserProfile() {

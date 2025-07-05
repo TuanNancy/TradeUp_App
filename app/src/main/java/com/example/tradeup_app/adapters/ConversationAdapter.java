@@ -22,6 +22,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapter.ConversationViewHolder> {
     private Context context;
@@ -57,60 +58,47 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
     public void onBindViewHolder(@NonNull ConversationViewHolder holder, int position) {
         Conversation conversation = conversationList.get(position);
 
-        // Set product title
-        holder.textViewProductTitle.setText(conversation.getProductTitle());
+        // ✅ SỬA: Hiển thị title thông minh dựa trên conversation type
+        String displayTitle = conversation.getDisplayTitle();
+        if (displayTitle == null || displayTitle.isEmpty()) {
+            if (conversation.getProductTitle() != null && !conversation.getProductTitle().isEmpty()) {
+                displayTitle = "Về: " + conversation.getProductTitle();
+            } else {
+                displayTitle = "Chat chung";
+            }
+        }
+        holder.textViewProductTitle.setText(displayTitle);
 
         // Set other participant name
         String otherParticipantName = conversation.getOtherParticipantName(currentUserId);
-        holder.textViewParticipantName.setText(otherParticipantName);
+        if (otherParticipantName == null || otherParticipantName.equals("Unknown")) {
+            // Fallback: try to get name from Firebase
+            loadParticipantName(conversation, holder.textViewParticipantName);
+        } else {
+            holder.textViewParticipantName.setText(otherParticipantName);
+        }
 
         // Set last message
-        holder.textViewLastMessage.setText(conversation.getLastMessage());
+        String lastMessage = conversation.getLastMessage();
+        if (lastMessage == null || lastMessage.isEmpty()) {
+            lastMessage = "Cuộc trò chuyện bắt đầu";
+        }
+        holder.textViewLastMessage.setText(lastMessage);
 
         // Set timestamp
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd", Locale.getDefault());
         String timeText = sdf.format(new Date(conversation.getLastMessageTime()));
         holder.textViewTime.setText(timeText);
 
-        // Check if conversation has unread messages for current user
-        // Simple and reliable logic: compare lastMessageTime with user's lastReadTime
-        boolean hasUnread = false;
-
-        // Check if there's a last message
-        if (conversation.getLastMessage() != null && !conversation.getLastMessage().trim().isEmpty()) {
-
-            if (conversation.getLastReadTimes() == null ||
-                !conversation.getLastReadTimes().containsKey(currentUserId)) {
-                // User has never read this conversation -> unread
-                hasUnread = true;
-            } else {
-                // User has read before, check if there are new messages
-                Long userLastReadTime = conversation.getLastReadTimes().get(currentUserId);
-
-                if (userLastReadTime != null && conversation.getLastMessageTime() > userLastReadTime) {
-                    // There's a new message after user's last read time -> unread
-                    hasUnread = true;
-                }
-                // else: no new messages -> read
-            }
-        }
-
-        // Fallback: also check unreadCount for compatibility
-        if (!hasUnread && conversation.getUnreadCount() > 0) {
-            hasUnread = true;
-        }
-
-        // Tạo biến final để sử dụng trong lambda
+        // ✅ SỬA: Logic unread đơn giản và chính xác hơn
+        boolean hasUnread = checkIfConversationHasUnread(conversation);
         final boolean isUnread = hasUnread;
 
-        // Debug log để kiểm tra
+        // Debug log
         android.util.Log.d("ConversationAdapter", "Conversation " + conversation.getId() +
             " - hasUnread: " + isUnread +
-            " - unreadCount: " + conversation.getUnreadCount() +
             " - lastMessage: " + conversation.getLastMessage() +
-            " - lastReadTimes: " + (conversation.getLastReadTimes() != null ? conversation.getLastReadTimes().size() : "null") +
-            " - lastMessageSenderId: " + conversation.getLastMessageSenderId() +
-            " - currentUserId: " + currentUserId);
+            " - otherParticipant: " + otherParticipantName);
 
         // Set visual indicators for read/unread status
         if (isUnread) {
@@ -124,7 +112,7 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
             holder.imageViewReadStatus.setVisibility(View.VISIBLE);
             holder.imageViewReadStatus.setImageResource(R.drawable.ic_message_unread);
 
-            // Set background to slightly highlighted với màu rõ ràng hơn
+            // Set background to slightly highlighted
             holder.itemView.setBackgroundColor(0xFFE3F2FD); // Light blue background
         } else {
             // Read conversation - normal text style
@@ -133,7 +121,7 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
             holder.textViewLastMessage.setTextColor(0xFF757575); // Gray color
             holder.textViewParticipantName.setTextColor(0xFF757575); // Gray color
 
-            // Hide read indicator for simplicity
+            // Hide read indicator
             holder.imageViewReadStatus.setVisibility(View.GONE);
 
             // Normal background
@@ -148,24 +136,14 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
             holder.textViewUnreadCount.setVisibility(View.GONE);
         }
 
-        // Load product image
-        if (conversation.getProductImageUrl() != null && !conversation.getProductImageUrl().isEmpty()) {
-            Glide.with(context)
-                    .load(conversation.getProductImageUrl())
-                    .placeholder(android.R.drawable.ic_menu_gallery)
-                    .error(android.R.drawable.ic_menu_close_clear_cancel)
-                    .into(holder.imageViewProduct);
-        } else {
-            holder.imageViewProduct.setImageResource(android.R.drawable.ic_menu_gallery);
-        }
+        // ✅ SỬA: Load product image thông minh
+        loadConversationImage(conversation, holder.imageViewProduct);
 
         // Set click listeners
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
                 // Mark conversation as read when clicked
                 if (isUnread) {
-                    conversation.markAsRead(currentUserId);
-                    // Update in Firebase
                     updateConversationReadStatus(conversation);
                     // Refresh the item to update UI
                     notifyItemChanged(position);
@@ -376,6 +354,101 @@ public class ConversationAdapter extends RecyclerView.Adapter<ConversationAdapte
                 .addOnFailureListener(e -> {
                     android.util.Log.e("ConversationAdapter", "Failed to update read status", e);
                 });
+    }
+
+    // NEW: Check if conversation has unread messages
+    private boolean checkIfConversationHasUnread(Conversation conversation) {
+        // Check if there's a last message
+        if (conversation.getLastMessage() == null || conversation.getLastMessage().trim().isEmpty()) {
+            return false;
+        }
+
+        // Check lastReadTimes
+        if (conversation.getLastReadTimes() == null ||
+            !conversation.getLastReadTimes().containsKey(currentUserId)) {
+            // User has never read this conversation -> unread
+            return true;
+        }
+
+        // User has read before, check if there are new messages
+        Long userLastReadTime = conversation.getLastReadTimes().get(currentUserId);
+        if (userLastReadTime != null && conversation.getLastMessageTime() > userLastReadTime) {
+            // There's a new message after user's last read time -> unread
+            return true;
+        }
+
+        // Check if current user is the last message sender
+        if (conversation.getLastMessageSenderId() != null &&
+            conversation.getLastMessageSenderId().equals(currentUserId)) {
+            // User sent the last message -> mark as read for them
+            return false;
+        }
+
+        // Fallback: check unreadCount
+        return conversation.getUnreadCount() > 0;
+    }
+
+    // NEW: Load participant name from Firebase if not available
+    private void loadParticipantName(Conversation conversation, TextView nameTextView) {
+        String otherUserId = conversation.getOtherParticipantId(currentUserId);
+        if (otherUserId == null) {
+            nameTextView.setText("Unknown User");
+            return;
+        }
+
+        // Load name from Firebase
+        messagingService.getUserProfile(otherUserId, new MessagingService.UserProfileCallback() {
+            @Override
+            public void onSuccess(String userName, String userAvatar) {
+                nameTextView.setText(userName);
+                // Update conversation object for future use
+                if (conversation.getBuyerId().equals(currentUserId)) {
+                    conversation.setSellerName(userName);
+                } else {
+                    conversation.setBuyerName(userName);
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                nameTextView.setText("Unknown User");
+            }
+        });
+    }
+
+    // NEW: Load conversation image intelligently
+    private void loadConversationImage(Conversation conversation, ImageView imageView) {
+        String imageUrl = null;
+
+        // Priority 1: Main product image
+        if (conversation.getProductImageUrl() != null && !conversation.getProductImageUrl().isEmpty()) {
+            imageUrl = conversation.getProductImageUrl();
+        }
+        // Priority 2: First product in products list
+        else if (conversation.getProducts() != null && !conversation.getProducts().isEmpty()) {
+            for (Object productObj : conversation.getProducts().values()) {
+                if (productObj instanceof Map) {
+                    Map<String, Object> productInfo = (Map<String, Object>) productObj;
+                    String productImageUrl = (String) productInfo.get("productImageUrl");
+                    if (productImageUrl != null && !productImageUrl.isEmpty()) {
+                        imageUrl = productImageUrl;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Load image or use default
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            Glide.with(context)
+                    .load(imageUrl)
+                    .placeholder(android.R.drawable.ic_menu_gallery)
+                    .error(android.R.drawable.ic_menu_close_clear_cancel)
+                    .into(imageView);
+        } else {
+            // Use default chat icon for general conversations
+            imageView.setImageResource(R.drawable.ic_user_placeholder);
+        }
     }
 
     @Override

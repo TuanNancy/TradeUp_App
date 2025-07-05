@@ -108,7 +108,7 @@ public class ChatActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        // ✅ SỬA: Cải thiện logic hiển thị tên user
+        // ✅ SỬA: Cải thiện logic hiển thị tên user cho conversation dựa trên user pair
         Log.d(TAG, "Initializing UI - receiverId: " + receiverId + ", receiverName: " + receiverName);
 
         // Luôn load tên từ Firebase để đảm bảo hiển thị đúng
@@ -132,9 +132,8 @@ public class ChatActivity extends AppCompatActivity {
             }
         }
 
-        if (productTitle != null && getSupportActionBar() != null) {
-            getSupportActionBar().setSubtitle("About: " + productTitle);
-        }
+        // ✅ SỬA: Hiển thị subtitle thông minh dựa trên context
+        updateSubtitleBasedOnContext();
 
         // Initialize views
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
@@ -142,24 +141,84 @@ public class ChatActivity extends AppCompatActivity {
         buttonSend = findViewById(R.id.buttonSend);
         buttonAttach = findViewById(R.id.buttonAttach);
         buttonEmoji = findViewById(R.id.buttonEmoji);
-        buttonOffer = findViewById(R.id.buttonOffer); // Initialize offer button
+        buttonOffer = findViewById(R.id.buttonOffer);
         textViewTyping = findViewById(R.id.textViewTyping);
 
-        // Show/hide offer button based on product availability
+        // Show/hide offer button - always show for general conversation
         if (buttonOffer != null) {
-            if (productId != null && !productId.isEmpty()) {
-                buttonOffer.setVisibility(View.VISIBLE);
-                Log.d(TAG, "Offer button shown - ProductID: " + productId);
-            } else {
-                buttonOffer.setVisibility(View.VISIBLE); // Show for testing
-                Log.d(TAG, "Offer button shown for testing - No ProductID");
-            }
+            buttonOffer.setVisibility(View.VISIBLE);
+            Log.d(TAG, "Offer button shown for user conversation");
         } else {
             Log.e(TAG, "Offer button is null!");
         }
 
         if (textViewTyping != null) {
             textViewTyping.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateSubtitleBasedOnContext() {
+        if (getSupportActionBar() == null) return;
+
+        if (productTitle != null && !productTitle.isEmpty() && !productTitle.equals("Chat chung")) {
+            // Có sản phẩm cụ thể - hiển thị rõ ràng với style nổi bật
+            String productSubtitle = "🛍️ Đang chat về: " + productTitle;
+            getSupportActionBar().setSubtitle(productSubtitle);
+
+            // Thêm toast để đảm bảo user nhận biết
+            Toast.makeText(this, "💬 Chat về sản phẩm: " + productTitle, Toast.LENGTH_LONG).show();
+
+            Log.d(TAG, "Chat about specific product: " + productTitle);
+        } else {
+            // Chat chung - hiển thị thông tin về cuộc trò chuyện
+            getSupportActionBar().setSubtitle("💬 Chat chung");
+            Log.d(TAG, "General chat conversation");
+        }
+    }
+
+    // NEW: Method to show product banner at top of chat
+    private void showProductBanner() {
+        if (productTitle != null && !productTitle.isEmpty() && !productTitle.equals("Chat chung")) {
+            // Tạo banner hiển thị thông tin sản phẩm
+            android.widget.LinearLayout mainLayout = findViewById(R.id.mainChatLayout);
+            if (mainLayout != null) {
+                // Create product info banner
+                android.widget.LinearLayout bannerLayout = new android.widget.LinearLayout(this);
+                bannerLayout.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+                bannerLayout.setBackgroundColor(0xFF2196F3); // Blue background
+                bannerLayout.setPadding(16, 12, 16, 12);
+                bannerLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+
+                // Product icon
+                android.widget.TextView iconView = new android.widget.TextView(this);
+                iconView.setText("🛍️");
+                iconView.setTextSize(18);
+                iconView.setPadding(0, 0, 12, 0);
+
+                // Product text
+                android.widget.TextView textView = new android.widget.TextView(this);
+                textView.setText("Đang thảo luận về: " + productTitle);
+                textView.setTextColor(0xFFFFFFFF); // White text
+                textView.setTextSize(14);
+                textView.setTypeface(null, android.graphics.Typeface.BOLD);
+
+                bannerLayout.addView(iconView);
+                bannerLayout.addView(textView);
+
+                // Add banner below toolbar
+                android.view.ViewGroup.LayoutParams layoutParams = new android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+
+                // Insert banner after toolbar (position 1)
+                try {
+                    mainLayout.addView(bannerLayout, 1, layoutParams);
+                    Log.d(TAG, "Product banner added successfully for: " + productTitle);
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to add product banner", e);
+                }
+            }
         }
     }
 
