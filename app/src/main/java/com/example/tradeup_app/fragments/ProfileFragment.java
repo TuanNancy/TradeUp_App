@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
 import com.example.tradeup_app.R;
+import com.example.tradeup_app.activities.MyProductsActivity;
 import com.example.tradeup_app.auth.AccountSettingsActivity;
 import com.example.tradeup_app.auth.LoginActivity;
 import com.example.tradeup_app.auth.UserProfileActivity;
@@ -80,8 +81,8 @@ public class ProfileFragment extends Fragment {
 
         // My Listings - Show user's active listings
         myListingsButton.setOnClickListener(v -> {
-            // TODO: Navigate to user's listings
-            Toast.makeText(getContext(), "My Listings feature coming soon", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(getContext(), MyProductsActivity.class);
+            startActivity(intent);
         });
 
         // Purchase History - Show transaction history (UPDATED TO USE TransactionHistoryActivity)

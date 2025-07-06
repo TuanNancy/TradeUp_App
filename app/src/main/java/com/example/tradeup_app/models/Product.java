@@ -31,6 +31,10 @@ public class Product implements Serializable {
     private long lastViewedAt;
     private List<String> interactionHistory;
 
+    // Additional fields to prevent ClassMapper warnings
+    private long soldAt;
+    private String buyerId;
+
     public Product() {
         this.imageUrls = new ArrayList<>();
         this.tags = new ArrayList<>();
@@ -129,4 +133,11 @@ public class Product implements Serializable {
 
     public List<String> getInteractionHistory() { return interactionHistory; }
     public void setInteractionHistory(List<String> interactionHistory) { this.interactionHistory = interactionHistory; }
+
+    // Additional getters and setters for new fields
+    public long getSoldAt() { return soldAt; }
+    public void setSoldAt(long soldAt) { this.soldAt = soldAt; }
+
+    public String getBuyerId() { return buyerId; }
+    public void setBuyerId(String buyerId) { this.buyerId = buyerId; }
 }
