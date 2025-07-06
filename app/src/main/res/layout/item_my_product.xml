@@ -64,37 +64,44 @@
             android:layout_marginTop="8dp">
 
             <!-- Status -->
-            <TextView
+            <com.google.android.material.chip.Chip
                 android:id="@+id/status_chip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Đang bán"
                 android:textSize="10sp"
-                android:background="#4CAF50"
-                android:textColor="@android:color/white"
-                android:padding="4dp"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="8dp"
+                app:chipBackgroundColor="@color/design_default_color_primary"
+                app:chipStrokeColor="@android:color/white"
+                app:chipStrokeWidth="1dp"
+                app:chipCornerRadius="8dp"
+                app:closeIconEnabled="false"
+                android:textColor="@android:color/white" />
 
             <!-- Category -->
-            <TextView
+            <com.google.android.material.chip.Chip
                 android:id="@+id/category_chip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Category"
                 android:textSize="10sp"
-                android:background="#EEEEEE"
-                android:padding="4dp"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="8dp"
+                app:chipBackgroundColor="#EEEEEE"
+                app:chipCornerRadius="8dp"
+                app:closeIconEnabled="false"
+                android:textColor="#000000" />
 
             <!-- Condition -->
-            <TextView
+            <com.google.android.material.chip.Chip
                 android:id="@+id/condition_chip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Condition"
                 android:textSize="10sp"
-                android:background="#EEEEEE"
-                android:padding="4dp" />
+                app:chipBackgroundColor="#EEEEEE"
+                app:chipCornerRadius="8dp"
+                app:closeIconEnabled="false"
+                android:textColor="#000000" />
 
         </LinearLayout>
 
