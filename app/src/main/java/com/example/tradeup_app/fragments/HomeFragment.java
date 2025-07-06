@@ -396,11 +396,13 @@ public class HomeFragment extends Fragment {
                 options = new String[]{"View Offers", "Edit Product", "Mark as Sold", "Delete Product"};
             }
         } else {
-            // Only show buyer options if product is available
+            // Show different options based on product status for buyers
             if ("Sold".equals(product.getStatus())) {
-                options = new String[]{"Product Sold", "Report Product"};
+                // Product is sold - only allow reporting
+                options = new String[]{"Report Product"};
             } else {
-                options = new String[]{"Make Offer", "Report Product", "Save Item"};
+                // Product is available - allow both make offer and reporting
+                options = new String[]{"Make Offer", "Report Product"};
             }
         }
 
@@ -443,18 +445,32 @@ public class HomeFragment extends Fragment {
     }
 
     private void handleBuyerAction(Product product, int actionIndex) {
-        switch (actionIndex) {
-            case 0: // Make Offer
-                showMakeOfferDialog(product);
-                break;
-            case 1: // Report Product
-                showReportDialog(product);
-                break;
-            case 2: // Save Item
-                if (getContext() != null) {
-                    Toast.makeText(getContext(), "Save Item feature coming soon", Toast.LENGTH_SHORT).show();
-                }
-                break;
+        // Kiểm tra trạng thái sản phẩm trước khi xử lý action
+        boolean isProductSold = "Sold".equals(product.getStatus());
+
+        if (isProductSold) {
+            // Nếu sản phẩm đã sold, chỉ có thể report
+            switch (actionIndex) {
+                case 0: // Report Product (duy nhất option cho sản phẩm đã sold)
+                    showReportDialog(product);
+                    break;
+                default:
+                    showToastOnce("This product has been sold");
+                    break;
+            }
+        } else {
+            // Nếu sản phẩm chưa sold, có thể make offer hoặc report
+            switch (actionIndex) {
+                case 0: // Make Offer
+                    showMakeOfferDialog(product);
+                    break;
+                case 1: // Report Product
+                    showReportDialog(product);
+                    break;
+                default:
+                    showToastOnce("Invalid action");
+                    break;
+            }
         }
     }
 
@@ -713,11 +729,32 @@ public class HomeFragment extends Fragment {
             description
         );
 
-        // TODO: Implement submitReport method in FirebaseManager
-        // For now, show a placeholder message
-        if (getContext() != null) {
-            Toast.makeText(getContext(), "Report feature will be implemented soon", Toast.LENGTH_SHORT).show();
-        }
+        // Ensure report has product title for better admin UI
+        report.setReportedItemTitle(product.getTitle());
+
+        android.util.Log.d("HomeFragment", "🚨 Submitting report for product: " + product.getTitle() +
+            " at timestamp: " + report.getCreatedAt());
+        android.util.Log.d("HomeFragment", "📋 Report details - Reason: " + reason + ", Status: " + report.getStatus());
+
+        // Submit report to Firebase using FirebaseManager
+        firebaseManager.submitReport(report, task -> {
+            if (task.isSuccessful()) {
+                android.util.Log.d("HomeFragment", "✅ Report submitted successfully to Firebase!");
+
+                // Force trigger a notification for testing
+                android.util.Log.d("HomeFragment", "🔔 Report should now appear in admin dashboard real-time");
+
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "Report submitted successfully. Admin will be notified immediately.", Toast.LENGTH_LONG).show();
+                }
+            } else {
+                android.util.Log.e("HomeFragment", "❌ Failed to submit report: " +
+                    (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "Failed to submit report. Please try again.", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     private void markProductAsSold(Product product) {

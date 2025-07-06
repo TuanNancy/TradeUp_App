@@ -86,6 +86,11 @@ public class FirebaseManager {
         void onError(String error);
     }
 
+    public interface FlaggedUsersCallback {
+        void onFlaggedUsersLoaded(List<com.example.tradeup_app.auth.Domain.UserModel> users);
+        void onError(String error);
+    }
+
     private FirebaseManager() {
         database = FirebaseDatabase.getInstance();
         auth = FirebaseAuth.getInstance();
@@ -1017,5 +1022,25 @@ public class FirebaseManager {
 
     public interface OnTransactionCheckListener {
         void onCheckComplete(String result);
+    }
+
+    public void getFlaggedUsers(final FlaggedUsersCallback callback) {
+        database.getReference(USERS_NODE)
+            .orderByChild("isFlagged").equalTo(true)
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(com.google.firebase.database.DataSnapshot snapshot) {
+                    List<com.example.tradeup_app.auth.Domain.UserModel> flaggedUsers = new java.util.ArrayList<>();
+                    for (com.google.firebase.database.DataSnapshot userSnap : snapshot.getChildren()) {
+                        com.example.tradeup_app.auth.Domain.UserModel user = userSnap.getValue(com.example.tradeup_app.auth.Domain.UserModel.class);
+                        if (user != null) flaggedUsers.add(user);
+                    }
+                    callback.onFlaggedUsersLoaded(flaggedUsers);
+                }
+                @Override
+                public void onCancelled(com.google.firebase.database.DatabaseError error) {
+                    callback.onError(error.getMessage());
+                }
+            });
     }
 }

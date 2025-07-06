@@ -12,6 +12,8 @@ public class UserModel {
     public double rating;
     private boolean isAdmin;
     private boolean deactivated;
+    private boolean isFlagged;
+    private String flaggedReason;
 
     // Constructor rỗng cho Firebase
     public UserModel() {}
@@ -28,6 +30,8 @@ public class UserModel {
         this.rating = rating;
         this.isAdmin = false;
         this.deactivated = false;
+        this.isFlagged = false;
+        this.flaggedReason = "";
     }
 
     // Getter và Setter
@@ -66,4 +70,9 @@ public class UserModel {
 
     public boolean isDeactivated() { return deactivated; }
     public void setDeactivated(boolean deactivated) { this.deactivated = deactivated; }
+
+    public boolean isFlagged() { return isFlagged; }
+    public void setFlagged(boolean flagged) { this.isFlagged = flagged; }
+    public String getFlaggedReason() { return flaggedReason; }
+    public void setFlaggedReason(String flaggedReason) { this.flaggedReason = flaggedReason; }
 }

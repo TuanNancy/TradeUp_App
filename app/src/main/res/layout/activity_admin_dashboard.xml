@@ -24,63 +24,89 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <!-- Content -->
-    <FrameLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-        <!-- Loading Indicator -->
-        <com.google.android.material.progressindicator.CircularProgressIndicator
-            android:id="@+id/progressIndicator"
-            android:layout_width="wrap_content"
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/admin_tab_layout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:visibility="gone" />
+            app:tabIndicatorColor="@color/error_color"
+            app:tabSelectedTextColor="@color/error_color"
+            app:tabTextColor="@color/secondary_text"
+            android:background="@color/white" />
 
-        <!-- Reports RecyclerView -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/reportsRecyclerView"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="8dp"
-            android:clipToPadding="false" />
+            android:layout_height="0dp"
+            android:layout_weight="1">
 
-        <!-- Empty State -->
-        <LinearLayout
-            android:id="@+id/emptyView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="32dp"
-            android:visibility="gone">
+            <!-- Reports RecyclerView -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/reportsRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="8dp"
+                android:clipToPadding="false" />
 
-            <ImageView
-                android:layout_width="120dp"
-                android:layout_height="120dp"
-                android:src="@drawable/ic_flag"
-                android:alpha="0.5"
-                android:layout_marginBottom="16dp" />
+            <!-- Flagged Users RecyclerView -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/flaggedUsersRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="8dp"
+                android:clipToPadding="false"
+                android:visibility="gone" />
 
-            <TextView
+            <!-- Loading Indicator -->
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progressIndicator"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="No pending reports"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/primary_text"
-                android:layout_marginBottom="8dp" />
+                android:layout_gravity="center"
+                android:visibility="gone" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="All reports have been reviewed"
-                android:textSize="14sp"
-                android:textColor="@color/secondary_text"
-                android:textAlignment="center" />
+            <!-- Empty State -->
+            <LinearLayout
+                android:id="@+id/emptyView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="32dp"
+                android:visibility="gone">
 
-        </LinearLayout>
+                <ImageView
+                    android:id="@+id/emptyImageView"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:src="@drawable/ic_flag"
+                    android:alpha="0.5"
+                    android:layout_marginBottom="16dp" />
 
-    </FrameLayout>
+                <TextView
+                    android:id="@+id/emptyTitleText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="No pending reports"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/primary_text"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/emptyDescriptionText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="All reports have been reviewed"
+                    android:textSize="14sp"
+                    android:textColor="@color/secondary_text"
+                    android:textAlignment="center" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
 
 </LinearLayout>

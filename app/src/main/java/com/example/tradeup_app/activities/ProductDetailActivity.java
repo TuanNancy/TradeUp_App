@@ -459,6 +459,13 @@ public class ProductDetailActivity extends AppCompatActivity {
         // Report - hidden for owner
         reportButton.setVisibility(isOwner ? View.GONE : View.VISIBLE);
         reportButton.setEnabled(isLoggedIn);
+
+        // Debug log for report button
+        android.util.Log.d("ProductDetailActivity",
+            "Report Button - Visible: " + (reportButton.getVisibility() == View.VISIBLE) +
+            ", Enabled: " + reportButton.isEnabled() +
+            ", isOwner: " + isOwner +
+            ", isLoggedIn: " + isLoggedIn);
     }
 
     private void incrementViewCount() {
@@ -744,14 +751,40 @@ public class ProductDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // Use the new comprehensive reporting system
-        ReportUtils.reportProduct(
-            this,
-            product.getId(),
-            product.getTitle(),
-            product.getSellerId(),
-            product.getSellerName()
-        );
+        // Use ReportDialog directly instead of ReportUtils
+        ReportDialog reportDialog = new ReportDialog(this, (reason, description) -> {
+            // Create report object
+            Report report = new Report();
+            report.setReporterId(currentUserId);
+            report.setReporterName(getCurrentUserName());
+            report.setReportedUserId(product.getSellerId());
+            report.setReportedUserName(product.getSellerName());
+            report.setReportedItemId(product.getId());
+            report.setReportedItemTitle(product.getTitle());
+            report.setReportType("PRODUCT");
+            report.setReason(reason);
+            report.setDescription(description);
+            report.setStatus("PENDING");
+            report.setCreatedAt(System.currentTimeMillis());
+
+            // Submit report to Firebase
+            firebaseManager.submitReport(report, task -> {
+                if (task.isSuccessful()) {
+                    Toast.makeText(this, "Report submitted successfully. Thank you for helping keep our community safe.", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, "Failed to submit report. Please try again.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+
+        reportDialog.show();
+    }
+
+    private String getCurrentUserName() {
+        if (CurrentUser.getUser() != null) {
+            return CurrentUser.getUser().getUsername();
+        }
+        return "Unknown User";
     }
 
     private void openSellerProfile(String sellerId) {

@@ -113,13 +113,19 @@ public class ProfileFragment extends Fragment {
 
 
 
+        // Admin Dashboard - Check and setup click listener
         View adminDashboardButton = view.findViewById(R.id.admin_dashboard_button);
-        if (adminDashboardButton != null && isAdminUser()) {
-            adminDashboardButton.setVisibility(View.VISIBLE);
+        if (adminDashboardButton != null) {
+            // Always set click listener
             adminDashboardButton.setOnClickListener(v -> {
                 Intent intent = new Intent(getContext(), com.example.tradeup_app.activities.AdminDashboardActivity.class);
                 startActivity(intent);
             });
+
+            // Check if should be visible (will be updated again in updateUI)
+            if (isAdminUser()) {
+                adminDashboardButton.setVisibility(View.VISIBLE);
+            }
         }
 
 
@@ -287,6 +293,12 @@ public class ProfileFragment extends Fragment {
 
 
         totalSalesTextView.setText("0");
+
+        // Ensure admin dashboard button visibility is updated after user data is loaded
+        View adminDashboardButton = getView() != null ? getView().findViewById(R.id.admin_dashboard_button) : null;
+        if (adminDashboardButton != null) {
+            adminDashboardButton.setVisibility(isAdminUser() ? View.VISIBLE : View.GONE);
+        }
     }
 
     private void showLogoutDialog() {
@@ -326,3 +338,4 @@ public class ProfileFragment extends Fragment {
         return currentUser != null && currentUser.getIsAdmin();
     }
 }
+
