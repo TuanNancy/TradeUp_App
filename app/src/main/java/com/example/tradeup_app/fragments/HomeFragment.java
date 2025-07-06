@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.tradeup_app.R;
 import com.example.tradeup_app.adapters.ProductAdapter;
 import com.example.tradeup_app.adapters.CategoryAdapter;
+import com.example.tradeup_app.auth.Domain.UserModel;
 import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Product;
 import com.example.tradeup_app.activities.ChatActivity;
@@ -26,6 +27,9 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.bumptech.glide.Glide;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import de.hdodenhof.circleimageview.CircleImageView;
 
 import java.util.ArrayList;
@@ -133,38 +137,49 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadUserProfile() {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser != null) {
-            // Load user profile image
-            if (currentUser.getPhotoUrl() != null) {
-                Glide.with(this)
-                    .load(currentUser.getPhotoUrl())
-                    .placeholder(R.drawable.ic_user_placeholder)
-                    .error(R.drawable.ic_user_placeholder)
-                    .into(userProfileImage);
-            }
+        FirebaseUser firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (firebaseUser == null) return;
 
-            // Set user name
-            String displayName = currentUser.getDisplayName();
-            if (displayName != null && !displayName.isEmpty()) {
-                userNameText.setText(displayName);
-            } else {
-                userNameText.setText("Người dùng");
-            }
+        String uid = firebaseUser.getUid();
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(uid);
 
-            // Set greeting based on time of day
-            java.util.Calendar calendar = java.util.Calendar.getInstance();
-            int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
-            String greeting;
-            if (hour < 12) {
-                greeting = "Chào buổi sáng!";
-            } else if (hour < 18) {
-                greeting = "Chào buổi chiều!";
-            } else {
-                greeting = "Chào buổi tối!";
+        userRef.get().addOnSuccessListener(snapshot -> {
+            if (snapshot.exists()) {
+                UserModel user = snapshot.getValue(UserModel.class);
+                if (user == null) return;
+
+                // Set name
+                String name = user.getUsername() != null && !user.getUsername().isEmpty()
+                        ? user.getUsername()
+                        : user.getUsername() != null ? user.getUsername() : "Người dùng";
+                userNameText.setText(name);
+
+                // Set avatar
+                if (user.getProfilePic() != null && !user.getProfilePic().isEmpty()) {
+                    Glide.with(this)
+                            .load(user.getProfilePic())
+                            .placeholder(R.drawable.ic_user_placeholder)
+                            .error(R.drawable.ic_user_placeholder)
+                            .into(userProfileImage);
+                } else {
+                    userProfileImage.setImageResource(R.drawable.ic_user_placeholder);
+                }
+
+                // Set greeting
+                int hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY);
+                String greeting;
+                if (hour < 12) {
+                    greeting = "Chào buổi sáng!";
+                } else if (hour < 18) {
+                    greeting = "Chào buổi chiều!";
+                } else {
+                    greeting = "Chào buổi tối!";
+                }
+                greetingText.setText(greeting);
             }
-            greetingText.setText(greeting);
-        }
+        }).addOnFailureListener(e -> {
+            Toast.makeText(getContext(), "Lỗi khi tải hồ sơ người dùng", Toast.LENGTH_SHORT).show();
+        });
     }
 
     private void loadCategories() {

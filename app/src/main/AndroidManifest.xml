@@ -86,12 +86,12 @@
             android:theme="@style/Theme.TradeUp_App" />
 
         <activity
-            android:name=".activities.UserProfileActivity"
+            android:name=".auth.UserProfileActivity"
             android:exported="false"
             android:theme="@style/Theme.TradeUp_App" />
 
         <activity
-            android:name=".activities.AccountSettingsActivity"
+            android:name=".auth.AccountSettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.TradeUp_App" />
 

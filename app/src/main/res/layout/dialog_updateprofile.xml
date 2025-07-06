@@ -30,4 +30,15 @@
         android:hint="Contact Info"
         android:inputType="textEmailAddress"
         android:minHeight="48dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/saveProfileButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Lưu thay đổi"
+        android:layout_marginTop="24dp"
+        android:backgroundTint="@color/primary"
+        android:textColor="@android:color/white"
+        style="@style/Widget.MaterialComponents.Button" />
+
 </LinearLayout>

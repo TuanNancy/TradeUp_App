@@ -376,7 +376,7 @@ public class LoginActivity extends AppCompatActivity {
                 photoUrl,
                 "", // bio
                 "", // contact
-                "0" // rating
+                0 // rating
         );
 
         FirebaseDatabase.getInstance().getReference("Users").child(uid)
