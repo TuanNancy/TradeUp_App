@@ -24,6 +24,7 @@ import com.example.tradeup_app.adapters.ProductAdapter;
 import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Product;
 import com.example.tradeup_app.activities.ChatActivity;
+import com.example.tradeup_app.activities.PaymentActivity;
 import com.example.tradeup_app.utils.VNDPriceFormatter;
 
 import java.util.ArrayList;
@@ -584,24 +585,51 @@ public class SearchFragment extends Fragment {
             return;
         }
 
-        // Check if user is trying to buy their own product
         if (currentUserId.equals(product.getSellerId())) {
             Toast.makeText(getContext(), "Bạn không thể mua sản phẩm của chính mình", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Check if the product is already sold
-        if ("Sold".equals(product.getStatus())) {
-            Toast.makeText(getContext(), "Sản phẩm này đã được bán", Toast.LENGTH_SHORT).show();
+        if (!"Available".equals(product.getStatus())) {
+            Toast.makeText(getContext(), "Sản phẩm này không còn khả dụng", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Proceed with the buying process
-        Toast.makeText(getContext(), "Đã mua sản phẩm: " + product.getTitle(), Toast.LENGTH_SHORT).show();
+        // Check if user has pending offers for this product
+        firebaseManager.checkPendingOffers(product.getId(), currentUserId, task -> {
+            if (task.isSuccessful() && task.getResult()) {
+                // User has pending offers, ask if they want to proceed
+                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("Bạn có đề xuất giá đang chờ")
+                    .setMessage("Bạn có đề xuất giá đang chờ xử lý cho sản phẩm này. Bạn có muốn tiếp tục mua với giá gốc không?")
+                    .setPositiveButton("Tiếp tục mua", (dialog, which) -> proceedToPurchase(product))
+                    .setNegativeButton("Hủy", null)
+                    .show();
+            } else {
+                // No pending offers, proceed directly
+                proceedToPurchase(product);
+            }
+        });
+    }
 
-        // TODO: Implement actual buying logic (e.g., payment, order confirmation, etc.)
-        // For now, just mark the product as sold
-        markProductAsSold(product);
+    private void proceedToPurchase(Product product) {
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Xác nhận mua hàng")
+            .setMessage("Bạn có muốn mua sản phẩm này không?\n\n" +
+                       "Tên: " + product.getTitle() + "\n" +
+                       "Giá: " + formatPrice(product.getPrice()) + "\n\n" +
+                       "Bạn sẽ được chuyển đến trang thanh toán.")
+            .setPositiveButton("Mua ngay", (dialog, which) -> {
+                openPaymentActivity(product);
+            })
+            .setNegativeButton("Hủy", null)
+            .show();
+    }
+
+    private void openPaymentActivity(Product product) {
+        Intent intent = new Intent(getContext(), PaymentActivity.class);
+        intent.putExtra("product", product);
+        startActivity(intent);
     }
 
     private String formatPrice(double price) {
