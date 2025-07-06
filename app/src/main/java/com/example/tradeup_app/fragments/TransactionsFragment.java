@@ -1,10 +1,14 @@
 package com.example.tradeup_app.fragments;
 
-import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -15,7 +19,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.tradeup_app.R;
-import com.example.tradeup_app.activities.OffersActivity;
 import com.example.tradeup_app.adapters.TransactionAdapter;
 import com.example.tradeup_app.dialogs.RatingDialog;
 import com.example.tradeup_app.firebase.FirebaseManager;
@@ -67,17 +70,27 @@ public class TransactionsFragment extends Fragment implements TransactionAdapter
     }
 
     private void loadTransactions() {
+        Log.d("TransactionsFragment", "loadTransactions() called");
         showLoading(true);
 
         String currentUserId = firebaseManager.getCurrentUserId();
+        Log.d("TransactionsFragment", "Current user ID: " + currentUserId);
+
         if (currentUserId == null) {
+            Log.e("TransactionsFragment", "User not logged in");
             showError("User not logged in");
             return;
         }
 
-        firebaseManager.getTransactionsForUser(currentUserId, new FirebaseManager.TransactionCallback() {
+        // Use the new method that gets transactions from both data sources
+        firebaseManager.getAllTransactionsForUser(currentUserId, new FirebaseManager.TransactionCallback() {
             @Override
             public void onTransactionsLoaded(List<Transaction> loadedTransactions) {
+                Log.d("TransactionsFragment", "onTransactionsLoaded called with " + loadedTransactions.size() + " transactions");
+                for (Transaction t : loadedTransactions) {
+                    Log.d("TransactionsFragment", "Loaded transaction: " + t.getId() + " - " + t.getProductTitle());
+                }
+
                 transactions.clear();
                 transactions.addAll(loadedTransactions);
                 updateUI();
@@ -85,20 +98,24 @@ public class TransactionsFragment extends Fragment implements TransactionAdapter
 
             @Override
             public void onError(String error) {
+                Log.e("TransactionsFragment", "Error loading transactions: " + error);
                 showError("Error loading transactions: " + error);
             }
         });
     }
 
     private void updateUI() {
+        Log.d("TransactionsFragment", "updateUI() called with " + transactions.size() + " transactions");
         showLoading(false);
         transactionAdapter.updateTransactions(transactions);
 
         if (transactions.isEmpty()) {
+            Log.d("TransactionsFragment", "No transactions found, showing empty view");
             emptyView.setVisibility(View.VISIBLE);
             transactionsRecyclerView.setVisibility(View.GONE);
             emptyMessageText.setText("No transactions yet\nStart buying or selling to see your transaction history");
         } else {
+            Log.d("TransactionsFragment", "Showing " + transactions.size() + " transactions");
             emptyView.setVisibility(View.GONE);
             transactionsRecyclerView.setVisibility(View.VISIBLE);
         }
@@ -204,5 +221,60 @@ public class TransactionsFragment extends Fragment implements TransactionAdapter
 
     public void refreshTransactions() {
         loadTransactions();
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        // Add debug buttons for testing (remove in production)
+        addDebugButtons(view);
+    }
+
+    private void addDebugButtons(View view) {
+        // Add a debug button to create test transaction
+        Button debugButton = new Button(getContext());
+        debugButton.setText("DEBUG: Create Test Transaction");
+        debugButton.setOnClickListener(v -> {
+            firebaseManager.createTestTransaction(new FirebaseManager.OnTransactionSavedListener() {
+                @Override
+                public void onSuccess(String transactionId) {
+                    Toast.makeText(getContext(), "Test transaction created: " + transactionId, Toast.LENGTH_SHORT).show();
+                    loadTransactions(); // Refresh the list
+                }
+
+                @Override
+                public void onError(String error) {
+                    Toast.makeText(getContext(), "Failed to create test transaction: " + error, Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+
+        // Add a debug button to check database state
+        Button checkButton = new Button(getContext());
+        checkButton.setText("DEBUG: Check Database");
+        checkButton.setOnClickListener(v -> {
+            firebaseManager.checkTransactionData(result -> {
+                Toast.makeText(getContext(), result, Toast.LENGTH_LONG).show();
+                Log.d("TransactionsFragment", "Database check result: " + result);
+            });
+        });
+
+        // Add buttons to the layout programmatically (for debug only)
+        if (view instanceof FrameLayout) {
+            LinearLayout debugLayout = new LinearLayout(getContext());
+            debugLayout.setOrientation(LinearLayout.VERTICAL);
+            debugLayout.addView(debugButton);
+            debugLayout.addView(checkButton);
+
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+            params.gravity = Gravity.TOP | Gravity.END;
+            params.setMargins(16, 16, 16, 16);
+
+            ((FrameLayout) view).addView(debugLayout, params);
+        }
     }
 }

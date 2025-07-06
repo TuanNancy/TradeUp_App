@@ -1,5 +1,6 @@
 package com.example.tradeup_app.firebase;
 
+import android.util.Log;
 import com.example.tradeup_app.models.Product;
 import com.example.tradeup_app.models.Message;
 import com.example.tradeup_app.models.Conversation;
@@ -7,6 +8,7 @@ import com.example.tradeup_app.models.Offer;
 import com.example.tradeup_app.models.Transaction;
 import com.example.tradeup_app.models.Rating;
 import com.example.tradeup_app.models.Report;
+import com.example.tradeup_app.utils.NotificationManager;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
@@ -66,6 +68,11 @@ public class FirebaseManager {
 
     public interface OnStatusUpdateListener {
         void onSuccess();
+        void onError(String error);
+    }
+
+    public interface OnPaymentSuccessListener {
+        void onSuccess(String transactionId);
         void onError(String error);
     }
 
@@ -516,10 +523,32 @@ public class FirebaseManager {
         String key = database.getReference(TRANSACTIONS_NODE).push().getKey();
         if (key != null) {
             transaction.setId(key);
+
+            // Save to main transactions node
             database.getReference(TRANSACTIONS_NODE)
                 .child(key)
                 .setValue(transaction)
-                .addOnCompleteListener(listener);
+                .addOnSuccessListener(aVoid -> {
+                    // Also save to user_transactions for both buyer and seller
+                    database.getReference("user_transactions")
+                        .child(transaction.getBuyerId())
+                        .child(key)
+                        .setValue(transaction);
+
+                    database.getReference("user_transactions")
+                        .child(transaction.getSellerId())
+                        .child(key)
+                        .setValue(transaction);
+
+                    if (listener != null) {
+                        listener.onComplete(null);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (listener != null) {
+                        listener.onComplete(null);
+                    }
+                });
         }
     }
 
@@ -688,16 +717,87 @@ public class FirebaseManager {
         }
     }
 
+    /**
+     * Handle successful payment - save transaction and send notifications
+     */
+    public void handlePaymentSuccess(Transaction transaction, OnPaymentSuccessListener listener) {
+        // Save transaction first
+        saveTransaction(transaction, new OnTransactionSavedListener() {
+            @Override
+            public void onSuccess(String transactionId) {
+                // Update product status to sold
+                updateProductStatus(transaction.getProductId(), "Sold", new OnStatusUpdateListener() {
+                    @Override
+                    public void onSuccess() {
+                        // Save transaction to both buyer and seller history
+                        saveTransactionToUserHistory(transaction, transactionId);
+
+                        // Send notification to seller
+                        sendPaymentSuccessNotification(transaction);
+
+                        listener.onSuccess(transactionId);
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        listener.onError("Failed to update product status: " + error);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                listener.onError("Failed to save transaction: " + errorMessage);
+            }
+        });
+    }
+
+    /**
+     * Save transaction to both buyer's and seller's transaction history
+     */
+    private void saveTransactionToUserHistory(Transaction transaction, String transactionId) {
+        // Save to buyer's history
+        database.getReference("user_transactions")
+                .child(transaction.getBuyerId())
+                .child(transactionId)
+                .setValue(transaction);
+
+        // Save to seller's history
+        database.getReference("user_transactions")
+                .child(transaction.getSellerId())
+                .child(transactionId)
+                .setValue(transaction);
+    }
+
+    /**
+     * Send payment success notification to seller
+     */
+    private void sendPaymentSuccessNotification(Transaction transaction) {
+        try {
+            NotificationManager notificationManager = NotificationManager.getInstance();
+            notificationManager.sendPaymentSuccessNotification(
+                transaction.getProductId(),
+                transaction.getProductTitle(),
+                transaction.getBuyerName(),
+                transaction.getFinalPrice(),
+                transaction.getSellerId()
+            );
+        } catch (Exception e) {
+            Log.e("FirebaseManager", "Failed to send payment notification: " + e.getMessage());
+        }
+    }
+
     public void getUserTransactions(String userId, OnTransactionsLoadedListener listener) {
-        database.getReference(TRANSACTIONS_NODE)
+        // Read from user_transactions node where we actually save the data
+        database.getReference("user_transactions")
+            .child(userId)
             .orderByChild("createdAt")
             .get()
             .addOnSuccessListener(snapshot -> {
                 List<Transaction> transactions = new java.util.ArrayList<>();
                 for (com.google.firebase.database.DataSnapshot dataSnapshot : snapshot.getChildren()) {
                     Transaction transaction = dataSnapshot.getValue(Transaction.class);
-                    if (transaction != null &&
-                        (userId.equals(transaction.getBuyerId()) || userId.equals(transaction.getSellerId()))) {
+                    if (transaction != null) {
                         transaction.setId(dataSnapshot.getKey());
                         transactions.add(transaction);
                     }
@@ -736,5 +836,186 @@ public class FirebaseManager {
             })
             .addOnFailureListener(e ->
                 listener.onComplete(com.google.android.gms.tasks.Tasks.forException(e)));
+    }
+
+    // ==================== ENHANCED TRANSACTION METHODS ====================
+
+    /**
+     * Get all transactions for a user from both main transactions node and user_transactions node
+     * This ensures we display both old transactions (before the fix) and new transactions
+     */
+    public void getAllTransactionsForUser(String userId, TransactionCallback callback) {
+        Log.d("FirebaseManager", "getAllTransactionsForUser called for userId: " + userId);
+
+        // Use a map to avoid duplicates and track transactions by ID
+        java.util.Map<String, Transaction> transactionMap = new java.util.HashMap<>();
+        final boolean[] firstCallCompleted = {false};
+        final boolean[] secondCallCompleted = {false};
+
+        // First, get transactions from main TRANSACTIONS_NODE (for old data)
+        Log.d("FirebaseManager", "Starting to fetch from TRANSACTIONS_NODE");
+        database.getReference(TRANSACTIONS_NODE)
+            .get()
+            .addOnSuccessListener(snapshot -> {
+                Log.d("FirebaseManager", "TRANSACTIONS_NODE fetch success, children count: " + snapshot.getChildrenCount());
+                for (com.google.firebase.database.DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                    Transaction transaction = dataSnapshot.getValue(Transaction.class);
+                    if (transaction != null &&
+                        (userId.equals(transaction.getBuyerId()) || userId.equals(transaction.getSellerId()))) {
+                        transaction.setId(dataSnapshot.getKey());
+                        transactionMap.put(transaction.getId(), transaction);
+                        Log.d("FirebaseManager", "Found transaction in TRANSACTIONS_NODE: " + transaction.getId() + " for product: " + transaction.getProductTitle());
+                    }
+                }
+                Log.d("FirebaseManager", "Total transactions found in TRANSACTIONS_NODE: " + transactionMap.size());
+                firstCallCompleted[0] = true;
+                checkAndReturnResults(transactionMap, firstCallCompleted, secondCallCompleted, callback);
+            })
+            .addOnFailureListener(e -> {
+                Log.e("FirebaseManager", "Error fetching from TRANSACTIONS_NODE: " + e.getMessage());
+                firstCallCompleted[0] = true;
+                checkAndReturnResults(transactionMap, firstCallCompleted, secondCallCompleted, callback);
+            });
+
+        // Second, get transactions from user_transactions node (for new data)
+        Log.d("FirebaseManager", "Starting to fetch from user_transactions");
+        database.getReference("user_transactions")
+            .child(userId)
+            .get()
+            .addOnSuccessListener(snapshot -> {
+                Log.d("FirebaseManager", "user_transactions fetch success, children count: " + snapshot.getChildrenCount());
+                for (com.google.firebase.database.DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                    Transaction transaction = dataSnapshot.getValue(Transaction.class);
+                    if (transaction != null) {
+                        transaction.setId(dataSnapshot.getKey());
+                        // This will overwrite if exists, ensuring we have the most recent data
+                        transactionMap.put(transaction.getId(), transaction);
+                        Log.d("FirebaseManager", "Found transaction in user_transactions: " + transaction.getId() + " for product: " + transaction.getProductTitle());
+                    }
+                }
+                Log.d("FirebaseManager", "Total transactions after user_transactions: " + transactionMap.size());
+                secondCallCompleted[0] = true;
+                checkAndReturnResults(transactionMap, firstCallCompleted, secondCallCompleted, callback);
+            })
+            .addOnFailureListener(e -> {
+                Log.e("FirebaseManager", "Error fetching from user_transactions: " + e.getMessage());
+                secondCallCompleted[0] = true;
+                checkAndReturnResults(transactionMap, firstCallCompleted, secondCallCompleted, callback);
+            });
+    }
+
+    private void checkAndReturnResults(java.util.Map<String, Transaction> transactionMap,
+                                     boolean[] firstCallCompleted, boolean[] secondCallCompleted,
+                                     TransactionCallback callback) {
+        if (firstCallCompleted[0] && secondCallCompleted[0]) {
+            // Both calls completed, return merged results
+            List<Transaction> allTransactions = new java.util.ArrayList<>(transactionMap.values());
+            Log.d("FirebaseManager", "Both calls completed. Final transaction count: " + allTransactions.size());
+
+            // Sort by most recent first
+            allTransactions.sort((a, b) -> Long.compare(b.getCreatedAt(), a.getCreatedAt()));
+
+            for (Transaction t : allTransactions) {
+                Log.d("FirebaseManager", "Final transaction: " + t.getId() + " - " + t.getProductTitle() + " - Created: " + t.getCreatedAt());
+            }
+
+            callback.onTransactionsLoaded(allTransactions);
+        }
+    }
+
+    // ==================== TEST METHODS FOR DEBUG ====================
+
+    /**
+     * Create a test transaction for debugging purposes
+     */
+    public void createTestTransaction(OnTransactionSavedListener listener) {
+        String currentUserId = getCurrentUserId();
+        if (currentUserId == null) {
+            listener.onError("User not logged in");
+            return;
+        }
+
+        // Create a test transaction
+        Transaction testTransaction = new Transaction();
+        testTransaction.setProductId("test_product_123");
+        testTransaction.setProductTitle("Test Product for Transaction History");
+        testTransaction.setBuyerId(currentUserId);
+        testTransaction.setBuyerName("Test Buyer");
+        testTransaction.setSellerId("test_seller_456");
+        testTransaction.setSellerName("Test Seller");
+        testTransaction.setFinalPrice(100000.0);
+        testTransaction.setStatus("COMPLETED");
+        testTransaction.setCreatedAt(System.currentTimeMillis());
+        testTransaction.setPaymentMethod("TEST");
+
+        // Save the test transaction
+        String key = database.getReference(TRANSACTIONS_NODE).push().getKey();
+        if (key != null) {
+            testTransaction.setId(key);
+
+            // Save to main transactions node
+            database.getReference(TRANSACTIONS_NODE)
+                .child(key)
+                .setValue(testTransaction)
+                .addOnSuccessListener(aVoid -> {
+                    // Also save to user_transactions
+                    database.getReference("user_transactions")
+                        .child(currentUserId)
+                        .child(key)
+                        .setValue(testTransaction)
+                        .addOnSuccessListener(aVoid2 -> {
+                            Log.d("FirebaseManager", "Test transaction created successfully: " + key);
+                            listener.onSuccess(key);
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e("FirebaseManager", "Failed to save test transaction to user_transactions: " + e.getMessage());
+                            listener.onError(e.getMessage());
+                        });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("FirebaseManager", "Failed to save test transaction to main node: " + e.getMessage());
+                    listener.onError(e.getMessage());
+                });
+        } else {
+            listener.onError("Failed to generate transaction ID");
+        }
+    }
+
+    /**
+     * Check if there are any transactions in the database
+     */
+    public void checkTransactionData(OnTransactionCheckListener listener) {
+        Log.d("FirebaseManager", "Checking transaction data in database...");
+
+        // Check main transactions node
+        database.getReference(TRANSACTIONS_NODE)
+            .get()
+            .addOnSuccessListener(snapshot -> {
+                long mainCount = snapshot.getChildrenCount();
+                Log.d("FirebaseManager", "Main transactions node has " + mainCount + " transactions");
+
+                // Check user_transactions node
+                database.getReference("user_transactions")
+                    .get()
+                    .addOnSuccessListener(userSnapshot -> {
+                        long userCount = userSnapshot.getChildrenCount();
+                        Log.d("FirebaseManager", "User transactions node has " + userCount + " users");
+
+                        String result = "Main transactions: " + mainCount + ", User nodes: " + userCount;
+                        listener.onCheckComplete(result);
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e("FirebaseManager", "Error checking user_transactions: " + e.getMessage());
+                        listener.onCheckComplete("Main: " + mainCount + ", User check failed: " + e.getMessage());
+                    });
+            })
+            .addOnFailureListener(e -> {
+                Log.e("FirebaseManager", "Error checking main transactions: " + e.getMessage());
+                listener.onCheckComplete("Main check failed: " + e.getMessage());
+            });
+    }
+
+    public interface OnTransactionCheckListener {
+        void onCheckComplete(String result);
     }
 }

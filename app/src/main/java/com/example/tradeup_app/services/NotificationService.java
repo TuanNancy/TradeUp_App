@@ -227,6 +227,49 @@ public class NotificationService {
         }
     }
 
+    // Send notification for successful payment to seller
+    public void sendPaymentSuccessNotification(String productId, String productTitle,
+                                             String buyerName, double amount, String sellerId) {
+        if (isNotificationPermissionDenied()) {
+            Log.w(TAG, "Notification permission not granted");
+            return;
+        }
+
+        if (shouldSendNotification(sellerId, null)) {
+            Intent intent = new Intent(context, ProductDetailActivity.class);
+            intent.putExtra("productId", productId);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                context,
+                productId.hashCode(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            String title = "Payment Received!";
+            String formattedAmount = String.format("$%.2f", amount);
+            String message = buyerName + " has successfully purchased " + productTitle + " for " + formattedAmount;
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_OFFERS)
+                .setSmallIcon(R.drawable.ic_check_circle)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .setGroup("payments");
+
+            try {
+                notificationManager.notify(("payment_" + productId).hashCode(), builder.build());
+                saveNotificationToDatabase(sellerId, "PAYMENT_SUCCESS", title, message, productId);
+            } catch (SecurityException e) {
+                Log.e(TAG, "Failed to send payment notification: " + e.getMessage());
+            }
+        }
+    }
+
     // Send notification for listing update
     public void sendListingUpdateNotification(String productId, String productTitle, String updateType,
                                             String userId) {

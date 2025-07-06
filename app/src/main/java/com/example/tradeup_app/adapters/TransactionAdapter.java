@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.tradeup_app.R;
 import com.example.tradeup_app.models.Transaction;
+import com.example.tradeup_app.utils.VNDPriceFormatter;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 
@@ -95,8 +96,10 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
 
         public void bind(Transaction transaction) {
             productTitleText.setText(transaction.getProductTitle());
-            priceText.setText(String.format("$%.2f", transaction.getFinalPrice()));
-            statusText.setText(transaction.getStatus());
+            priceText.setText(VNDPriceFormatter.formatVND(transaction.getFinalPrice()));
+
+            // Improved status display with icons and clear text
+            setStatusWithIcon(transaction.getStatus());
 
             // Set status color
             setStatusColor(transaction.getStatus());
@@ -143,6 +146,30 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
                     break;
             }
             statusText.setTextColor(ContextCompat.getColor(context, colorRes));
+        }
+
+        private void setStatusWithIcon(String status) {
+            String statusDisplay;
+            switch (status.toUpperCase()) {
+                case "COMPLETED":
+                case "PAID":
+                case "SUCCESS":
+                    statusDisplay = "✅ Giao dịch thành công";
+                    break;
+                case "CANCELLED":
+                case "CANCELED":
+                case "FAILED":
+                    statusDisplay = "❌ Giao dịch thất bại";
+                    break;
+                case "PENDING":
+                    statusDisplay = "⏳ Đang chờ xử lý";
+                    break;
+                default:
+                    statusDisplay = "📋 " + status;
+                    break;
+            }
+
+            statusText.setText(statusDisplay);
         }
 
         private void setupButtons(Transaction transaction, boolean isUserBuyer) {

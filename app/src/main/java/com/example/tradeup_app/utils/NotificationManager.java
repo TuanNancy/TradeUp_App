@@ -72,6 +72,15 @@ public class NotificationManager {
     }
 
     /**
+     * Send notification for successful payment to seller
+     */
+    public void sendPaymentSuccessNotification(String productId, String productTitle,
+                                             String buyerName, double amount, String sellerId) {
+        notificationService.sendPaymentSuccessNotification(productId, productTitle,
+                                                          buyerName, amount, sellerId);
+    }
+
+    /**
      * Send notification for listing update
      */
     public void sendListingUpdateNotification(String productId, String productTitle, String updateType,

@@ -461,53 +461,33 @@ public class PaymentActivity extends AppCompatActivity {
     }
 
     private void saveTransactionAndUpdateProduct(Transaction transaction) {
-        Log.d(TAG, "Saving transaction for product: " + transaction.getProductTitle());
+        Log.d(TAG, "Processing payment success for product: " + transaction.getProductTitle());
 
-        // Save transaction
-        firebaseManager.saveTransaction(transaction, new FirebaseManager.OnTransactionSavedListener() {
+        // Use the new comprehensive payment success handler
+        firebaseManager.handlePaymentSuccess(transaction, new FirebaseManager.OnPaymentSuccessListener() {
             @Override
             public void onSuccess(String transactionId) {
-                Log.d(TAG, "Transaction saved successfully: " + transactionId);
+                Log.d(TAG, "Payment success handling completed: " + transactionId);
 
-                // Update product status to sold
-                firebaseManager.updateProductStatus(product.getId(), "Sold", new FirebaseManager.OnStatusUpdateListener() {
-                    @Override
-                    public void onSuccess() {
-                        Log.d(TAG, "Product status updated to Sold");
+                runOnUiThread(() -> {
+                    setLoadingState(false);
+                    showPaymentSuccessMessage();
 
-                        // Send notification to seller
-                        sendPurchaseNotification();
-
-                        runOnUiThread(() -> {
-                            setLoadingState(false);
-                            showPaymentSuccessMessage();
-
-                            // Return to previous activity with success result
-                            Intent intent = new Intent();
-                            intent.putExtra("payment_success", true);
-                            intent.putExtra("transaction_id", transactionId);
-                            intent.putExtra("product_id", product.getId());
-                            setResult(RESULT_OK, intent);
-                            finish();
-                        });
-                    }
-
-                    @Override
-                    public void onError(String error) {
-                        Log.e(TAG, "Failed to update product status: " + error);
-                        runOnUiThread(() -> {
-                            Toast.makeText(PaymentActivity.this, "Lỗi cập nhật trạng thái sản phẩm: " + error, Toast.LENGTH_SHORT).show();
-                            setLoadingState(false);
-                        });
-                    }
+                    // Return to previous activity with success result
+                    Intent intent = new Intent();
+                    intent.putExtra("payment_success", true);
+                    intent.putExtra("transaction_id", transactionId);
+                    intent.putExtra("product_id", product.getId());
+                    setResult(RESULT_OK, intent);
+                    finish();
                 });
             }
 
             @Override
             public void onError(String error) {
-                Log.e(TAG, "Failed to save transaction: " + error);
+                Log.e(TAG, "Payment success handling failed: " + error);
                 runOnUiThread(() -> {
-                    Toast.makeText(PaymentActivity.this, "Lỗi lưu giao dịch: " + error, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(PaymentActivity.this, "Lỗi xử lý thanh toán: " + error, Toast.LENGTH_SHORT).show();
                     setLoadingState(false);
                 });
             }

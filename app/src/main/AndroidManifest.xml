@@ -85,13 +85,21 @@
             android:exported="false"
             android:theme="@style/Theme.TradeUp_App" />
 
+        <!-- Add missing UserProfileActivity -->
         <activity
-            android:name=".activities.UserProfileActivity"
+            android:name=".auth.UserProfileActivity"
             android:exported="false"
             android:theme="@style/Theme.TradeUp_App" />
 
+        <!-- Remove duplicate - this should be in auth package -->
+        <!-- <activity
+            android:name=".activities.UserProfileActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App" /> -->
+
+        <!-- Fix: AccountSettingsActivity is in auth package, not activities -->
         <activity
-            android:name=".activities.AccountSettingsActivity"
+            android:name=".auth.AccountSettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.TradeUp_App" />
 
@@ -134,6 +142,13 @@
             android:name=".activities.PaymentHistoryActivity"
             android:exported="false"
             android:theme="@style/Theme.TradeUp_App" />
+
+        <!-- Transaction History Activity - NEW -->
+        <activity
+            android:name=".activities.TransactionHistoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App"
+            android:parentActivityName=".activities.MainActivity" />
 
         <!-- Admin Activities -->
         <activity

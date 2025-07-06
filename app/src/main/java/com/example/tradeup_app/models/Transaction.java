@@ -27,6 +27,10 @@ public class Transaction implements Serializable {
     private long paidAt;
     private String receiptUrl;
 
+    // Additional fields found in database
+    private double shippingFee;
+    private boolean cancelled;
+
     public Transaction() {
         this.createdAt = System.currentTimeMillis();
         this.status = "PENDING";
@@ -215,5 +219,21 @@ public class Transaction implements Serializable {
 
     public void setReceiptUrl(String receiptUrl) {
         this.receiptUrl = receiptUrl;
+    }
+
+    public double getShippingFee() {
+        return shippingFee;
+    }
+
+    public void setShippingFee(double shippingFee) {
+        this.shippingFee = shippingFee;
+    }
+
+    public boolean isCancelled() {
+        return cancelled;
+    }
+
+    public void setCancelled(boolean cancelled) {
+        this.cancelled = cancelled;
     }
 }
