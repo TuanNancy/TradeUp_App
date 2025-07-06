@@ -84,10 +84,10 @@ public class ProfileFragment extends Fragment {
             Toast.makeText(getContext(), "My Listings feature coming soon", Toast.LENGTH_SHORT).show();
         });
 
-        // Purchase History - Show transaction history (UPDATED TO USE TransactionsFragment)
+        // Purchase History - Show payment history (UPDATED FOR STRIPE INTEGRATION)
         purchaseHistoryButton.setOnClickListener(v -> {
-            // Navigate to TransactionHistoryActivity instead of PaymentHistoryActivity
-            Intent intent = new Intent(getContext(), com.example.tradeup_app.activities.TransactionHistoryActivity.class);
+            // Navigate to PaymentHistoryActivity
+            Intent intent = new Intent(getContext(), com.example.tradeup_app.activities.PaymentHistoryActivity.class);
             startActivity(intent);
         });
 
