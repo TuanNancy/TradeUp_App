@@ -182,7 +182,6 @@ public class HomeFragment extends Fragment {
             Toast.makeText(getContext(), "Lỗi khi tải hồ sơ người dùng", Toast.LENGTH_SHORT).show();
         });
     }
-
     private void loadCategories() {
         // Cập nhật tên danh mục để khớp với SearchFragment
         List<CategoryAdapter.CategoryItem> categories = Arrays.asList(

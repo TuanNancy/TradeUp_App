@@ -1,5 +1,7 @@
 package com.example.tradeup_app.auth.Domain;
 
+
+
 public class UserModel {
     private String uid;
     private String email;
@@ -13,6 +15,7 @@ public class UserModel {
 
     // Constructor rỗng cho Firebase
     public UserModel() {}
+
 
     // Constructor đầy đủ
     public UserModel(String uid, String email, String username, String profilePic, String bio, String contact, double rating) {
@@ -46,8 +49,17 @@ public class UserModel {
     public String getContact() { return contact; }
     public void setContact(String contact) { this.contact = contact; }
 
+
+
+
     public double getRating() { return rating; }
     public void setRating(double rating) { this.rating = rating; }
+
+
+
+
+
+
 
     public boolean getIsAdmin() { return isAdmin; }
     public void setIsAdmin(boolean isAdmin) { this.isAdmin = isAdmin; }
