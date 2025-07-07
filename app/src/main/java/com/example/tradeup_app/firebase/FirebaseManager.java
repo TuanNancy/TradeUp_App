@@ -201,12 +201,24 @@ public class FirebaseManager {
 
     private boolean matchesSearchCriteria(Product product, String query, String condition,
                                         double minPrice, double maxPrice) {
-        // Match query text
+        // Match query text - TÌM KIẾM TRONG TITLE, DESCRIPTION VÀ TAGS
         if (query != null && !query.isEmpty()) {
             String lowerQuery = query.toLowerCase();
             boolean matchesTitle = product.getTitle().toLowerCase().contains(lowerQuery);
             boolean matchesDesc = product.getDescription().toLowerCase().contains(lowerQuery);
-            if (!matchesTitle && !matchesDesc) {
+
+            // ✅ THÊM: Tìm kiếm trong tags
+            boolean matchesTags = false;
+            if (product.getTags() != null && !product.getTags().isEmpty()) {
+                for (String tag : product.getTags()) {
+                    if (tag.toLowerCase().contains(lowerQuery)) {
+                        matchesTags = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!matchesTitle && !matchesDesc && !matchesTags) {
                 return false;
             }
         }
@@ -218,11 +230,16 @@ public class FirebaseManager {
             }
         }
 
-        // Match price range
+        // ✅ SỬA: Validation khoảng giá tốt hơn
         if (minPrice > 0 && product.getPrice() < minPrice) {
             return false;
         }
         if (maxPrice > 0 && product.getPrice() > maxPrice) {
+            return false;
+        }
+
+        // ✅ THÊM: Validation minPrice <= maxPrice
+        if (minPrice > 0 && maxPrice > 0 && minPrice > maxPrice) {
             return false;
         }
 

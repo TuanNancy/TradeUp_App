@@ -84,12 +84,26 @@
                     android:textSize="14sp"
                     android:layout_marginBottom="8dp" />
 
+                <!-- ✅ THÊM: TextView hiển thị giá trị khoảng giá -->
+                <TextView
+                    android:id="@+id/price_range_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Khoảng giá: 0₫ - 10.000.000₫"
+                    android:textSize="12sp"
+                    android:textColor="@color/primary_color"
+                    android:layout_marginBottom="4dp" />
+
                 <com.google.android.material.slider.RangeSlider
                     android:id="@+id/price_range_slider"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:valueFrom="0"
-                    android:valueTo="10000000"
+                    android:valueTo="100000000"
+                    android:stepSize="100000"
+                    app:thumbColor="@color/primary_color"
+                    app:trackColorActive="@color/primary_color"
+                    app:trackColorInactive="@color/gray_light"
                     android:layout_marginBottom="12dp" />
 
                 <!-- Sort Options -->

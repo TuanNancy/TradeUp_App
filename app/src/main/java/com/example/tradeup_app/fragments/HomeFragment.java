@@ -145,6 +145,11 @@ public class HomeFragment extends Fragment {
         DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users").child(uid);
 
         userRef.get().addOnSuccessListener(snapshot -> {
+            // Kiểm tra Fragment còn attach và context còn tồn tại
+            if (!isAdded() || getActivity() == null || getContext() == null) {
+                return;
+            }
+
             if (snapshot.exists()) {
                 UserModel user = snapshot.getValue(UserModel.class);
                 if (user == null) return;
@@ -155,13 +160,15 @@ public class HomeFragment extends Fragment {
                         : user.getUsername() != null ? user.getUsername() : "Người dùng";
                 userNameText.setText(name);
 
-                // Set avatar
+                // Set avatar - Kiểm tra lại trạng thái trước khi dùng Glide
                 if (user.getProfilePic() != null && !user.getProfilePic().isEmpty()) {
-                    Glide.with(this)
-                            .load(user.getProfilePic())
-                            .placeholder(R.drawable.ic_user_placeholder)
-                            .error(R.drawable.ic_user_placeholder)
-                            .into(userProfileImage);
+                    if (isAdded() && getContext() != null) {
+                        Glide.with(getContext())
+                                .load(user.getProfilePic())
+                                .placeholder(R.drawable.ic_user_placeholder)
+                                .error(R.drawable.ic_user_placeholder)
+                                .into(userProfileImage);
+                    }
                 } else {
                     userProfileImage.setImageResource(R.drawable.ic_user_placeholder);
                 }

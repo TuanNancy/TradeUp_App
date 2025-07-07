@@ -11,6 +11,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -36,6 +37,9 @@ public class SearchFragment extends Fragment {
     private Spinner categorySpinner, conditionSpinner, sortSpinner;
     private RecyclerView searchResultsRecyclerView;
     private View progressBar;
+    // ✅ THÊM: RangeSlider cho khoảng giá
+    private com.google.android.material.slider.RangeSlider priceRangeSlider;
+    private TextView priceRangeText;
 
     private ProductAdapter productAdapter;
     private FirebaseManager firebaseManager;
@@ -69,6 +73,9 @@ public class SearchFragment extends Fragment {
         sortSpinner = view.findViewById(R.id.sort_spinner);
         searchResultsRecyclerView = view.findViewById(R.id.search_results_recycler);
         progressBar = view.findViewById(R.id.progress_bar);
+        // ✅ THÊM: Khởi tạo RangeSlider và TextView hiển thị giá trị
+        priceRangeSlider = view.findViewById(R.id.price_range_slider);
+        priceRangeText = view.findViewById(R.id.price_range_text);
 
         firebaseManager = FirebaseManager.getInstance();
     }
@@ -170,7 +177,7 @@ public class SearchFragment extends Fragment {
         conditionSpinner.setOnItemSelectedListener(spinnerListener);
         sortSpinner.setOnItemSelectedListener(spinnerListener);
 
-        // Setup price range input listeners
+        // ✅ SỬA: Setup price range input listeners với validation
         TextWatcher priceWatcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -180,14 +187,236 @@ public class SearchFragment extends Fragment {
 
             @Override
             public void afterTextChanged(Editable s) {
-                // Delay search to avoid too many calls while typing
-                searchEditText.removeCallbacks(searchRunnable);
-                searchEditText.postDelayed(searchRunnable, 500);
+                // ✅ THÊM: Validation khoảng giá trước khi tìm kiếm
+                if (validatePriceRange()) {
+                    // Delay search to avoid too many calls while typing
+                    searchEditText.removeCallbacks(searchRunnable);
+                    searchEditText.postDelayed(searchRunnable, 300); // Giảm từ 500ms xuống 300ms
+                }
             }
         };
 
         minPriceEditText.addTextChangedListener(priceWatcher);
         maxPriceEditText.addTextChangedListener(priceWatcher);
+
+        // ✅ THÊM: Thiết lập listener cho RangeSlider
+        priceRangeSlider.addOnChangeListener((slider, value, fromUser) -> {
+            if (fromUser) {
+                // Cập nhật giá trị hiển thị khi người dùng kéo slider
+                updatePriceRangeText();
+                // ✅ THÊM: Tự động tìm kiếm khi thay đổi slider
+                searchEditText.removeCallbacks(searchRunnable);
+                searchEditText.postDelayed(searchRunnable, 200);
+            }
+        });
+
+        // Đặt giá trị mặc định cho RangeSlider và TextView
+        priceRangeSlider.setValueFrom(0);
+        priceRangeSlider.setValueTo(100000000); // ✅ Tăng lên 100 triệu VNĐ
+        priceRangeSlider.setValues(0f, 100000000f);
+        updatePriceRangeText();
+
+        // ✅ THÊM: Tự động điều chỉnh khoảng giá dựa trên dữ liệu thực tế
+        adjustPriceRangeBasedOnData();
+
+        // ✅ THÊM: Đồng bộ EditText với RangeSlider khi người dùng nhập tay
+        TextWatcher editTextWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                updateSliderFromEditText();
+            }
+        };
+
+        minPriceEditText.addTextChangedListener(editTextWatcher);
+        maxPriceEditText.addTextChangedListener(editTextWatcher);
+    }
+
+    // ✅ THÊM: Đồng bộ RangeSlider từ EditText
+    private void updateSliderFromEditText() {
+        try {
+            String minStr = minPriceEditText.getText().toString().trim();
+            String maxStr = maxPriceEditText.getText().toString().trim();
+
+            float minValue = minStr.isEmpty() ? 0 : Float.parseFloat(minStr);
+            float maxValue = maxStr.isEmpty() ? 100000000 : Float.parseFloat(maxStr); // ✅ SỬA: 100 triệu
+
+            // Đảm bảo giá trị trong phạm vi hợp lệ
+            minValue = Math.max(0, Math.min(minValue, 100000000)); // ✅ SỬA: 100 triệu
+            maxValue = Math.max(minValue, Math.min(maxValue, 100000000)); // ✅ SỬA: 100 triệu
+
+            // Cập nhật slider mà không trigger listener
+            priceRangeSlider.clearOnChangeListeners();
+            priceRangeSlider.setValues(minValue, maxValue);
+
+            // Khôi phục listener
+            priceRangeSlider.addOnChangeListener((slider, value, fromUser) -> {
+                if (fromUser) {
+                    updatePriceRangeText();
+                    searchEditText.removeCallbacks(searchRunnable);
+                    searchEditText.postDelayed(searchRunnable, 200);
+                }
+            });
+
+            // Cập nhật text hiển thị
+            String text = "Khoảng giá: " + VNDPriceFormatter.formatVND(minValue) + " - " + VNDPriceFormatter.formatVND(maxValue);
+            if (priceRangeText != null) {
+                priceRangeText.setText(text);
+            }
+
+        } catch (NumberFormatException e) {
+            // Ignore invalid input
+        }
+    }
+
+    // ✅ THÊM: Tự động điều chỉnh khoảng giá dựa trên dữ liệu thực tế
+    private void adjustPriceRangeBasedOnData() {
+        firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
+            @Override
+            public void onProductsLoaded(List<Product> products) {
+                if (products.isEmpty() || !isAdded()) return;
+
+                // Tìm giá cao nhất và thấp nhất trong database
+                double minPrice = Double.MAX_VALUE;
+                double maxPrice = 0;
+
+                for (Product product : products) {
+                    if (product.getPrice() > 0) { // Chỉ tính sản phẩm có giá hợp lệ
+                        minPrice = Math.min(minPrice, product.getPrice());
+                        maxPrice = Math.max(maxPrice, product.getPrice());
+                    }
+                }
+
+                // Nếu tìm thấy dữ liệu giá hợp lệ
+                if (minPrice != Double.MAX_VALUE && maxPrice > 0) {
+                    // Thêm buffer 20% để người dùng có thể tìm kiếm rộng hơn
+                    double buffer = (maxPrice - minPrice) * 0.2;
+                    double adjustedMin = Math.max(0, minPrice - buffer);
+                    double adjustedMax = maxPrice + buffer;
+
+                    // Đảm bảo không vượt quá 100 triệu
+                    adjustedMax = Math.min(adjustedMax, 100000000);
+
+                    // ✅ SỬA: Làm tròn giá trị theo stepSize để tránh crash
+                    final double stepSize = 100000; // 100k VNĐ
+                    final double finalAdjustedMax = Math.ceil(adjustedMax / stepSize) * stepSize;
+
+                    // Cập nhật RangeSlider với khoảng giá thực tế
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            priceRangeSlider.setValueTo((float) finalAdjustedMax);
+                            priceRangeSlider.setValues(0f, (float) finalAdjustedMax);
+
+                            // Cập nhật TextView hiển thị
+                            String text = "Khoảng giá: " + VNDPriceFormatter.formatVND(0) + " - " + VNDPriceFormatter.formatVND(finalAdjustedMax);
+                            if (priceRangeText != null) {
+                                priceRangeText.setText(text);
+                            }
+
+                            // Cập nhật EditText
+                            minPriceEditText.setText("0");
+                            maxPriceEditText.setText(String.valueOf((int) finalAdjustedMax));
+
+                            android.util.Log.d("SearchFragment", "📊 Khoảng giá đã được điều chỉnh: 0₫ - " + VNDPriceFormatter.formatVND(finalAdjustedMax));
+                        });
+                    }
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                android.util.Log.e("SearchFragment", "Lỗi khi điều chỉnh khoảng giá: " + error);
+                // Giữ nguyên giá trị mặc định 100 triệu nếu có lỗi
+            }
+        });
+    }
+
+    // ✅ THÊM: Phương thức cập nhật văn bản khoảng giá
+    private void updatePriceRangeText() {
+        List<Float> values = priceRangeSlider.getValues();
+        if (values.size() == 2) {
+            float minValue = values.get(0);
+            float maxValue = values.get(1);
+
+            // Cập nhật giá trị vào EditText
+            minPriceEditText.setText(String.valueOf((int) minValue));
+            maxPriceEditText.setText(String.valueOf((int) maxValue));
+
+            // Cập nhật giá trị hiển thị
+            String text = "Khoảng giá: " + VNDPriceFormatter.formatVND(minValue) + " - " + VNDPriceFormatter.formatVND(maxValue);
+            priceRangeText.setText(text);
+        }
+    }
+
+    // ✅ THÊM: Phương thức validation khoảng giá
+    private boolean validatePriceRange() {
+        String minPriceStr = minPriceEditText.getText().toString().trim();
+        String maxPriceStr = maxPriceEditText.getText().toString().trim();
+
+        // Nếu cả hai đều trống, không có lỗi
+        if (minPriceStr.isEmpty() && maxPriceStr.isEmpty()) {
+            clearPriceErrors();
+            return true;
+        }
+
+        try {
+            double minPrice = 0, maxPrice = 0;
+
+            if (!minPriceStr.isEmpty()) {
+                minPrice = Double.parseDouble(minPriceStr);
+                if (minPrice < 0) {
+                    minPriceEditText.setError("Giá không được âm");
+                    return false;
+                }
+            }
+
+            if (!maxPriceStr.isEmpty()) {
+                maxPrice = Double.parseDouble(maxPriceStr);
+                if (maxPrice < 0) {
+                    maxPriceEditText.setError("Giá không được âm");
+                    return false;
+                }
+            }
+
+            // Kiểm tra minPrice <= maxPrice khi cả hai đều có giá trị
+            if (!minPriceStr.isEmpty() && !maxPriceStr.isEmpty() && minPrice > maxPrice) {
+                maxPriceEditText.setError("Giá tối đa phải lớn hơn giá tối thiểu");
+                return false;
+            }
+
+            clearPriceErrors();
+            return true;
+
+        } catch (NumberFormatException e) {
+            if (!minPriceStr.isEmpty() && !isValidNumber(minPriceStr)) {
+                minPriceEditText.setError("Giá không hợp lệ");
+            }
+            if (!maxPriceStr.isEmpty() && !isValidNumber(maxPriceStr)) {
+                maxPriceEditText.setError("Giá không hợp lệ");
+            }
+            return false;
+        }
+    }
+
+    // ✅ THÊM: Phương thức kiểm tra số hợp lệ
+    private boolean isValidNumber(String str) {
+        try {
+            Double.parseDouble(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    // ✅ THÊM: Xóa lỗi giá
+    private void clearPriceErrors() {
+        minPriceEditText.setError(null);
+        maxPriceEditText.setError(null);
     }
 
     private void performInitialSearch() {
