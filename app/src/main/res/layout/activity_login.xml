@@ -140,6 +140,16 @@
                 android:layout_marginBottom="16dp"
                 android:enabled="false" />
 
+            <!-- Loading Progress Bar -->
+            <ProgressBar
+                android:id="@+id/loadingProgressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                android:indeterminateTint="@color/primary"
+                android:layout_marginBottom="16dp" />
+
             <!-- Divider -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -153,14 +163,6 @@
                     android:layout_height="1dp"
                     android:layout_weight="1"
                     android:background="@color/divider" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="or continue with"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    android:layout_marginHorizontal="16dp" />
 
                 <View
                     android:layout_width="0dp"
@@ -217,5 +219,13 @@
         </LinearLayout>
 
     </androidx.cardview.widget.CardView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:text="or continue with"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp" />
 
 </LinearLayout>

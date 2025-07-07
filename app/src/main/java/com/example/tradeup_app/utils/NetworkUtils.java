@@ -4,167 +4,130 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
-import android.util.Log;
+import android.net.NetworkInfo;
+import android.os.Build;
 
 /**
- * Network utility to manage connectivity and sync data when online
+ * Utility class để kiểm tra kết nối mạng
  */
 public class NetworkUtils {
-    private static final String TAG = "NetworkUtils";
-
-    private final Context context;
-    private final ConnectivityManager connectivityManager;
-    private NetworkCallback networkCallback;
-
-    public interface NetworkStatusListener {
-        void onNetworkAvailable();
-        void onNetworkLost();
-    }
-
-    public NetworkUtils(Context context) {
-        this.context = context.getApplicationContext();
-        this.connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-    }
 
     /**
-     * Check if device is currently connected to the internet
+     * Kiểm tra xem thiết bị có kết nối internet không
      */
-    public boolean isNetworkAvailable() {
+    public static boolean isNetworkAvailable(Context context) {
+        if (context == null) return false;
+
+        ConnectivityManager connectivityManager =
+            (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
         if (connectivityManager == null) return false;
 
-        Network activeNetwork = connectivityManager.getActiveNetwork();
-        if (activeNetwork == null) return false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // For Android 6.0+
+            Network activeNetwork = connectivityManager.getActiveNetwork();
+            if (activeNetwork == null) return false;
 
-        NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(activeNetwork);
-        return capabilities != null &&
-               (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
-    }
+            NetworkCapabilities networkCapabilities =
+                connectivityManager.getNetworkCapabilities(activeNetwork);
 
-    /**
-     * Check if device has WiFi connection
-     */
-    public boolean isWiFiConnected() {
-        if (connectivityManager == null) return false;
-
-        Network activeNetwork = connectivityManager.getActiveNetwork();
-        if (activeNetwork == null) return false;
-
-        NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(activeNetwork);
-        return capabilities != null && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
-    }
-
-    /**
-     * Check if device has cellular connection
-     */
-    public boolean isCellularConnected() {
-        if (connectivityManager == null) return false;
-
-        Network activeNetwork = connectivityManager.getActiveNetwork();
-        if (activeNetwork == null) return false;
-
-        NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(activeNetwork);
-        return capabilities != null && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR);
-    }
-
-    /**
-     * Register network callback to listen for connectivity changes
-     */
-    public void registerNetworkCallback(NetworkStatusListener listener) {
-        if (connectivityManager == null) return;
-
-        networkCallback = new NetworkCallback(listener);
-
-        // Fixed: Use proper API level check and method calls
-        NetworkRequest.Builder builder = new NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
-
-        // Add transport types if API level supports it
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                   .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR);
-        }
-
-        NetworkRequest networkRequest = builder.build();
-
-        connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
-        Log.d(TAG, "Network callback registered");
-    }
-
-    /**
-     * Unregister network callback
-     */
-    public void unregisterNetworkCallback() {
-        if (connectivityManager != null && networkCallback != null) {
-            connectivityManager.unregisterNetworkCallback(networkCallback);
-            networkCallback = null;
-            Log.d(TAG, "Network callback unregistered");
+            return networkCapabilities != null &&
+                   (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
+        } else {
+            // For older Android versions
+            NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
         }
     }
 
     /**
-     * Get network type as string
+     * Kiểm tra loại kết nối mạng
      */
-    public String getNetworkType() {
-        if (!isNetworkAvailable()) return "No Connection";
+    public static String getNetworkType(Context context) {
+        if (context == null) return "Unknown";
 
-        if (isWiFiConnected()) return "WiFi";
-        if (isCellularConnected()) return "Cellular";
+        ConnectivityManager connectivityManager =
+            (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if (connectivityManager == null) return "Unknown";
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Network activeNetwork = connectivityManager.getActiveNetwork();
+            if (activeNetwork == null) return "No Connection";
+
+            NetworkCapabilities networkCapabilities =
+                connectivityManager.getNetworkCapabilities(activeNetwork);
+
+            if (networkCapabilities == null) return "Unknown";
+
+            if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                return "WiFi";
+            } else if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                return "Mobile Data";
+            } else if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                return "Ethernet";
+            }
+        } else {
+            NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            if (activeNetworkInfo != null && activeNetworkInfo.isConnected()) {
+                return activeNetworkInfo.getTypeName();
+            }
+        }
+
         return "Unknown";
     }
 
     /**
-     * Check if it's good time to sync large data (WiFi connection)
+     * Kiểm tra xem có kết nối WiFi không
      */
-    public boolean isGoodTimeForLargeSync() {
-        return isWiFiConnected();
+    public static boolean isWiFiConnected(Context context) {
+        if (context == null) return false;
+
+        ConnectivityManager connectivityManager =
+            (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if (connectivityManager == null) return false;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Network activeNetwork = connectivityManager.getActiveNetwork();
+            if (activeNetwork == null) return false;
+
+            NetworkCapabilities networkCapabilities =
+                connectivityManager.getNetworkCapabilities(activeNetwork);
+
+            return networkCapabilities != null &&
+                   networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+        } else {
+            NetworkInfo wifiInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+            return wifiInfo != null && wifiInfo.isConnected();
+        }
     }
 
     /**
-     * Check if it's good time to upload images (WiFi or strong cellular)
+     * Kiểm tra xem có kết nối Mobile Data không
      */
-    public boolean isGoodTimeForImageUpload() {
-        if (isWiFiConnected()) return true;
+    public static boolean isMobileDataConnected(Context context) {
+        if (context == null) return false;
 
-        if (isCellularConnected()) {
-            // Could add signal strength check here if needed
-            return true;
-        }
+        ConnectivityManager connectivityManager =
+            (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        return false;
-    }
+        if (connectivityManager == null) return false;
 
-    private static class NetworkCallback extends ConnectivityManager.NetworkCallback {
-        private final NetworkStatusListener listener;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Network activeNetwork = connectivityManager.getActiveNetwork();
+            if (activeNetwork == null) return false;
 
-        public NetworkCallback(NetworkStatusListener listener) {
-            this.listener = listener;
-        }
+            NetworkCapabilities networkCapabilities =
+                connectivityManager.getNetworkCapabilities(activeNetwork);
 
-        @Override
-        public void onAvailable(Network network) {
-            super.onAvailable(network);
-            Log.d(TAG, "Network available: " + network);
-            if (listener != null) {
-                listener.onNetworkAvailable();
-            }
-        }
-
-        @Override
-        public void onLost(Network network) {
-            super.onLost(network);
-            Log.d(TAG, "Network lost: " + network);
-            if (listener != null) {
-                listener.onNetworkLost();
-            }
-        }
-
-        @Override
-        public void onCapabilitiesChanged(Network network, NetworkCapabilities networkCapabilities) {
-            super.onCapabilitiesChanged(network, networkCapabilities);
-            Log.d(TAG, "Network capabilities changed: " + network);
+            return networkCapabilities != null &&
+                   networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR);
+        } else {
+            NetworkInfo mobileInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+            return mobileInfo != null && mobileInfo.isConnected();
         }
     }
 }

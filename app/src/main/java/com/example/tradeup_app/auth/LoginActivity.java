@@ -3,12 +3,15 @@ package com.example.tradeup_app.auth;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Toast;
 import android.widget.TextView;
+import android.widget.ProgressBar;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,6 +20,7 @@ import com.example.tradeup_app.auth.Domain.UserModel;
 import com.example.tradeup_app.auth.Helper.CurrentUser;
 import com.example.tradeup_app.activities.MainActivity;
 import com.example.tradeup_app.services.BackgroundMessageService;
+import com.example.tradeup_app.utils.NetworkUtils;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.android.gms.auth.api.identity.BeginSignInRequest;
 import com.google.android.gms.auth.api.identity.Identity;
@@ -42,11 +46,17 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputLayout emailInputLayout, passwordInputLayout;
     private MaterialButton loginButton, googleSignInButton;
     private TextView registerLink, forgotPasswordText;
+    private ProgressBar loadingProgressBar;
 
     private FirebaseAuth auth;
     private SignInClient oneTapClient;
     private BeginSignInRequest signInRequest;
     private final int REQ_ONE_TAP = 2;
+
+    // ✅ Add timeout handling
+    private static final int LOGIN_TIMEOUT_MS = 15000; // 15 seconds
+    private final Handler timeoutHandler = new Handler(Looper.getMainLooper());
+    private Runnable timeoutRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +83,14 @@ public class LoginActivity extends AppCompatActivity {
         googleSignInButton = findViewById(R.id.googleSignInButton);
         registerLink = findViewById(R.id.registerLink);
         forgotPasswordText = findViewById(R.id.forgotPasswordText);
+
+        // ✅ Add loading progress bar for better UX
+        loadingProgressBar = findViewById(R.id.loadingProgressBar);
+        if (loadingProgressBar == null) {
+            // Create programmatically if not in layout
+            loadingProgressBar = new ProgressBar(this);
+            loadingProgressBar.setVisibility(View.GONE);
+        }
 
         // Disable login button initially
         loginButton.setEnabled(false);
@@ -152,6 +170,13 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void performLogin() {
+        // ✅ Kiểm tra kết nối mạng trước khi đăng nhập
+        if (!NetworkUtils.isNetworkAvailable(this)) {
+            String networkType = NetworkUtils.getNetworkType(this);
+            showNetworkErrorDialog(networkType);
+            return;
+        }
+
         String email = emailEditText.getText() != null ?
             emailEditText.getText().toString().trim() : "";
         String password = passwordEditText.getText() != null ?
@@ -188,24 +213,100 @@ public class LoginActivity extends AppCompatActivity {
 
         setLoading(true);
 
+        // ✅ Set timeout for login operation
+        setupLoginTimeout();
+
         auth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(task -> {
+                    clearLoginTimeout();
                     setLoading(false);
+
                     if (task.isSuccessful()) {
                         FirebaseUser user = auth.getCurrentUser();
                         if (user != null) {
                             if (user.isEmailVerified()) {
-                                loadUserDataAndNavigate(user.getUid());
+                                // ✅ Load user data with faster navigation
+                                loadUserDataAndNavigateFast(user.getUid());
                             } else {
                                 showEmailVerificationDialog(user);
                             }
                         }
                     } else {
-                        String errorMessage = task.getException() != null ?
-                            task.getException().getMessage() : "Login failed";
+                        String errorMessage = getFirebaseErrorMessage(task.getException());
                         Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+
+    // ✅ Hiển thị dialog lỗi mạng với thông tin chi tiết
+    private void showNetworkErrorDialog(String networkType) {
+        String message = "Không thể kết nối internet.\n\n" +
+                        "Loại kết nối hiện tại: " + networkType + "\n\n" +
+                        "Vui lòng kiểm tra:\n" +
+                        "• Kết nối WiFi hoặc Mobile Data\n" +
+                        "• Cài đặt mạng của thiết bị\n" +
+                        "• Firewall hoặc proxy";
+
+        new AlertDialog.Builder(this)
+                .setTitle("Lỗi kết nối mạng")
+                .setMessage(message)
+                .setPositiveButton("Thử lại", (dialog, which) -> {
+                    // Kiểm tra lại kết nối
+                    if (NetworkUtils.isNetworkAvailable(this)) {
+                        Toast.makeText(this, "Kết nối đã được khôi phục!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Vẫn chưa có kết nối internet", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cài đặt", (dialog, which) -> {
+                    // Mở cài đặt mạng
+                    try {
+                        Intent intent = new Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS);
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Không thể mở cài đặt", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    // ✅ Add timeout handling for login operations
+    private void setupLoginTimeout() {
+        timeoutRunnable = () -> {
+            setLoading(false);
+            Toast.makeText(this, "Login timeout. Please check your internet connection and try again.", Toast.LENGTH_LONG).show();
+        };
+        timeoutHandler.postDelayed(timeoutRunnable, LOGIN_TIMEOUT_MS);
+    }
+
+    private void clearLoginTimeout() {
+        if (timeoutRunnable != null) {
+            timeoutHandler.removeCallbacks(timeoutRunnable);
+        }
+    }
+
+    // ✅ Improved error handling
+    private String getFirebaseErrorMessage(Exception exception) {
+        if (exception == null) return "Login failed";
+
+        String message = exception.getMessage();
+        if (message != null) {
+            if (message.contains("INVALID_EMAIL")) {
+                return "Invalid email address";
+            } else if (message.contains("WRONG_PASSWORD")) {
+                return "Incorrect password";
+            } else if (message.contains("USER_NOT_FOUND")) {
+                return "No account found with this email";
+            } else if (message.contains("USER_DISABLED")) {
+                return "This account has been disabled";
+            } else if (message.contains("TOO_MANY_REQUESTS")) {
+                return "Too many failed attempts. Please try again later";
+            } else if (message.contains("NETWORK_ERROR")) {
+                return "Network error. Please check your internet connection";
+            }
+        }
+        return "Login failed. Please try again";
     }
 
     private void showEmailVerificationDialog(FirebaseUser user) {
@@ -223,7 +324,7 @@ public class LoginActivity extends AppCompatActivity {
                     // Reload user and check verification status
                     user.reload().addOnCompleteListener(reloadTask -> {
                         if (user.isEmailVerified()) {
-                            loadUserDataAndNavigate(user.getUid());
+                            loadUserDataAndNavigateFast(user.getUid());
                         } else {
                             Toast.makeText(this, R.string.email_not_verified, Toast.LENGTH_SHORT).show();
                         }
@@ -234,80 +335,94 @@ public class LoginActivity extends AppCompatActivity {
         auth.signOut(); // Sign out unverified user
     }
 
-    private void loadUserDataAndNavigate(String uid) {
+    // ✅ Optimized user data loading with faster navigation
+    private void loadUserDataAndNavigateFast(String uid) {
         FirebaseDatabase.getInstance().getReference("Users").child(uid).get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot.exists()) {
                         UserModel userModel = snapshot.getValue(UserModel.class);
                         if (userModel != null) {
-                            // Set user data in singleton before navigating
+                            // Set user data in singleton
                             CurrentUser.setUser(userModel);
 
-                            // ✅ Start BackgroundMessageService for real-time notifications
-                            BackgroundMessageService.startService(this);
+                            // ✅ Navigate immediately, start service in background after navigation
+                            navigateToMainActivity();
 
-                            // Now navigate to MainActivity
-                            startActivity(new Intent(this, MainActivity.class));
-                            finish();
+                            // Start BackgroundMessageService after navigation to avoid blocking UI
+                            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                BackgroundMessageService.startService(this);
+                            }, 500); // Delay 500ms to ensure smooth navigation
                         } else {
-                            // User exists but data is corrupted, redirect to profile setup
-                            Toast.makeText(this, "Please complete your profile", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(this, UserProfileActivity.class));
-                            finish();
+                            handleCorruptedUserData();
                         }
                     } else {
-                        // User authenticated but no profile data exists
-                        Toast.makeText(this, "Please complete your profile", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(this, UserProfileActivity.class));
-                        finish();
+                        handleMissingUserProfile();
                     }
                 })
                 .addOnFailureListener(e -> {
-                    // Failed to load user data, stay on login screen
                     Toast.makeText(this, "Failed to load user data. Please login again.", Toast.LENGTH_SHORT).show();
                     auth.signOut();
                 });
     }
 
+    private void navigateToMainActivity() {
+        Intent intent = new Intent(this, MainActivity.class);
+        // ✅ Add flags for smoother navigation
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+        // ✅ Add transition animation
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+    }
+
+    private void handleCorruptedUserData() {
+        Toast.makeText(this, "Please complete your profile", Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(this, UserProfileActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
+
+    private void handleMissingUserProfile() {
+        Toast.makeText(this, "Please complete your profile", Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(this, UserProfileActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
+
     private void checkUserLoginStatus() {
         FirebaseUser currentUser = auth.getCurrentUser();
         if (currentUser != null && currentUser.isEmailVerified()) {
-            // User is logged in and verified, load user data and navigate
+            // ✅ Show loading indicator for auto-login
+            setLoading(true);
             loadUserDataAndNavigateFromLogin(currentUser.getUid());
         }
-        // If no user or not verified, stay on login screen
     }
 
     private void loadUserDataAndNavigateFromLogin(String uid) {
         FirebaseDatabase.getInstance().getReference("Users").child(uid).get()
                 .addOnSuccessListener(snapshot -> {
+                    setLoading(false);
                     if (snapshot.exists()) {
                         UserModel userModel = snapshot.getValue(UserModel.class);
                         if (userModel != null) {
-                            // Set user data in singleton before navigating
                             CurrentUser.setUser(userModel);
+                            navigateToMainActivity();
 
-                            // ✅ Start BackgroundMessageService for real-time notifications
-                            BackgroundMessageService.startService(this);
-
-                            // Now navigate to MainActivity
-                            startActivity(new Intent(this, MainActivity.class));
-                            finish();
+                            // Start service after navigation
+                            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                BackgroundMessageService.startService(this);
+                            }, 500);
                         } else {
-                            // User exists but data is corrupted, redirect to profile setup
-                            Toast.makeText(this, "Please complete your profile", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(this, UserProfileActivity.class));
-                            finish();
+                            handleCorruptedUserData();
                         }
                     } else {
-                        // User authenticated but no profile data exists
-                        Toast.makeText(this, "Please complete your profile", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(this, UserProfileActivity.class));
-                        finish();
+                        handleMissingUserProfile();
                     }
                 })
                 .addOnFailureListener(e -> {
-                    // Failed to load user data, stay on login screen
+                    setLoading(false);
                     Toast.makeText(this, "Failed to load user data. Please login again.", Toast.LENGTH_SHORT).show();
                     auth.signOut();
                 });
@@ -512,16 +627,27 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
+    // ✅ Improved loading state management
     private void setLoading(boolean loading) {
         loginButton.setEnabled(!loading);
         googleSignInButton.setEnabled(!loading);
         emailEditText.setEnabled(!loading);
         passwordEditText.setEnabled(!loading);
 
+        if (loadingProgressBar != null) {
+            loadingProgressBar.setVisibility(loading ? View.VISIBLE : View.GONE);
+        }
+
         if (loading) {
             loginButton.setText(R.string.signing_in);
         } else {
             loginButton.setText(R.string.sign_in);
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        clearLoginTimeout();
     }
 }

@@ -81,8 +81,9 @@ public class VNDPriceFormatter {
 
                     s.replace(0, s.length(), formatted);
 
-                    // Đặt cursor ở cuối
-                    editText.setSelection(formatted.length());
+                    // Đặt cursor ở cuối, đảm bảo không vượt quá độ dài text
+                    int newCursor = Math.min(formatted.length(), editText.getText().length());
+                    editText.setSelection(newCursor);
                 } catch (NumberFormatException e) {
                     // Nếu số quá lớn, giữ nguyên text
                 }

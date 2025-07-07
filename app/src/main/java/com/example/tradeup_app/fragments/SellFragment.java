@@ -16,6 +16,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -24,6 +25,7 @@ import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.Toast;
+import android.widget.AutoCompleteTextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -64,7 +66,7 @@ public class SellFragment extends Fragment {
     private static final int BACKGROUND_LOCATION_PERMISSION_REQUEST = 1003;
 
     private EditText titleEditText, descriptionEditText, priceEditText, locationEditText, behaviorEditText, addTagEditText;
-    private Spinner categorySpinner, conditionSpinner;
+    private AutoCompleteTextView categoryDropdown, conditionDropdown;
     private Switch negotiableSwitch; // Changed from MaterialSwitch to Switch
     private ChipGroup tagsChipGroup;
     private RecyclerView imagesRecyclerView;
@@ -106,8 +108,8 @@ public class SellFragment extends Fragment {
         descriptionEditText = view.findViewById(R.id.description_edit_text);
         priceEditText = view.findViewById(R.id.price_edit_text);
         locationEditText = view.findViewById(R.id.location_edit_text);
-        categorySpinner = view.findViewById(R.id.category_spinner);
-        conditionSpinner = view.findViewById(R.id.condition_spinner);
+        categoryDropdown = view.findViewById(R.id.category_dropdown);
+        conditionDropdown = view.findViewById(R.id.condition_dropdown);
         negotiableSwitch = view.findViewById(R.id.negotiable_switch);
         tagsChipGroup = view.findViewById(R.id.tags_chip_group);
         imagesRecyclerView = view.findViewById(R.id.images_recycler_view);
@@ -152,17 +154,21 @@ public class SellFragment extends Fragment {
     }
 
     private void setupSpinners() {
-        // Category spinner
+        // Category dropdown
         String[] categories = {"Điện tử", "Thời trang", "Xe cộ", "Nhà cửa", "Sách", "Thể thao", "Khác"};
-        ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, categories);
-        categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        categorySpinner.setAdapter(categoryAdapter);
+        ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_dropdown_item_1line, categories);
+        categoryDropdown.setAdapter(categoryAdapter);
+        categoryDropdown.setOnItemClickListener((parent, view, position, id) -> {
+            categoryDropdown.setError(null);
+        });
 
-        // Condition spinner
+        // Condition dropdown
         String[] conditions = {"Mới", "Như mới", "Tốt", "Khá tốt", "Cũ"};
-        ArrayAdapter<String> conditionAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, conditions);
-        conditionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        conditionSpinner.setAdapter(conditionAdapter);
+        ArrayAdapter<String> conditionAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_dropdown_item_1line, conditions);
+        conditionDropdown.setAdapter(conditionAdapter);
+        conditionDropdown.setOnItemClickListener((parent, view, position, id) -> {
+            conditionDropdown.setError(null);
+        });
     }
 
     private void setupLocationFeatures() {
@@ -467,6 +473,18 @@ public class SellFragment extends Fragment {
             locationEditText.setError("Vui lòng nhập địa chỉ");
             return false;
         }
+        // Validate category
+        if (categoryDropdown.getText().toString().trim().isEmpty()) {
+            categoryDropdown.setError("Vui lòng chọn danh mục sản phẩm");
+            categoryDropdown.requestFocus();
+            return false;
+        }
+        // Validate condition
+        if (conditionDropdown.getText().toString().trim().isEmpty()) {
+            conditionDropdown.setError("Vui lòng chọn tình trạng sản phẩm");
+            conditionDropdown.requestFocus();
+            return false;
+        }
         if (selectedImages.isEmpty() && !isPreview) {
             Toast.makeText(getContext(), "Vui lòng thêm ít nhất 1 hình ảnh", Toast.LENGTH_SHORT).show();
             return false;
@@ -480,8 +498,8 @@ public class SellFragment extends Fragment {
         product.setDescription(descriptionEditText.getText().toString().trim());
         // Sử dụng VNDPriceFormatter để parse giá có định dạng VNĐ
         product.setPrice(VNDPriceFormatter.parseVND(priceEditText.getText().toString().trim()));
-        product.setCategory(categorySpinner.getSelectedItem().toString());
-        product.setCondition(conditionSpinner.getSelectedItem().toString());
+        product.setCategory(categoryDropdown.getText().toString());
+        product.setCondition(conditionDropdown.getText().toString());
         product.setLocation(locationEditText.getText().toString().trim());
         product.setNegotiable(negotiableSwitch.isChecked());
         product.setItemBehavior(behaviorEditText.getText().toString().trim());
@@ -597,8 +615,8 @@ public class SellFragment extends Fragment {
         behaviorEditText.setText("");
         addTagEditText.setText("");
         negotiableSwitch.setChecked(false);
-        categorySpinner.setSelection(0);
-        conditionSpinner.setSelection(0);
+        categoryDropdown.setText("", false);
+        conditionDropdown.setText("", false);
         selectedImages.clear();
         imagePreviewAdapter.notifyDataSetChanged();
         tagsChipGroup.removeAllViews();

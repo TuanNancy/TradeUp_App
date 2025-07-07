@@ -172,6 +172,10 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 productImage.setImageResource(android.R.drawable.ic_menu_gallery);
             }
 
+            // Set item behavior
+            TextView itemBehaviorView = itemView.findViewById(R.id.item_behavior);
+            itemBehaviorView.setText(product.getItemBehavior() != null ? product.getItemBehavior() : "N/A");
+
             // Set click listeners
             itemView.setOnClickListener(v -> {
                 if (adapter.listener != null) {

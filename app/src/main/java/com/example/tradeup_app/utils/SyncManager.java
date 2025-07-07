@@ -18,7 +18,7 @@ public class SyncManager {
 
     private final FirebaseManager firebaseManager;
     private final CacheManager cacheManager;
-    private final NetworkUtils networkUtils;
+    private final Context context; // Store context instead of NetworkUtils instance
     private final AtomicBoolean isSyncing = new AtomicBoolean(false);
 
     public interface SyncCallback {
@@ -30,14 +30,14 @@ public class SyncManager {
     public SyncManager(Context context) {
         this.firebaseManager = FirebaseManager.getInstance();
         this.cacheManager = new CacheManager(context);
-        this.networkUtils = new NetworkUtils(context);
+        this.context = context; // Store context for NetworkUtils static methods
     }
 
     /**
      * Sync products data with Firebase
      */
     public void syncProducts(SyncCallback callback) {
-        if (!networkUtils.isNetworkAvailable()) {
+        if (!NetworkUtils.isNetworkAvailable(context)) {
             if (callback != null) {
                 callback.onSyncError("Không có kết nối mạng");
             }
@@ -88,7 +88,7 @@ public class SyncManager {
      * Sync conversations data with Firebase
      */
     public void syncConversations(String userId, SyncCallback callback) {
-        if (!networkUtils.isNetworkAvailable()) {
+        if (!NetworkUtils.isNetworkAvailable(context)) {
             if (callback != null) {
                 callback.onSyncError("Không có kết nối mạng");
             }
@@ -135,7 +135,7 @@ public class SyncManager {
      */
     public void getProducts(FirebaseManager.ProductCallback callback) {
         // Try cache first if network is slow or unavailable
-        if (!networkUtils.isNetworkAvailable() || !networkUtils.isGoodTimeForLargeSync()) {
+        if (!NetworkUtils.isNetworkAvailable(context) || !isGoodTimeForLargeSync()) {
             List<Product> cachedProducts = cacheManager.getCachedProducts();
             if (cachedProducts != null && !cachedProducts.isEmpty()) {
                 Log.d(TAG, "Returning cached products: " + cachedProducts.size());
@@ -184,7 +184,7 @@ public class SyncManager {
      */
     public void getConversations(String userId, FirebaseManager.ConversationCallback callback) {
         // Try cache first if network is slow or unavailable
-        if (!networkUtils.isNetworkAvailable()) {
+        if (!NetworkUtils.isNetworkAvailable(context)) {
             List<Conversation> cachedConversations = cacheManager.getCachedConversations();
             if (cachedConversations != null && !cachedConversations.isEmpty()) {
                 Log.d(TAG, "Returning cached conversations: " + cachedConversations.size());
@@ -232,7 +232,7 @@ public class SyncManager {
      * Force refresh data from Firebase
      */
     public void forceRefresh(String userId, SyncCallback callback) {
-        if (!networkUtils.isNetworkAvailable()) {
+        if (!NetworkUtils.isNetworkAvailable(context)) {
             if (callback != null) {
                 callback.onSyncError("Không có kết nối mạng");
             }
@@ -328,9 +328,10 @@ public class SyncManager {
     }
 
     /**
-     * Get network utils instance
+     * Check if it's a good time for large sync operations
+     * (e.g., on WiFi, not low battery, etc.)
      */
-    public NetworkUtils getNetworkUtils() {
-        return networkUtils;
+    private boolean isGoodTimeForLargeSync() {
+        return NetworkUtils.isWiFiConnected(context);
     }
 }
