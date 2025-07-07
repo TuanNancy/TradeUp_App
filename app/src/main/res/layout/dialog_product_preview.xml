@@ -1,152 +1,381 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white">
+    android:background="@color/background_light">
 
-    <LinearLayout
+    <!-- App Bar -->
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        app:elevation="0dp">
 
-        <!-- Image Preview Section -->
-        <RelativeLayout
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="?attr/actionBarSize"
+            app:title="Xem trước sản phẩm"
+            app:titleTextColor="@color/on_primary"
+            app:navigationIcon="@drawable/ic_close"
+            app:navigationIconTint="@color/on_primary"
+            android:background="@color/primary" />
 
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/image_view_pager"
-                android:layout_width="match_parent"
-                android:layout_height="300dp" />
+    </com.google.android.material.appbar.AppBarLayout>
 
-            <ImageButton
-                android:id="@+id/close_button"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_margin="16dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_close_clear_cancel" />
-        </RelativeLayout>
+    <!-- Content -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <!-- Product Details Section -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingBottom="24dp">
 
-            <!-- Title -->
-            <TextView
-                android:id="@+id/title_text"
+            <!-- Image Gallery Section -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:layout_margin="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
 
-            <!-- Price & Negotiable -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp">
-
-                <TextView
-                    android:id="@+id/price_text"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textSize="20sp"
-                    android:textColor="@android:color/holo_green_dark" />
+                    android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/negotiable_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Có thể thương lượng"
-                    android:textStyle="italic"
-                    android:visibility="gone" />
-            </LinearLayout>
+                    <!-- Image ViewPager -->
+                    <androidx.viewpager2.widget.ViewPager2
+                        android:id="@+id/image_view_pager"
+                        android:layout_width="match_parent"
+                        android:layout_height="300dp"
+                        android:background="@color/surface_variant" />
 
-            <!-- Description -->
-            <TextView
-                android:id="@+id/description_text"
+                    <!-- Image Counter -->
+                    <TextView
+                        android:id="@+id/image_counter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:padding="8dp"
+                        android:text="1 / 5"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Product Info Section -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp" />
-
-            <!-- Category -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Danh mục: "
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/category_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-
-            <!-- Condition -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Tình trạng: "
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/condition_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-
-            <!-- Location -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Địa điểm: "
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/location_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-
-            <!-- Item Behavior -->
-            <TextView
-                android:id="@+id/behavior_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
                 android:layout_marginBottom="16dp"
-                android:visibility="gone" />
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
 
-            <!-- Tags -->
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/tags_chip_group"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Title -->
+                    <TextView
+                        android:id="@+id/title_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/on_surface"
+                        android:layout_marginBottom="12dp"
+                        android:lineSpacingExtra="4dp" />
+
+                    <!-- Price & Negotiable Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <TextView
+                            android:id="@+id/price_text"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/primary" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/negotiable_chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Có thể thương lượng"
+                            android:visibility="gone"
+                            app:chipBackgroundColor="@color/secondary_container"
+                            app:chipStrokeWidth="0dp" />
+
+                    </LinearLayout>
+
+                    <!-- Description -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mô tả"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/description_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="@color/on_surface_variant"
+                        android:lineSpacingExtra="2dp"
+                        android:layout_marginBottom="20dp" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Product Details Section -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Chi tiết sản phẩm"
+                        android:textStyle="bold"
+                        android:textSize="18sp"
+                        android:textColor="@color/on_surface"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Category Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_category"
+                            android:layout_marginEnd="12dp"
+                            android:layout_marginTop="2dp"
+                            app:tint="@color/primary" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Danh mục"
+                                android:textSize="12sp"
+                                android:textColor="@color/on_surface_variant" />
+
+                            <TextView
+                                android:id="@+id/category_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/on_surface" />
+
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Condition Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_condition"
+                            android:layout_marginEnd="12dp"
+                            android:layout_marginTop="2dp"
+                            app:tint="@color/primary" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Tình trạng"
+                                android:textSize="12sp"
+                                android:textColor="@color/on_surface_variant" />
+
+                            <TextView
+                                android:id="@+id/condition_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/on_surface" />
+
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Behavior Row -->
+                    <LinearLayout
+                        android:id="@+id/behavior_layout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp"
+                        android:visibility="gone">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_behavior"
+                            android:layout_marginEnd="12dp"
+                            android:layout_marginTop="2dp"
+                            app:tint="@color/primary" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Tình trạng hoạt động"
+                                android:textSize="12sp"
+                                android:textColor="@color/on_surface_variant" />
+
+                            <TextView
+                                android:id="@+id/behavior_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/on_surface" />
+
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Location Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_location"
+                            android:layout_marginEnd="12dp"
+                            android:layout_marginTop="2dp"
+                            app:tint="@color/primary" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Địa điểm"
+                                android:textSize="12sp"
+                                android:textColor="@color/on_surface_variant" />
+
+                            <TextView
+                                android:id="@+id/location_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/on_surface" />
+
+                        </LinearLayout>
+                    </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Tags Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/tags_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_tag"
+                            android:layout_marginEnd="12dp"
+                            app:tint="@color/primary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Thẻ tìm kiếm"
+                            android:textStyle="bold"
+                            android:textSize="16sp"
+                            android:textColor="@color/on_surface" />
+
+                    </LinearLayout>
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/tags_chip_group"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:singleLine="false" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-    </LinearLayout>
-</ScrollView>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

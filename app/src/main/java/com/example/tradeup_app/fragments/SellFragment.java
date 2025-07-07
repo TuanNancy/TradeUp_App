@@ -65,12 +65,12 @@ public class SellFragment extends Fragment {
     private static final int LOCATION_PERMISSION_REQUEST = 1002;
     private static final int BACKGROUND_LOCATION_PERMISSION_REQUEST = 1003;
 
-    private EditText titleEditText, descriptionEditText, priceEditText, locationEditText, behaviorEditText, addTagEditText;
-    private AutoCompleteTextView categoryDropdown, conditionDropdown;
+    private EditText titleEditText, descriptionEditText, priceEditText, locationEditText, addTagEditText;
+    private AutoCompleteTextView categoryDropdown, conditionDropdown, behaviorDropdown;
     private Switch negotiableSwitch; // Changed from MaterialSwitch to Switch
     private ChipGroup tagsChipGroup;
     private RecyclerView imagesRecyclerView;
-    private Button addImagesButton, previewButton, publishButton;
+    private Button previewButton, publishButton;
     private ImageButton locationGpsButton;
 
     private List<Uri> selectedImages = new ArrayList<>();
@@ -110,14 +110,13 @@ public class SellFragment extends Fragment {
         locationEditText = view.findViewById(R.id.location_edit_text);
         categoryDropdown = view.findViewById(R.id.category_dropdown);
         conditionDropdown = view.findViewById(R.id.condition_dropdown);
+        behaviorDropdown = view.findViewById(R.id.behavior_edit_text);
         negotiableSwitch = view.findViewById(R.id.negotiable_switch);
         tagsChipGroup = view.findViewById(R.id.tags_chip_group);
         imagesRecyclerView = view.findViewById(R.id.images_recycler_view);
-        addImagesButton = view.findViewById(R.id.add_images_button);
         previewButton = view.findViewById(R.id.preview_button);
         publishButton = view.findViewById(R.id.publish_button);
         locationGpsButton = view.findViewById(R.id.location_gps_button);
-        behaviorEditText = view.findViewById(R.id.behavior_edit_text);
         addTagEditText = view.findViewById(R.id.add_tag_edit_text);
 
         firebaseManager = FirebaseManager.getInstance();
@@ -169,6 +168,45 @@ public class SellFragment extends Fragment {
         conditionDropdown.setOnItemClickListener((parent, view, position, id) -> {
             conditionDropdown.setError(null);
         });
+
+        // ✅ IMPROVED: Setup behavior dropdown as options instead of free text
+        setupBehaviorDropdown();
+    }
+
+    private void setupBehaviorDropdown() {
+
+        // Các lựa chọn tình trạng hoạt động
+        String[] behaviors = {
+            "Hoạt động bình thường",
+            "Hoạt động tốt",
+            "Có một số lỗi nhỏ",
+            "Cần sửa chữa",
+            "Chỉ để trang trí",
+            "Không hoạt động",
+            "Chưa test"
+        };
+
+        ArrayAdapter<String> behaviorAdapter = new ArrayAdapter<>(getContext(),
+            android.R.layout.simple_dropdown_item_1line, behaviors);
+        behaviorDropdown.setAdapter(behaviorAdapter);
+
+        // ✅ FIX: Make dropdown clickable and show options
+        behaviorDropdown.setOnClickListener(v -> behaviorDropdown.showDropDown());
+
+        behaviorDropdown.setOnItemClickListener((parent, view, position, id) -> {
+            // Clear error when user selects an option
+            behaviorDropdown.setError(null);
+        });
+
+        // ✅ FIX: Allow dropdown to open on focus
+        behaviorDropdown.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                behaviorDropdown.showDropDown();
+            }
+        });
+
+        // Set hint
+        behaviorDropdown.setHint("Chọn tình trạng hoạt động");
     }
 
     private void setupLocationFeatures() {
@@ -238,13 +276,16 @@ public class SellFragment extends Fragment {
                         if (isValidLocation(location)) {
                             handleLocationSuccess(location);
                         } else {
-                            Toast.makeText(getContext(), "Vị trí không hợp lệ. Vui lòng thử lại hoặc nhập thủ công.", Toast.LENGTH_LONG).show();
+                            // ✅ IMPROVED: Reduced toast messages - only show one concise message
+                            Toast.makeText(getContext(), "Vị trí không hợp lệ. Vui lòng nhập thủ công.", Toast.LENGTH_SHORT).show();
                         }
                     } else {
-                        Toast.makeText(getContext(), "Không thể lấy vị trí. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
+                        // ✅ IMPROVED: Reduced toast messages - only show one concise message
+                        Toast.makeText(getContext(), "Không thể lấy vị trí. Vui lòng nhập thủ công.", Toast.LENGTH_SHORT).show();
                     }
                 } else {
-                    Toast.makeText(getContext(), "Không nhận được dữ liệu vị trí. Vui lòng thử lại.", Toast.LENGTH_LONG).show();
+                    // ✅ IMPROVED: Reduced toast messages - only show one concise message
+                    Toast.makeText(getContext(), "Không lấy được vị trí. Vui lòng nhập thủ công.", Toast.LENGTH_SHORT).show();
                 }
 
                 // Clean up
@@ -252,22 +293,22 @@ public class SellFragment extends Fragment {
             }
         };
 
-        // Add timeout
+        // Add timeout with reduced message
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            // ✅ FIX: Check if fragment is still attached before accessing context
             if (locationCallback != null && isAdded() && getContext() != null) {
                 fusedLocationClient.removeLocationUpdates(locationCallback);
                 locationGpsButton.setEnabled(true);
-                Toast.makeText(getContext(), "Timeout: Không thể lấy vị trí. Vui lòng kiểm tra GPS.", Toast.LENGTH_LONG).show();
+                // ✅ IMPROVED: Reduced toast messages - simplified timeout message
+                Toast.makeText(getContext(), "Không thể lấy vị trí. Vui lòng nhập thủ công.", Toast.LENGTH_SHORT).show();
             }
         }, 15000); // 15 seconds timeout
 
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
                 .addOnFailureListener(e -> {
-                    // ✅ FIX: Check if fragment is still attached before accessing context
                     if (isAdded() && getContext() != null) {
                         locationGpsButton.setEnabled(true);
-                        Toast.makeText(getContext(), "Lỗi GPS: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        // ✅ IMPROVED: Reduced toast messages - simplified error message
+                        Toast.makeText(getContext(), "Lỗi GPS. Vui lòng nhập thủ công.", Toast.LENGTH_SHORT).show();
                         android.util.Log.e("SellFragment", "Location request failed", e);
                     }
                 });
@@ -297,7 +338,6 @@ public class SellFragment extends Fragment {
     }
 
     private void handleLocationSuccess(Location location) {
-        // ✅ FIX: Check if fragment is still attached before accessing context
         if (!isAdded() || getContext() == null) {
             return;
         }
@@ -305,7 +345,7 @@ public class SellFragment extends Fragment {
         // Check if this is a mock location (fake/simulated location)
         if (location.isFromMockProvider()) {
             locationGpsButton.setEnabled(true);
-            Toast.makeText(getContext(), "Phát hiện vị trí giả lập. Vui lòng tắt mock location và thử lại.", Toast.LENGTH_LONG).show();
+            Toast.makeText(getContext(), "Vị trí giả lập. Vui lòng nhập thủ công.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -327,7 +367,6 @@ public class SellFragment extends Fragment {
                     "Bạn có muốn nhập địa chỉ thủ công không?")
                 .setPositiveButton("Nhập thủ công", (dialog, which) -> {
                     locationEditText.requestFocus();
-                    Toast.makeText(getContext(), "Vui lòng nhập địa chỉ của bạn", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Thử lại", (dialog, which) -> {
                     // Reset and try again
@@ -339,23 +378,20 @@ public class SellFragment extends Fragment {
             return;
         }
 
-        // Check accuracy
-        if (location.getAccuracy() > 100) // More than 100 meters accuracy
-        {
-            Toast.makeText(getContext(), String.format("Độ chính xác thấp (±%.0fm). Đang thử cải thiện...", location.getAccuracy()), Toast.LENGTH_SHORT).show();
-            // Continue trying for better accuracy, but don't return immediately
+        // ✅ IMPROVED: Removed excessive accuracy toast message - only log for debugging
+        if (location.getAccuracy() > 100) {
+            android.util.Log.d("SellFragment", String.format("Low accuracy location: ±%.0fm", location.getAccuracy()));
         }
 
         LocationUtils.getAddressFromLocation(getContext(), location.getLatitude(), location.getLongitude(),
             address -> {
-                // ✅ FIX: Check if fragment is still attached before accessing context in callback
                 if (!isAdded() || getContext() == null) {
                     return;
                 }
 
                 if (address == null || address.trim().isEmpty()) {
                     locationGpsButton.setEnabled(true);
-                    Toast.makeText(getContext(), "Không thể chuyển đổi tọa độ thành địa chỉ. Vui lòng nhập thủ công.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getContext(), "Không thể lấy địa chỉ. Vui lòng nhập thủ công.", Toast.LENGTH_SHORT).show();
                     locationEditText.requestFocus();
                     return;
                 }
@@ -365,8 +401,8 @@ public class SellFragment extends Fragment {
                 longitude = location.getLongitude();
                 locationGpsButton.setEnabled(true);
 
-                String successMessage = String.format("Vị trí: %s (±%.0fm)", address, location.getAccuracy());
-                Toast.makeText(getContext(), successMessage, Toast.LENGTH_LONG).show();
+                // ✅ IMPROVED: Simplified success message - removed accuracy info to reduce clutter
+                Toast.makeText(getContext(), "Đã lấy vị trí thành công", Toast.LENGTH_SHORT).show();
 
                 // Log for debugging
                 android.util.Log.d("SellFragment", String.format("Location obtained: lat=%.6f, lng=%.6f, accuracy=%.2f, provider=%s",
@@ -398,26 +434,14 @@ public class SellFragment extends Fragment {
             intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             startActivityForResult(Intent.createChooser(intent, "Chọn hình ảnh"), PICK_IMAGES_REQUEST);
         });
-
-        // Keep the old button listener as backup (hidden button)
-        addImagesButton.setOnClickListener(v -> {
-            if (selectedImages.size() >= MAX_IMAGES) {
-                Toast.makeText(getContext(), "Tối đa 10 hình ảnh", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("image/*");
-            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-            startActivityForResult(Intent.createChooser(intent, "Chọn hình ảnh"), PICK_IMAGES_REQUEST);
-        });
     }
 
     private void updateImageButtonState() {
-        addImagesButton.setEnabled(selectedImages.size() < MAX_IMAGES);
+        // addImagesButton.setEnabled(selectedImages.size() < MAX_IMAGES);
     }
 
     private void setupTagSystem() {
+        // Keyboard "Done" action
         addTagEditText.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 addTag(addTagEditText.getText().toString());
@@ -425,16 +449,49 @@ public class SellFragment extends Fragment {
             }
             return false;
         });
+
+        // ✅ IMPROVED: Setup end icon click listener for TextInputLayout to add tags
+        com.google.android.material.textfield.TextInputLayout tagInputLayout =
+            (com.google.android.material.textfield.TextInputLayout) addTagEditText.getParent().getParent();
+        tagInputLayout.setEndIconOnClickListener(v -> {
+            addTag(addTagEditText.getText().toString());
+        });
     }
 
     private void addTag(String tag) {
         if (tag != null && !tag.trim().isEmpty()) {
+            // ✅ IMPROVED: Check for duplicate tags
+            String trimmedTag = tag.trim();
+
+            // Check if tag already exists
+            for (int i = 0; i < tagsChipGroup.getChildCount(); i++) {
+                Chip existingChip = (Chip) tagsChipGroup.getChildAt(i);
+                if (existingChip.getText().toString().equalsIgnoreCase(trimmedTag)) {
+                    Toast.makeText(getContext(), "Thẻ \"" + trimmedTag + "\" đã tồn tại", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+
+            // ✅ IMPROVED: Limit number of tags
+            if (tagsChipGroup.getChildCount() >= 10) {
+                Toast.makeText(getContext(), "Tối đa 10 thẻ", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             Chip chip = new Chip(requireContext());
-            chip.setText(tag.trim());
+            chip.setText(trimmedTag);
             chip.setCloseIconVisible(true);
-            chip.setOnCloseIconClickListener(v -> tagsChipGroup.removeView(chip));
+            chip.setOnCloseIconClickListener(v -> {
+                tagsChipGroup.removeView(chip);
+                Toast.makeText(getContext(), "Đã xóa thẻ: " + trimmedTag, Toast.LENGTH_SHORT).show();
+            });
             tagsChipGroup.addView(chip);
             addTagEditText.setText("");
+
+            // Show success message
+            Toast.makeText(getContext(), "Đã thêm thẻ: " + trimmedTag, Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getContext(), "Vui lòng nhập tên thẻ", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -444,11 +501,67 @@ public class SellFragment extends Fragment {
     }
 
     private void showPreview() {
-        if (!validateInputs(true)) return;
+        // ✅ IMPROVED: Enhanced preview validation with images requirement
+        if (!validateInputsForPreview()) return;
 
         Product preview = createProductFromInputs();
-        // Show preview dialog/activity
-        ProductPreviewDialog.show(requireContext(), preview);
+
+        // ✅ IMPROVED: Set preview images from selected images (URIs) for preview
+        List<String> previewImageUrls = new ArrayList<>();
+        for (Uri imageUri : selectedImages) {
+            previewImageUrls.add(imageUri.toString());
+        }
+        preview.setImageUrls(previewImageUrls);
+
+        // Show enhanced preview dialog
+        ProductPreviewDialog.showWithImages(requireContext(), preview, selectedImages);
+    }
+
+    private boolean validateInputsForPreview() {
+        // ✅ IMPROVED: More comprehensive validation for preview
+        if (titleEditText.getText().toString().trim().isEmpty()) {
+            titleEditText.setError("Vui lòng nhập tiêu đề");
+            titleEditText.requestFocus();
+            return false;
+        }
+        if (descriptionEditText.getText().toString().trim().isEmpty()) {
+            descriptionEditText.setError("Vui lòng nhập mô tả");
+            descriptionEditText.requestFocus();
+            return false;
+        }
+        if (priceEditText.getText().toString().trim().isEmpty()) {
+            priceEditText.setError("Vui lòng nhập giá");
+            priceEditText.requestFocus();
+            return false;
+        }
+        if (!VNDPriceFormatter.isValidVNDPrice(priceEditText.getText().toString().trim())) {
+            priceEditText.setError("Giá không hợp lệ");
+            priceEditText.requestFocus();
+            return false;
+        }
+        if (categoryDropdown.getText().toString().trim().isEmpty()) {
+            categoryDropdown.setError("Vui lòng chọn danh mục");
+            categoryDropdown.requestFocus();
+            return false;
+        }
+        if (conditionDropdown.getText().toString().trim().isEmpty()) {
+            conditionDropdown.setError("Vui lòng chọn tình trạng");
+            conditionDropdown.requestFocus();
+            return false;
+        }
+        if (locationEditText.getText().toString().trim().isEmpty()) {
+            locationEditText.setError("Vui lòng nhập địa chỉ");
+            locationEditText.requestFocus();
+            return false;
+        }
+        // ✅ IMPROVED: Require at least one image for preview
+        if (selectedImages.isEmpty()) {
+            Toast.makeText(getContext(), "Vui lòng thêm ít nhất 1 hình ảnh để xem trước", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        Toast.makeText(getContext(), "Đang chuẩn bị xem trước...", Toast.LENGTH_SHORT).show();
+        return true;
     }
 
     private boolean validateInputs(boolean isPreview) {
@@ -502,7 +615,7 @@ public class SellFragment extends Fragment {
         product.setCondition(conditionDropdown.getText().toString());
         product.setLocation(locationEditText.getText().toString().trim());
         product.setNegotiable(negotiableSwitch.isChecked());
-        product.setItemBehavior(behaviorEditText.getText().toString().trim());
+        product.setItemBehavior(behaviorDropdown.getText().toString().trim());
         product.setLatitude(latitude);
         product.setLongitude(longitude);
 
@@ -540,17 +653,26 @@ public class SellFragment extends Fragment {
 
             @Override
             public void onFailure(Exception e) {
-                hideLoadingDialog();
-                Toast.makeText(getContext(), "Lỗi tải lên hình ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                // ✅ FIX: Check if fragment is still attached before showing toast
+                if (isAdded() && getContext() != null) {
+                    hideLoadingDialog();
+                    Toast.makeText(getContext(), "Lỗi tải lên hình ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
 
     private void publishProduct(Product product) {
         firebaseManager.addProduct(product, task -> {
+            // ✅ FIX: Check if fragment is still attached before any UI operations
+            if (!isAdded() || getContext() == null) {
+                return; // Fragment is no longer attached, don't perform UI operations
+            }
+
             hideLoadingDialog();
 
             if (task.isSuccessful()) {
+                // ✅ FIX: Safe toast with context check
                 Toast.makeText(getContext(), "Đăng bán thành công!", Toast.LENGTH_LONG).show();
                 clearForm();
 
@@ -582,6 +704,7 @@ public class SellFragment extends Fragment {
                     // Fallback: just stay on current screen
                 }
             } else {
+                // ✅ FIX: Safe error toast with context check
                 String errorMessage = "Lỗi đăng bán";
                 if (task.getException() != null && task.getException().getMessage() != null) {
                     errorMessage += ": " + task.getException().getMessage();
@@ -612,7 +735,7 @@ public class SellFragment extends Fragment {
         descriptionEditText.setText("");
         priceEditText.setText("");
         locationEditText.setText("");
-        behaviorEditText.setText("");
+        behaviorDropdown.setText("", false);
         addTagEditText.setText("");
         negotiableSwitch.setChecked(false);
         categoryDropdown.setText("", false);

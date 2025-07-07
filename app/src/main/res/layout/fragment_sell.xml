@@ -113,15 +113,15 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
+                <!-- Enhanced Add Images Button -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/images_recycler_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="120dp"
                     android:layout_marginBottom="16dp"
-                    android:background="@drawable/dashed_border_background" />
+                    android:background="@drawable/dashed_border_background"
+                    android:minHeight="120dp" />
 
-                <!-- Enhanced Add Images Button -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/add_images_card"
                     android:layout_width="match_parent"
@@ -223,52 +223,6 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Description -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <!-- Icon -->
-                    <ImageView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_marginBottom="12dp"
-                        android:padding="12dp"
-                        android:src="@drawable/ic_add_photo"
-                        android:tint="@color/primary" />
-
-                    <!-- Title -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="4dp"
-                        android:text="Thêm hình ảnh sản phẩm"
-                        android:textColor="@color/primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <!-- Subtitle -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:alpha="0.8"
-                        android:text="Tối đa 10 ảnh • JPG, PNG"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp" />
-
-                    <!-- Hidden MaterialButton for functionality -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/add_images_button"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_marginTop="8dp"
-                        android:visibility="gone" />
-
-                </LinearLayout>
-
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -598,7 +552,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="20dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     app:boxCornerRadiusTopStart="12dp"
                     app:boxCornerRadiusTopEnd="12dp"
                     app:boxCornerRadiusBottomStart="12dp"
@@ -606,12 +560,14 @@
                     app:startIconDrawable="@drawable/ic_behavior"
                     app:startIconTint="@color/primary">
 
-                    <com.google.android.material.textfield.TextInputEditText
+                    <AutoCompleteTextView
                         android:id="@+id/behavior_edit_text"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Tình trạng hoạt động (tùy chọn)"
-                        android:inputType="textCapSentences" />
+                        android:inputType="none"
+                        android:focusable="false"
+                        android:clickable="true" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Tags Section -->
