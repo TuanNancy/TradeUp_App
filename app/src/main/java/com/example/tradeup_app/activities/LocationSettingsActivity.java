@@ -47,11 +47,13 @@ public class LocationSettingsActivity extends AppCompatActivity {
 
         initializeViews();
         setupToolbar();
-        loadSettings();
-        setupListeners();
 
+        // Initialize SharedPreferences and LocationService before loading settings
         locationService = new LocationService(this);
         prefs = getSharedPreferences("location_prefs", MODE_PRIVATE);
+
+        loadSettings();
+        setupListeners();
     }
 
     private void initializeViews() {

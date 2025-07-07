@@ -9,7 +9,7 @@ public class UserModel {
     private String profilePic;
     private String bio;
     private String contact;
-    public double rating;
+    private double rating;
     private boolean isAdmin;
     private boolean deactivated;
     private boolean isFlagged;
@@ -57,8 +57,22 @@ public class UserModel {
 
 
     public double getRating() { return rating; }
-    public void setRating(double rating) { this.rating = rating; }
 
+    public void setRating(Object ratingObj) {
+        if (ratingObj == null) {
+            this.rating = 0.0;
+        } else if (ratingObj instanceof String) {
+            try {
+                this.rating = Double.parseDouble((String) ratingObj);
+            } catch (NumberFormatException e) {
+                this.rating = 0.0;
+            }
+        } else if (ratingObj instanceof Number) {
+            this.rating = ((Number) ratingObj).doubleValue();
+        } else {
+            this.rating = 0.0;
+        }
+    }
 
 
 
