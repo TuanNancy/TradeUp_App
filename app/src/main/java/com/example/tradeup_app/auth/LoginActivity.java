@@ -345,6 +345,15 @@ public class LoginActivity extends AppCompatActivity {
                             // Set user data in singleton
                             CurrentUser.setUser(userModel);
 
+                            // Check if account is deactivated
+                            if (userModel.isDeactivated()) {
+                                // Navigate to deactivated account screen
+                                Intent intent = new Intent(this, DeactivatedAccountActivity.class);
+                                startActivity(intent);
+                                finish();
+                                return;
+                            }
+
                             // ✅ Navigate immediately, start service in background after navigation
                             navigateToMainActivity();
 
@@ -408,6 +417,16 @@ public class LoginActivity extends AppCompatActivity {
                         UserModel userModel = snapshot.getValue(UserModel.class);
                         if (userModel != null) {
                             CurrentUser.setUser(userModel);
+
+                            // Check if account is deactivated
+                            if (userModel.isDeactivated()) {
+                                // Navigate to deactivated account screen
+                                Intent intent = new Intent(this, DeactivatedAccountActivity.class);
+                                startActivity(intent);
+                                finish();
+                                return;
+                            }
+
                             navigateToMainActivity();
 
                             // Start service after navigation

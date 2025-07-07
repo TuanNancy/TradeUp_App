@@ -112,8 +112,8 @@ public class AccountSettingsActivity extends AppCompatActivity {
         // Update user status to deactivated in database
         FirebaseDatabase.getInstance().getReference("Users")
                 .child(currentUser.getUid())
-                .child("isActive")
-                .setValue(false)
+                .child("deactivated")
+                .setValue(true)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, R.string.account_deactivated_success, Toast.LENGTH_SHORT).show();
                     // Sign out user

@@ -80,6 +80,12 @@
             android:exported="false"
             android:theme="@style/Theme.TradeUp_App" />
 
+        <!-- Deactivated Account Activity - NEW -->
+        <activity
+            android:name=".auth.DeactivatedAccountActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App" />
+
         <!-- User Profile Activities -->
         <activity
             android:name=".auth.UserProfileViewActivity"
