@@ -1,6 +1,7 @@
 package com.example.tradeup_app.fragments;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,8 +24,11 @@ import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Product;
 import com.example.tradeup_app.activities.ChatActivity;
 import com.example.tradeup_app.activities.PaymentActivity;
+import com.example.tradeup_app.activities.LocationSettingsActivity;
+import com.example.tradeup_app.services.LocationService;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.chip.Chip;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.bumptech.glide.Glide;
@@ -36,6 +40,8 @@ import de.hdodenhof.circleimageview.CircleImageView;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static android.content.Context.MODE_PRIVATE;
 
 public class HomeFragment extends Fragment {
 
@@ -53,6 +59,15 @@ public class HomeFragment extends Fragment {
     // Quick action cards
     private MaterialCardView quickSellCard, quickChatCard;
 
+    // Location services
+    private LocationService locationService;
+    private SharedPreferences locationPrefs;
+    private double userLatitude = 0;
+    private double userLongitude = 0;
+    private String userAddress = "";
+    private Chip locationChip;
+    private MaterialCardView locationSettingsCard;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -63,6 +78,8 @@ public class HomeFragment extends Fragment {
         setupClickListeners();
         loadUserProfile();
         loadCategories();
+        // Initialize location services
+        initLocationServices();
         loadFeaturedItems();
         loadRecentItems();
         setupSearchBar();
@@ -88,6 +105,10 @@ public class HomeFragment extends Fragment {
         // Quick action cards
         quickSellCard = view.findViewById(R.id.quick_sell_card);
         quickChatCard = view.findViewById(R.id.quick_chat_card);
+
+        // Location services
+        locationChip = view.findViewById(R.id.chip_location);
+        locationSettingsCard = view.findViewById(R.id.card_location_settings);
 
         firebaseManager = FirebaseManager.getInstance();
     }
@@ -135,6 +156,236 @@ public class HomeFragment extends Fragment {
                     .commit();
             }
         });
+
+        // Location chip click listener for quick location search
+        locationChip.setOnClickListener(v -> {
+            showLocationSearchDialog();
+        });
+
+        // Location settings card
+        locationSettingsCard.setOnClickListener(v -> {
+            if (getActivity() != null) {
+                startActivity(new Intent(getActivity(), LocationSettingsActivity.class));
+            }
+        });
+    }
+
+    /**
+     * Initialize location services and load saved location preferences
+     */
+    private void initLocationServices() {
+        locationService = new LocationService(getContext());
+        locationPrefs = getActivity().getSharedPreferences("location_prefs", MODE_PRIVATE);
+
+        // Load saved location data
+        loadSavedLocationData();
+
+        // Update location chip display
+        updateLocationChipDisplay();
+    }
+
+    /**
+     * Load saved location data from SharedPreferences
+     */
+    private void loadSavedLocationData() {
+        userLatitude = Double.longBitsToDouble(locationPrefs.getLong("latitude", 0));
+        userLongitude = Double.longBitsToDouble(locationPrefs.getLong("longitude", 0));
+        userAddress = locationPrefs.getString("address", "");
+
+        // If no saved location, try to get current location
+        if (userLatitude == 0 && userLongitude == 0) {
+            getCurrentLocationIfPermitted();
+        }
+    }
+
+    /**
+     * Update the location chip display with current location
+     */
+    private void updateLocationChipDisplay() {
+        if (!userAddress.isEmpty()) {
+            // Shorten address for display
+            String displayAddress = userAddress.length() > 25 ?
+                userAddress.substring(0, 25) + "..." : userAddress;
+            locationChip.setText("📍 " + displayAddress);
+        } else {
+            locationChip.setText("📍 Set location");
+        }
+    }
+
+    /**
+     * Get current location if permissions are granted
+     */
+    private void getCurrentLocationIfPermitted() {
+        if (getContext() == null) return;
+
+        locationService.getCurrentLocation(new LocationService.LocationCallback() {
+            @Override
+            public void onLocationReceived(double latitude, double longitude, String address) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        userLatitude = latitude;
+                        userLongitude = longitude;
+                        userAddress = address;
+                        updateLocationChipDisplay();
+
+                        // Apply location-based filtering to current products
+                        applyLocationBasedFiltering();
+                    });
+                }
+            }
+
+            @Override
+            public void onLocationError(String error) {
+                // Silently handle error - user can manually set location
+            }
+        });
+    }
+
+    /**
+     * Show location search dialog for quick location-based search
+     */
+    private void showLocationSearchDialog() {
+        if (getContext() == null) return;
+
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(getContext());
+        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_location_search, null);
+
+        com.google.android.material.textfield.TextInputEditText editRadius = dialogView.findViewById(R.id.edit_search_radius);
+        com.google.android.material.chip.ChipGroup chipGroupRadius = dialogView.findViewById(R.id.chip_group_radius);
+        TextView textCurrentLocation = dialogView.findViewById(R.id.text_current_location);
+
+        // Set current location display
+        textCurrentLocation.setText(userAddress.isEmpty() ? "No location set" : userAddress);
+
+        // Set default radius
+        int savedRadius = locationPrefs.getInt("search_radius", 25);
+        editRadius.setText(String.valueOf(savedRadius));
+
+        // Setup radius chips
+        setupRadiusChips(chipGroupRadius, editRadius);
+
+        builder.setView(dialogView)
+               .setTitle("Search by Location")
+               .setPositiveButton("Search", (dialog, which) -> {
+                   String radiusStr = editRadius.getText().toString().trim();
+                   if (!radiusStr.isEmpty()) {
+                       try {
+                           int radius = Integer.parseInt(radiusStr);
+                           performLocationBasedSearch(radius);
+                       } catch (NumberFormatException e) {
+                           Toast.makeText(getContext(), "Invalid radius value", Toast.LENGTH_SHORT).show();
+                       }
+                   }
+               })
+               .setNegativeButton("Cancel", null)
+               .setNeutralButton("Settings", (dialog, which) -> {
+                   startActivity(new Intent(getActivity(), LocationSettingsActivity.class));
+               })
+               .show();
+    }
+
+    /**
+     * Setup radius selection chips
+     */
+    private void setupRadiusChips(com.google.android.material.chip.ChipGroup chipGroup,
+                                 com.google.android.material.textfield.TextInputEditText editRadius) {
+        int[] radiusOptions = {5, 10, 25, 50, 100};
+
+        for (int radius : radiusOptions) {
+            com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(getContext());
+            chip.setText(radius + " km");
+            chip.setCheckable(true);
+            chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) {
+                    editRadius.setText(String.valueOf(radius));
+                }
+            });
+            chipGroup.addView(chip);
+        }
+    }
+
+    /**
+     * Perform location-based search with specified radius
+     */
+    private void performLocationBasedSearch(int radiusKm) {
+        if (userLatitude == 0 && userLongitude == 0) {
+            Toast.makeText(getContext(), "Please set your location first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Get all products and filter by location
+        firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
+            @Override
+            public void onProductsLoaded(List<Product> products) {
+                if (getActivity() != null) {
+                    locationService.filterProductsByLocation(products, userLatitude, userLongitude,
+                        radiusKm, new LocationService.ProductLocationCallback() {
+                            @Override
+                            public void onProductsFiltered(List<Product> filteredProducts) {
+                                getActivity().runOnUiThread(() -> {
+                                    // Sort by distance
+                                    locationService.sortProductsByDistance(filteredProducts,
+                                        userLatitude, userLongitude,
+                                        new LocationService.ProductLocationCallback() {
+                                            @Override
+                                            public void onProductsFiltered(List<Product> sortedProducts) {
+                                                getActivity().runOnUiThread(() -> {
+                                                    // Update both featured and recent with location-filtered results
+                                                    featuredAdapter.updateProducts(sortedProducts.size() > 10 ?
+                                                        sortedProducts.subList(0, 10) : sortedProducts);
+                                                    recentAdapter.updateProducts(sortedProducts);
+
+                                                    Toast.makeText(getContext(),
+                                                        "Found " + sortedProducts.size() + " products within " + radiusKm + " km",
+                                                        Toast.LENGTH_SHORT).show();
+                                                });
+                                            }
+
+                                            @Override
+                                            public void onError(String error) {
+                                                if (getActivity() != null) {
+                                                    getActivity().runOnUiThread(() ->
+                                                        Toast.makeText(getContext(), "Error sorting products: " + error,
+                                                            Toast.LENGTH_SHORT).show());
+                                                }
+                                            }
+                                        });
+                                });
+                            }
+
+                            @Override
+                            public void onError(String error) {
+                                if (getActivity() != null) {
+                                    getActivity().runOnUiThread(() ->
+                                        Toast.makeText(getContext(), "Error filtering products: " + error,
+                                            Toast.LENGTH_SHORT).show());
+                                }
+                            }
+                        });
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                if (getActivity() != null) {
+                    Toast.makeText(getContext(), "Error loading products: " + error, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+
+    /**
+     * Apply location-based filtering to current feed based on saved preferences
+     */
+    private void applyLocationBasedFiltering() {
+        if (userLatitude == 0 && userLongitude == 0) return;
+
+        int savedRadius = locationPrefs.getInt("search_radius", 25);
+        boolean locationFilterEnabled = locationPrefs.getBoolean("location_filter_enabled", false);
+
+        if (locationFilterEnabled) {
+            performLocationBasedSearch(savedRadius);
+        }
     }
 
     private void loadUserProfile() {
@@ -379,6 +630,8 @@ public class HomeFragment extends Fragment {
         super.onResume();
         // Refresh data when fragment resumes
         refreshData();
+        // Initialize location services
+        initializeLocationServices();
     }
 
     // Add public method to refresh data
@@ -387,6 +640,169 @@ public class HomeFragment extends Fragment {
             loadFeaturedItems();
             loadRecentItems();
         }
+    }
+
+    // ============ LOCATION SERVICES IMPLEMENTATION ============
+
+    private void initializeLocationServices() {
+        if (getContext() == null) return;
+
+        locationService = new LocationService(getContext());
+        locationPrefs = getContext().getSharedPreferences("location_prefs", MODE_PRIVATE);
+
+        loadLocationSettings();
+        setupLocationChip();
+    }
+
+    private void loadLocationSettings() {
+        // Load saved location settings
+        boolean useGPS = locationPrefs.getBoolean("use_gps", true);
+        double savedLat = Double.longBitsToDouble(locationPrefs.getLong("latitude", 0));
+        double savedLon = Double.longBitsToDouble(locationPrefs.getLong("longitude", 0));
+        String savedAddress = locationPrefs.getString("address", "");
+
+        if (savedLat != 0 && savedLon != 0) {
+            userLatitude = savedLat;
+            userLongitude = savedLon;
+            userAddress = savedAddress;
+            updateLocationChip(savedAddress);
+        } else if (useGPS) {
+            // Get current location automatically
+            getCurrentLocationIfNeeded();
+        }
+    }
+
+    private void getCurrentLocationIfNeeded() {
+        if (getContext() == null || locationService == null) return;
+
+        // Check if location was updated recently (within 1 hour)
+        long lastUpdated = locationPrefs.getLong("last_updated", 0);
+        long currentTime = System.currentTimeMillis();
+        long oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+
+        if (currentTime - lastUpdated > oneHour) {
+            locationService.getCurrentLocation(new LocationService.LocationCallback() {
+                @Override
+                public void onLocationReceived(double latitude, double longitude, String address) {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            userLatitude = latitude;
+                            userLongitude = longitude;
+                            userAddress = address;
+
+                            // Save to preferences
+                            SharedPreferences.Editor editor = locationPrefs.edit();
+                            editor.putLong("latitude", Double.doubleToLongBits(latitude));
+                            editor.putLong("longitude", Double.doubleToLongBits(longitude));
+                            editor.putString("address", address);
+                            editor.putLong("last_updated", System.currentTimeMillis());
+                            editor.apply();
+
+                            updateLocationChip(address);
+
+                            // Reload products with location-based sorting
+                            loadLocationBasedProducts();
+                        });
+                    }
+                }
+
+                @Override
+                public void onLocationError(String error) {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            updateLocationChip("Location unavailable");
+                        });
+                    }
+                }
+            });
+        }
+    }
+
+    private void setupLocationChip() {
+        if (locationChip != null) {
+            locationChip.setOnClickListener(v -> {
+                if (getActivity() != null) {
+                    startActivity(new Intent(getActivity(), LocationSettingsActivity.class));
+                }
+            });
+        }
+    }
+
+    private void updateLocationChip(String address) {
+        if (locationChip != null && getActivity() != null) {
+            getActivity().runOnUiThread(() -> {
+                if (address != null && !address.isEmpty()) {
+                    // Shorten address for display
+                    String displayAddress = address.length() > 30 ?
+                        address.substring(0, 30) + "..." : address;
+                    locationChip.setText("📍 " + displayAddress);
+                    locationChip.setVisibility(View.VISIBLE);
+                } else {
+                    locationChip.setText("📍 Set location");
+                    locationChip.setVisibility(View.VISIBLE);
+                }
+            });
+        }
+    }
+
+    private void loadLocationBasedProducts() {
+        if (userLatitude == 0 && userLongitude == 0) {
+            // No location available, load normally
+            loadFeaturedItems();
+            loadRecentItems();
+            return;
+        }
+
+        // Load products with location-based prioritization
+        firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
+            @Override
+            public void onProductsLoaded(List<Product> products) {
+                if (getActivity() != null && locationService != null) {
+                    int searchRadius = locationPrefs.getInt("search_radius", 25); // Default 25km
+
+                    // Sort products by distance from user location
+                    locationService.sortProductsByDistance(products, userLatitude, userLongitude,
+                        new LocationService.ProductLocationCallback() {
+                            @Override
+                            public void onProductsFiltered(List<Product> sortedProducts) {
+                                if (getActivity() != null) {
+                                    getActivity().runOnUiThread(() -> {
+                                        // Update featured products (top 10 nearest)
+                                        List<Product> featuredProducts = sortedProducts.size() > 10 ?
+                                            sortedProducts.subList(0, 10) : sortedProducts;
+                                        featuredAdapter.updateProducts(featuredProducts);
+
+                                        // Update recent products with location info
+                                        recentAdapter.updateProducts(sortedProducts);
+                                    });
+                                }
+                            }
+
+                            @Override
+                            public void onError(String error) {
+                                if (getActivity() != null) {
+                                    getActivity().runOnUiThread(() -> {
+                                        Toast.makeText(getContext(), "Error sorting by location: " + error,
+                                            Toast.LENGTH_SHORT).show();
+                                        // Fallback to normal loading
+                                        loadFeaturedItems();
+                                        loadRecentItems();
+                                    });
+                                }
+                            }
+                        });
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "Error loading products: " + error, Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+        });
     }
 
     // NEW METHODS for handling offers and reports
@@ -409,7 +825,7 @@ public class HomeFragment extends Fragment {
                 options = new String[]{"Report Product"};
             } else {
                 // Product is available - allow both make offer and reporting
-                options = new String[]{"Make Offer", "Report Product"};
+                options = new String[]{"Make Offer", "Report Product", "View Distance"};
             }
         }
 
@@ -466,7 +882,7 @@ public class HomeFragment extends Fragment {
                     break;
             }
         } else {
-            // Nếu sản phẩm chưa sold, có thể make offer hoặc report
+            // Nếu sản phẩm chưa sold, có thể make offer, report, hoặc view distance
             switch (actionIndex) {
                 case 0: // Make Offer
                     showMakeOfferDialog(product);
@@ -474,11 +890,114 @@ public class HomeFragment extends Fragment {
                 case 1: // Report Product
                     showReportDialog(product);
                     break;
+                case 2: // View Distance
+                    showProductDistance(product);
+                    break;
                 default:
                     showToastOnce("Invalid action");
                     break;
             }
         }
+    }
+
+    // ============ LOCATION-SPECIFIC METHODS ============
+
+    private void showProductDistance(Product product) {
+        if (userLatitude == 0 && userLongitude == 0) {
+            Toast.makeText(getContext(), "Your location is not available. Please set your location in settings.",
+                Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (product.getLatitude() == 0 && product.getLongitude() == 0) {
+            Toast.makeText(getContext(), "Product location is not available.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String distanceStr = LocationService.getDistanceString(
+            userLatitude, userLongitude,
+            product.getLatitude(), product.getLongitude()
+        );
+
+        String message = String.format(
+            "Distance from your location:\n\n" +
+            "�� Your location: %s\n" +
+            "📍 Product location: %s\n\n" +
+            "📏 Distance: %s",
+            userAddress.isEmpty() ? "Unknown" : userAddress,
+            product.getLocation().isEmpty() ? "Unknown" : product.getLocation(),
+            distanceStr
+        );
+
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("📍 Location & Distance")
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .setNeutralButton("Open Maps", (dialog, which) -> openInMaps(product))
+            .show();
+    }
+
+    private void openInMaps(Product product) {
+        if (product.getLatitude() == 0 && product.getLongitude() == 0) {
+            Toast.makeText(getContext(), "Product location coordinates not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            // Create intent to open location in Google Maps
+            String uri = String.format("geo:%f,%f?q=%f,%f(%s)",
+                product.getLatitude(), product.getLongitude(),
+                product.getLatitude(), product.getLongitude(),
+                product.getTitle());
+            Intent intent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(uri));
+            intent.setPackage("com.google.android.apps.maps");
+
+            if (intent.resolveActivity(getContext().getPackageManager()) != null) {
+                startActivity(intent);
+            } else {
+                // Fallback to web browser if Maps app not installed
+                String webUri = String.format("https://www.google.com/maps/search/?api=1&query=%f,%f",
+                    product.getLatitude(), product.getLongitude());
+                Intent webIntent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(webUri));
+                startActivity(webIntent);
+            }
+        } catch (Exception e) {
+            Toast.makeText(getContext(), "Error opening maps: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // Method to get nearby products within radius
+    public void searchNearbyProducts(double radiusKm, LocationService.ProductLocationCallback callback) {
+        if (userLatitude == 0 && userLongitude == 0) {
+            callback.onError("User location not available");
+            return;
+        }
+
+        firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
+            @Override
+            public void onProductsLoaded(List<Product> products) {
+                if (locationService != null) {
+                    locationService.filterProductsByLocation(products, userLatitude, userLongitude,
+                        radiusKm, callback);
+                } else {
+                    callback.onError("Location service not initialized");
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                callback.onError("Error loading products: " + error);
+            }
+        });
+    }
+
+    // Public method to get user's current location for other fragments
+    public double[] getUserLocation() {
+        return new double[]{userLatitude, userLongitude};
+    }
+
+    public String getUserAddress() {
+        return userAddress;
     }
 
     private void showMakeOfferDialog(Product product) {
@@ -916,3 +1435,4 @@ public class HomeFragment extends Fragment {
         startActivity(intent);
     }
 }
+

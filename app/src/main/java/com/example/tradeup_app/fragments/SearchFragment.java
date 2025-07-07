@@ -1,6 +1,7 @@
 package com.example.tradeup_app.fragments;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -26,10 +27,16 @@ import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Product;
 import com.example.tradeup_app.activities.ChatActivity;
 import com.example.tradeup_app.activities.PaymentActivity;
+import com.example.tradeup_app.activities.LocationSettingsActivity;
+import com.example.tradeup_app.services.LocationService;
 import com.example.tradeup_app.utils.VNDPriceFormatter;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static android.content.Context.MODE_PRIVATE;
 
 public class SearchFragment extends Fragment {
 
@@ -37,9 +44,19 @@ public class SearchFragment extends Fragment {
     private Spinner categorySpinner, conditionSpinner, sortSpinner;
     private RecyclerView searchResultsRecyclerView;
     private View progressBar;
-    // ✅ THÊM: RangeSlider cho khoảng giá
+    // ✅ THÊM: RangeSlider cho kho���ng giá
     private com.google.android.material.slider.RangeSlider priceRangeSlider;
     private TextView priceRangeText;
+
+    // Location-based search components
+    private ChipGroup locationChipGroup;
+    private Chip chipLocationFilter, chipSortByDistance;
+    private LocationService locationService;
+    private SharedPreferences locationPrefs;
+    private double userLatitude = 0;
+    private double userLongitude = 0;
+    private String userAddress = "";
+    private boolean locationFilterEnabled = false;
 
     private ProductAdapter productAdapter;
     private FirebaseManager firebaseManager;
@@ -77,7 +94,310 @@ public class SearchFragment extends Fragment {
         priceRangeSlider = view.findViewById(R.id.price_range_slider);
         priceRangeText = view.findViewById(R.id.price_range_text);
 
+        // Location-based search components
+        locationChipGroup = view.findViewById(R.id.location_chip_group);
+        chipLocationFilter = view.findViewById(R.id.chip_location_filter);
+        chipSortByDistance = view.findViewById(R.id.chip_sort_by_distance);
+
         firebaseManager = FirebaseManager.getInstance();
+
+        // Initialize location services
+        initLocationServices();
+    }
+
+    /**
+     * Initialize location services for location-based search
+     */
+    private void initLocationServices() {
+        if (getContext() == null) return;
+
+        locationService = new LocationService(getContext());
+        locationPrefs = getContext().getSharedPreferences("location_prefs", MODE_PRIVATE);
+
+        // Load saved location data
+        loadLocationData();
+
+        // Setup location chips
+        setupLocationChips();
+    }
+
+    /**
+     * Load saved location data from SharedPreferences
+     */
+    private void loadLocationData() {
+        userLatitude = Double.longBitsToDouble(locationPrefs.getLong("latitude", 0));
+        userLongitude = Double.longBitsToDouble(locationPrefs.getLong("longitude", 0));
+        userAddress = locationPrefs.getString("address", "");
+        locationFilterEnabled = locationPrefs.getBoolean("location_filter_enabled", false);
+
+        updateLocationChipsVisibility();
+    }
+
+    /**
+     * Setup location filter chips
+     */
+    private void setupLocationChips() {
+        if (chipLocationFilter != null) {
+            chipLocationFilter.setOnClickListener(v -> {
+                if (userLatitude == 0 && userLongitude == 0) {
+                    // No location set, open location settings
+                    Toast.makeText(getContext(), "Please set your location first", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(getActivity(), LocationSettingsActivity.class));
+                } else {
+                    // Toggle location filter
+                    chipLocationFilter.setChecked(!chipLocationFilter.isChecked());
+                    applyLocationFilter();
+                }
+            });
+        }
+
+        if (chipSortByDistance != null) {
+            chipSortByDistance.setOnClickListener(v -> {
+                if (userLatitude == 0 && userLongitude == 0) {
+                    Toast.makeText(getContext(), "Please set your location first", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(getActivity(), LocationSettingsActivity.class));
+                } else {
+                    chipSortByDistance.setChecked(!chipSortByDistance.isChecked());
+                    performSearch();
+                }
+            });
+        }
+    }
+
+    /**
+     * Update visibility of location chips based on location availability
+     */
+    private void updateLocationChipsVisibility() {
+        if (locationChipGroup != null) {
+            if (userLatitude != 0 && userLongitude != 0) {
+                locationChipGroup.setVisibility(View.VISIBLE);
+
+                // Update chip texts
+                if (chipLocationFilter != null) {
+                    int radius = locationPrefs.getInt("search_radius", 25);
+                    chipLocationFilter.setText("📍 Within " + radius + " km");
+                    chipLocationFilter.setChecked(locationFilterEnabled);
+                }
+
+                if (chipSortByDistance != null) {
+                    chipSortByDistance.setText("📏 Sort by distance");
+                }
+            } else {
+                locationChipGroup.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    /**
+     * Apply location-based filtering to search results
+     */
+    private void applyLocationFilter() {
+        if (chipLocationFilter == null || !chipLocationFilter.isChecked()) {
+            return;
+        }
+
+        if (userLatitude == 0 && userLongitude == 0) {
+            Toast.makeText(getContext(), "Location not available", Toast.LENGTH_SHORT).show();
+            chipLocationFilter.setChecked(false);
+            return;
+        }
+
+        int radius = locationPrefs.getInt("search_radius", 25);
+
+        // Filter current product list by location
+        locationService.filterProductsByLocation(new ArrayList<>(productList),
+            userLatitude, userLongitude, radius,
+            new LocationService.ProductLocationCallback() {
+                @Override
+                public void onProductsFiltered(List<Product> filteredProducts) {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            productList.clear();
+                            productList.addAll(filteredProducts);
+                            productAdapter.notifyDataSetChanged();
+
+                            Toast.makeText(getContext(),
+                                "Found " + filteredProducts.size() + " products within " + radius + " km",
+                                Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                }
+
+                @Override
+                public void onError(String error) {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            Toast.makeText(getContext(), "Error filtering by location: " + error,
+                                Toast.LENGTH_SHORT).show();
+                            chipLocationFilter.setChecked(false);
+                        });
+                    }
+                }
+            });
+    }
+
+    /**
+     * Enhanced search method with location-based features
+     */
+    private void performLocationAwareSearch() {
+        progressBar.setVisibility(View.VISIBLE);
+
+        firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
+            @Override
+            public void onProductsLoaded(List<Product> products) {
+                if (getActivity() == null) return;
+
+                // Apply text and filter-based search first
+                List<Product> filteredProducts = applyBasicFilters(products);
+
+                // Apply location-based filtering/sorting if enabled
+                if (userLatitude != 0 && userLongitude != 0) {
+                    applyLocationBasedProcessing(filteredProducts);
+                } else {
+                    // No location data, just display filtered results
+                    displaySearchResults(filteredProducts);
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(getContext(), "Search error: " + error, Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+        });
+    }
+
+    /**
+     * Apply location-based processing (filtering and/or sorting)
+     */
+    private void applyLocationBasedProcessing(List<Product> products) {
+        boolean filterByLocation = chipLocationFilter != null && chipLocationFilter.isChecked();
+        boolean sortByDistance = chipSortByDistance != null && chipSortByDistance.isChecked();
+
+        if (filterByLocation) {
+            // Filter by location radius first
+            int radius = locationPrefs.getInt("search_radius", 25);
+            locationService.filterProductsByLocation(products, userLatitude, userLongitude, radius,
+                new LocationService.ProductLocationCallback() {
+                    @Override
+                    public void onProductsFiltered(List<Product> filteredProducts) {
+                        if (sortByDistance) {
+                            // Then sort by distance
+                            sortProductsByDistance(filteredProducts);
+                        } else {
+                            displaySearchResults(filteredProducts);
+                        }
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                Toast.makeText(getContext(), "Location filter error: " + error,
+                                    Toast.LENGTH_SHORT).show();
+                                displaySearchResults(products);
+                            });
+                        }
+                    }
+                });
+        } else if (sortByDistance) {
+            // Just sort by distance without filtering
+            sortProductsByDistance(products);
+        } else {
+            // No location processing needed
+            displaySearchResults(products);
+        }
+    }
+
+    /**
+     * Sort products by distance from user location
+     */
+    private void sortProductsByDistance(List<Product> products) {
+        locationService.sortProductsByDistance(products, userLatitude, userLongitude,
+            new LocationService.ProductLocationCallback() {
+                @Override
+                public void onProductsFiltered(List<Product> sortedProducts) {
+                    displaySearchResults(sortedProducts);
+                }
+
+                @Override
+                public void onError(String error) {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            Toast.makeText(getContext(), "Distance sort error: " + error,
+                                Toast.LENGTH_SHORT).show();
+                            displaySearchResults(products);
+                        });
+                    }
+                }
+            });
+    }
+
+    /**
+     * Apply basic text and category filters (existing functionality)
+     */
+    private List<Product> applyBasicFilters(List<Product> products) {
+        List<Product> filteredProducts = new ArrayList<>();
+
+        String searchQuery = searchEditText.getText().toString().toLowerCase().trim();
+        String selectedCategory = categorySpinner.getSelectedItem().toString();
+        String selectedCondition = conditionSpinner.getSelectedItem().toString();
+
+        // Get price range from RangeSlider if available
+        double minPrice = 0;
+        double maxPrice = Double.MAX_VALUE;
+
+        if (priceRangeSlider != null) {
+            List<Float> values = priceRangeSlider.getValues();
+            if (values.size() >= 2) {
+                minPrice = values.get(0);
+                maxPrice = values.get(1);
+            }
+        }
+
+        for (Product product : products) {
+            boolean matchesSearch = searchQuery.isEmpty() ||
+                product.getTitle().toLowerCase().contains(searchQuery) ||
+                product.getDescription().toLowerCase().contains(searchQuery) ||
+                (product.getTags() != null && product.getTags().toString().toLowerCase().contains(searchQuery));
+
+            boolean matchesCategory = selectedCategory.equals("Tất cả") ||
+                product.getCategory().equals(selectedCategory);
+
+            boolean matchesCondition = selectedCondition.equals("Tất cả") ||
+                product.getCondition().equals(selectedCondition);
+
+            boolean matchesPrice = product.getPrice() >= minPrice && product.getPrice() <= maxPrice;
+
+            if (matchesSearch && matchesCategory && matchesCondition && matchesPrice) {
+                filteredProducts.add(product);
+            }
+        }
+
+        return filteredProducts;
+    }
+
+    /**
+     * Display final search results
+     */
+    private void displaySearchResults(List<Product> products) {
+        if (getActivity() != null) {
+            getActivity().runOnUiThread(() -> {
+                progressBar.setVisibility(View.GONE);
+                productList.clear();
+                productList.addAll(products);
+                productAdapter.notifyDataSetChanged();
+
+                // Update product adapter with user location for distance display
+                if (productAdapter instanceof ProductAdapter && userLatitude != 0 && userLongitude != 0) {
+                    productAdapter.setUserLocation(userLatitude, userLongitude);
+                }
+            });
+        }
     }
 
     private void setupSpinners() {
@@ -286,7 +606,7 @@ public class SearchFragment extends Fragment {
                 double maxPrice = 0;
 
                 for (Product product : products) {
-                    if (product.getPrice() > 0) { // Chỉ tính sản phẩm có giá hợp lệ
+                    if (product.getPrice() > 0) { // Chỉ tính sản ph��m có giá hợp lệ
                         minPrice = Math.min(minPrice, product.getPrice());
                         maxPrice = Math.max(maxPrice, product.getPrice());
                     }
@@ -305,24 +625,44 @@ public class SearchFragment extends Fragment {
                     // ✅ SỬA: Làm tròn giá trị theo stepSize để tránh crash
                     final double stepSize = 100000; // 100k VNĐ
                     final double finalAdjustedMax = Math.ceil(adjustedMax / stepSize) * stepSize;
+                    final double finalAdjustedMin = Math.floor(adjustedMin / stepSize) * stepSize;
 
                     // Cập nhật RangeSlider với khoảng giá thực tế
                     if (getActivity() != null) {
                         getActivity().runOnUiThread(() -> {
-                            priceRangeSlider.setValueTo((float) finalAdjustedMax);
-                            priceRangeSlider.setValues(0f, (float) finalAdjustedMax);
+                            try {
+                                // Đảm bảo các giá trị hợp lệ trước khi set
+                                float maxValue = (float) Math.max(finalAdjustedMax, stepSize);
+                                float minValue = (float) Math.max(finalAdjustedMin, 0);
 
-                            // Cập nhật TextView hiển thị
-                            String text = "Khoảng giá: " + VNDPriceFormatter.formatVND(0) + " - " + VNDPriceFormatter.formatVND(finalAdjustedMax);
-                            if (priceRangeText != null) {
-                                priceRangeText.setText(text);
+                                // Đảm bảo maxValue là bội số của stepSize
+                                maxValue = (float) (Math.ceil(maxValue / stepSize) * stepSize);
+                                minValue = (float) (Math.floor(minValue / stepSize) * stepSize);
+
+                                priceRangeSlider.setValueTo(maxValue);
+                                priceRangeSlider.setValues(minValue, maxValue);
+
+                                // Cập nhật TextView hiển thị
+                                String text = "Khoảng giá: " + VNDPriceFormatter.formatVND(minValue) + " - " + VNDPriceFormatter.formatVND(maxValue);
+                                if (priceRangeText != null) {
+                                    priceRangeText.setText(text);
+                                }
+
+                                // Cập nhật EditText
+                                minPriceEditText.setText(String.valueOf((int) minValue));
+                                maxPriceEditText.setText(String.valueOf((int) maxValue));
+
+                                android.util.Log.d("SearchFragment", "📊 Khoảng giá đã được điều chỉnh: " + VNDPriceFormatter.formatVND(minValue) + " - " + VNDPriceFormatter.formatVND(maxValue));
+                            } catch (Exception e) {
+                                android.util.Log.e("SearchFragment", "❌ Lỗi khi cập nhật RangeSlider: " + e.getMessage());
+                                // Fallback to safe default values
+                                priceRangeSlider.setValueTo(100000000f);
+                                priceRangeSlider.setValues(0f, 100000000f);
+
+                                if (priceRangeText != null) {
+                                    priceRangeText.setText("Khoảng giá: " + VNDPriceFormatter.formatVND(0) + " - " + VNDPriceFormatter.formatVND(100000000));
+                                }
                             }
-
-                            // Cập nhật EditText
-                            minPriceEditText.setText("0");
-                            maxPriceEditText.setText(String.valueOf((int) finalAdjustedMax));
-
-                            android.util.Log.d("SearchFragment", "📊 Khoảng giá đã được điều chỉnh: 0₫ - " + VNDPriceFormatter.formatVND(finalAdjustedMax));
                         });
                     }
                 }
@@ -863,5 +1203,15 @@ public class SearchFragment extends Fragment {
 
     private String formatPrice(double price) {
         return VNDPriceFormatter.formatVND(price);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Reload location data when returning from settings
+        if (getContext() != null) {
+            loadLocationData();
+            updateLocationChipsVisibility();
+        }
     }
 }

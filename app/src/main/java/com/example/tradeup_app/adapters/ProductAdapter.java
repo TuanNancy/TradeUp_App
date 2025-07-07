@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.tradeup_app.R;
 import com.example.tradeup_app.models.Product;
+import com.example.tradeup_app.services.LocationService;
 import com.example.tradeup_app.utils.VNDPriceFormatter;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
@@ -26,6 +27,11 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     private final List<Product> products;
     private final Context context;
     private OnProductClickListener listener;
+
+    // Location-related fields for distance display
+    private double userLatitude = 0;
+    private double userLongitude = 0;
+    private boolean showDistance = false;
 
     public interface OnProductClickListener {
         void onProductClick(Product product);
@@ -43,6 +49,37 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
     public void setOnProductClickListener(OnProductClickListener listener) {
         this.listener = listener;
+    }
+
+    /**
+     * Set user location for distance calculation and display
+     */
+    public void setUserLocation(double latitude, double longitude) {
+        this.userLatitude = latitude;
+        this.userLongitude = longitude;
+        this.showDistance = (latitude != 0 && longitude != 0);
+
+        // Refresh all items to show distance
+        notifyDataSetChanged();
+    }
+
+    /**
+     * Clear user location and hide distance display
+     */
+    public void clearUserLocation() {
+        this.userLatitude = 0;
+        this.userLongitude = 0;
+        this.showDistance = false;
+
+        // Refresh all items to hide distance
+        notifyDataSetChanged();
+    }
+
+    /**
+     * Check if distance display is enabled
+     */
+    public boolean isDistanceDisplayEnabled() {
+        return showDistance;
     }
 
     @NonNull
@@ -176,6 +213,16 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             TextView itemBehaviorView = itemView.findViewById(R.id.item_behavior);
             itemBehaviorView.setText(product.getItemBehavior() != null ? product.getItemBehavior() : "N/A");
 
+            // Set distance if available
+            TextView distanceView = itemView.findViewById(R.id.distance_view);
+            if (adapter.isDistanceDisplayEnabled()) {
+                double distance = calculateDistance(product.getLatitude(), product.getLongitude());
+                distanceView.setText(formatDistance(distance));
+                distanceView.setVisibility(View.VISIBLE);
+            } else {
+                distanceView.setVisibility(View.GONE);
+            }
+
             // Set click listeners
             itemView.setOnClickListener(v -> {
                 if (adapter.listener != null) {
@@ -252,6 +299,30 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 return minutes + " minute" + (minutes > 1 ? "s" : "") + " ago";
             } else {
                 return "Just now";
+            }
+        }
+
+        private double calculateDistance(double productLatitude, double productLongitude) {
+            // Haversine formula to calculate the distance between two points on the Earth
+            final int R = 6371; // Radius of the Earth in kilometers
+
+            double latDistance = Math.toRadians(productLatitude - adapter.userLatitude);
+            double lonDistance = Math.toRadians(productLongitude - adapter.userLongitude);
+
+            double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2) +
+                    Math.cos(Math.toRadians(adapter.userLatitude)) * Math.cos(Math.toRadians(productLatitude)) *
+                    Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+            double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; // Distance in kilometers
+        }
+
+        private String formatDistance(double distance) {
+            // Format distance to show in kilometers or meters
+            if (distance < 1) {
+                return String.format(Locale.getDefault(), "%.0f meters", distance * 1000);
+            } else {
+                return String.format(Locale.getDefault(), "%.1f km", distance);
             }
         }
     }
