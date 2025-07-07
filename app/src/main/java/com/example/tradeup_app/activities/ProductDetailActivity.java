@@ -2,6 +2,7 @@ package com.example.tradeup_app.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.RatingBar;
 import android.widget.TextView;
@@ -808,8 +809,13 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
     private void editProduct() {
-        // TODO: Implement edit product functionality
-        Toast.makeText(this, "Edit product feature coming soon", Toast.LENGTH_SHORT).show();
+        if (currentProduct != null) {
+            Intent intent = new Intent(this, EditProductActivity.class);
+            intent.putExtra("product", currentProduct);
+            startActivityForResult(intent, 1001); // Request code for edit product
+        } else {
+            Toast.makeText(this, "Không thể tải thông tin sản phẩm", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void markAsSold() {
@@ -926,12 +932,107 @@ public class ProductDetailActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
-            boolean paymentSuccess = data.getBooleanExtra("payment_success", false);
-            String transactionId = data.getStringExtra("transaction_id");
+        Log.d("ProductDetailActivity", "=== ACTIVITY RESULT RECEIVED ===");
+        Log.d("ProductDetailActivity", "Request Code: " + requestCode);
+        Log.d("ProductDetailActivity", "Result Code: " + resultCode);
+        Log.d("ProductDetailActivity", "Data: " + (data != null ? "Available" : "NULL"));
+
+        if (requestCode == 1001) { // Edit product request code
+            Log.d("ProductDetailActivity", "Processing EDIT PRODUCT result...");
+
+            if (resultCode == RESULT_OK && data != null) {
+                Log.d("ProductDetailActivity", "Edit result: SUCCESS");
+
+                // Extract updated product from intent
+                Product updatedProduct = (Product) data.getSerializableExtra("updated_product");
+
+                if (updatedProduct == null) {
+                    Log.e("ProductDetailActivity", "❌ Updated product is NULL!");
+                    Toast.makeText(this, "Lỗi: Không thể lấy dữ liệu sản phẩm đã cập nhật", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                Log.d("ProductDetailActivity", "✅ Updated product received:");
+                Log.d("ProductDetailActivity", "  - ID: " + updatedProduct.getId());
+                Log.d("ProductDetailActivity", "  - Title: " + updatedProduct.getTitle());
+                Log.d("ProductDetailActivity", "  - Price: " + updatedProduct.getPrice());
+                Log.d("ProductDetailActivity", "  - Description: " + updatedProduct.getDescription());
+                Log.d("ProductDetailActivity", "  - Category: " + updatedProduct.getCategory());
+                Log.d("ProductDetailActivity", "  - Condition: " + updatedProduct.getCondition());
+
+                // Show loading indicator
+                Toast.makeText(this, "Đang cập nhật sản phẩm...", Toast.LENGTH_SHORT).show();
+
+                Log.d("ProductDetailActivity", "🔄 Starting Firebase database update...");
+
+                // Update product in Firebase database
+                firebaseManager.updateProduct(updatedProduct, task -> {
+                    Log.d("ProductDetailActivity", "🔥 Firebase update callback received");
+
+                    if (task.isSuccessful()) {
+                        Log.d("ProductDetailActivity", "✅ Firebase update SUCCESSFUL!");
+
+                        // Update local data
+                        currentProduct = updatedProduct;
+                        Log.d("ProductDetailActivity", "✅ Local currentProduct updated");
+
+                        // Update UI to reflect changes
+                        updateUI();
+                        Log.d("ProductDetailActivity", "✅ UI updated successfully");
+
+                        // Show success message
+                        Toast.makeText(this, "✅ Sản phẩm đã được cập nhật thành công!", Toast.LENGTH_SHORT).show();
+
+                        // Send notification about listing update
+                        try {
+                            sendListingUpdateNotification("updated");
+                            Log.d("ProductDetailActivity", "✅ Update notification sent");
+                        } catch (Exception e) {
+                            Log.e("ProductDetailActivity", "⚠️ Failed to send notification: " + e.getMessage());
+                        }
+
+                        Log.d("ProductDetailActivity", "=== PRODUCT UPDATE PROCESS COMPLETED ===");
+
+                    } else {
+                        Log.e("ProductDetailActivity", "❌ Firebase update FAILED!");
+
+                        String errorMsg = "Lỗi không xác định";
+                        if (task.getException() != null) {
+                            errorMsg = task.getException().getMessage();
+                            Log.e("ProductDetailActivity", "Error details: " + errorMsg);
+                            task.getException().printStackTrace();
+                        }
+
+                        Toast.makeText(this, "❌ Lỗi cập nhật: " + errorMsg, Toast.LENGTH_LONG).show();
+                        Log.d("ProductDetailActivity", "=== PRODUCT UPDATE FAILED ===");
+                    }
+                });
+
+            } else {
+                Log.w("ProductDetailActivity", "Edit result: CANCELLED or FAILED");
+                Log.w("ProductDetailActivity", "ResultCode: " + resultCode + ", Data: " + (data != null));
+
+                if (resultCode == RESULT_CANCELED) {
+                    Log.d("ProductDetailActivity", "User cancelled edit operation");
+                } else {
+                    Toast.makeText(this, "Có lỗi xảy ra khi chỉnh sửa sản phẩm", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+        } else {
+            Log.d("ProductDetailActivity", "Processing PAYMENT result...");
+
+            // Handle payment success (existing code)
+            boolean paymentSuccess = data != null && data.getBooleanExtra("payment_success", false);
+            String transactionId = data != null ? data.getStringExtra("transaction_id") : null;
+
+            Log.d("ProductDetailActivity", "Payment success: " + paymentSuccess);
+            Log.d("ProductDetailActivity", "Transaction ID: " + transactionId);
 
             if (paymentSuccess) {
-                // Payment successful, update UI
+                Log.d("ProductDetailActivity", "Processing successful payment...");
+
+                // Payment successful, update product status and UI
                 currentProduct.setStatus("Sold");
                 updateUI();
 
@@ -944,6 +1045,8 @@ public class ProductDetailActivity extends AppCompatActivity {
                                (transactionId != null ? transactionId.substring(0, 8) : "N/A"))
                     .setPositiveButton("OK", null)
                     .show();
+
+                Log.d("ProductDetailActivity", "Payment processing completed");
             }
         }
     }

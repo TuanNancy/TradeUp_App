@@ -93,10 +93,11 @@ public class MyProductsActivity extends AppCompatActivity {
 
             @Override
             public void onEditProduct(Product product) {
-                // Handle edit product
-                Toast.makeText(MyProductsActivity.this,
-                        "Chỉnh sửa sản phẩm: " + product.getTitle(), Toast.LENGTH_SHORT).show();
-                // TODO: Navigate to edit product activity
+                // Handle edit product - Navigate to EditProductActivity
+                Log.d(TAG, "Opening EditProductActivity for product: " + product.getTitle());
+                Intent intent = new Intent(MyProductsActivity.this, EditProductActivity.class);
+                intent.putExtra("product", product);
+                startActivityForResult(intent, 1001); // Request code for edit product
             }
 
             @Override
@@ -269,6 +270,47 @@ public class MyProductsActivity extends AppCompatActivity {
 
     private interface LoadCallback {
         void onComplete(boolean success);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        Log.d(TAG, "=== onActivityResult called ===");
+        Log.d(TAG, "Request Code: " + requestCode + ", Result Code: " + resultCode);
+
+        if (requestCode == 1001) { // Edit product request code
+            if (resultCode == RESULT_OK && data != null) {
+                Log.d(TAG, "Edit product result: SUCCESS");
+
+                // Extract updated product from EditProductActivity
+                Product updatedProduct = (Product) data.getSerializableExtra("updated_product");
+                if (updatedProduct != null) {
+                    Log.d(TAG, "Updated product received: " + updatedProduct.getTitle());
+
+                    // Find and update the product in the list
+                    for (int i = 0; i < myProductsList.size(); i++) {
+                        if (myProductsList.get(i).getId().equals(updatedProduct.getId())) {
+                            Log.d(TAG, "Updating product at position: " + i);
+                            myProductsList.set(i, updatedProduct);
+                            myProductsAdapter.notifyItemChanged(i);
+                            break;
+                        }
+                    }
+
+                    Toast.makeText(this, "✅ Sản phẩm đã được cập nhật thành công!", Toast.LENGTH_SHORT).show();
+                } else {
+                    Log.e(TAG, "Updated product is null!");
+                    Toast.makeText(this, "Lỗi: Không thể lấy dữ liệu sản phẩm đã cập nhật", Toast.LENGTH_SHORT).show();
+                }
+            } else if (resultCode == RESULT_CANCELED) {
+                Log.d(TAG, "Edit product was cancelled by user");
+                Toast.makeText(this, "Đã hủy chỉnh sửa sản phẩm", Toast.LENGTH_SHORT).show();
+            } else {
+                Log.w(TAG, "Edit product failed with result code: " + resultCode);
+                Toast.makeText(this, "Có lỗi xảy ra khi chỉnh sửa sản phẩm", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override

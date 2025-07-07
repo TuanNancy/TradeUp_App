@@ -121,6 +121,13 @@
             android:exported="false"
             android:theme="@style/Theme.TradeUp_App" />
 
+        <!-- Edit Product Activity - NEW -->
+        <activity
+            android:name=".activities.EditProductActivity"
+            android:exported="false"
+            android:theme="@style/Theme.TradeUp_App"
+            android:parentActivityName=".activities.ProductDetailActivity" />
+
         <!-- My Products Activity - NEW -->
         <activity
             android:name=".activities.MyProductsActivity"

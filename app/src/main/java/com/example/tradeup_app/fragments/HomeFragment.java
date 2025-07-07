@@ -634,12 +634,84 @@ public class HomeFragment extends Fragment {
         initializeLocationServices();
     }
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == 1001) { // Edit product request code
+            if (resultCode == getActivity().RESULT_OK && data != null) {
+                // Product was successfully edited
+                Product updatedProduct = (Product) data.getSerializableExtra("updated_product");
+                if (updatedProduct != null) {
+                    Toast.makeText(getContext(), "Sản phẩm đã được cập nhật thành công!", Toast.LENGTH_SHORT).show();
+
+                    // Add delay to ensure Firebase has been updated before refreshing
+                    new android.os.Handler().postDelayed(() -> {
+                        refreshData();
+                    }, 1000); // Wait 1 second before refreshing
+                }
+            }
+        }
+    }
+
     // Add public method to refresh data
     public void refreshData() {
         if (isAdded() && getContext() != null) {
-            loadFeaturedItems();
-            loadRecentItems();
+            // Force refresh from Firebase server, not cache
+            loadFeaturedItemsForceRefresh();
+            loadRecentItemsForceRefresh();
         }
+    }
+
+    private void loadFeaturedItemsForceRefresh() {
+        // Force refresh from server by using keepSynced(false) then keepSynced(true)
+        firebaseManager.getDatabase().getReference(FirebaseManager.PRODUCTS_NODE).keepSynced(false);
+        firebaseManager.getDatabase().getReference(FirebaseManager.PRODUCTS_NODE).keepSynced(true);
+
+        firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
+            @Override
+            public void onProductsLoaded(List<Product> products) {
+                if (getActivity() != null) {
+                    // Get featured products (e.g., top 10 most viewed)
+                    List<Product> featuredProducts = products.size() > 10 ?
+                        products.subList(0, 10) : products;
+                    featuredAdapter.updateProducts(featuredProducts);
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                if (getActivity() != null) {
+                    Toast.makeText(getContext(), "Lỗi tải sản phẩm nổi bật: " + error, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+
+    private void loadRecentItemsForceRefresh() {
+        // Force refresh from server
+        firebaseManager.getDatabase().getReference(FirebaseManager.PRODUCTS_NODE).keepSynced(false);
+        firebaseManager.getDatabase().getReference(FirebaseManager.PRODUCTS_NODE).keepSynced(true);
+
+        firebaseManager.getProducts(new FirebaseManager.ProductCallback() {
+            @Override
+            public void onProductsLoaded(List<Product> products) {
+                // ✅ FIX: Sort products by creation time - newest first
+                products.sort((p1, p2) -> {
+                    // Compare by createdAt timestamp in descending order (newest first)
+                    long time1 = p1.getCreatedAt();
+                    long time2 = p2.getCreatedAt();
+                    return Long.compare(time2, time1); // Descending order
+                });
+
+                recentAdapter.updateProducts(products);
+            }
+
+            @Override
+            public void onError(String error) {
+                Toast.makeText(getContext(), "Lỗi: " + error, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     // ============ LOCATION SERVICES IMPLEMENTATION ============
@@ -851,7 +923,9 @@ public class HomeFragment extends Fragment {
                 break;
             case 1: // Edit Product
                 if (getContext() != null) {
-                    Toast.makeText(getContext(), "Edit Product feature coming soon", Toast.LENGTH_SHORT).show();
+                    Intent editIntent = new Intent(getContext(), com.example.tradeup_app.activities.EditProductActivity.class);
+                    editIntent.putExtra("product", product);
+                    startActivityForResult(editIntent, 1001); // Use startActivityForResult with request code
                 }
                 break;
             case 2: // ✅ FIX: Handle both Mark as Sold and Mark as Available based on current status

@@ -136,6 +136,185 @@ public class FirebaseManager {
         }
     }
 
+    // ==================== PRODUCT UPDATE METHODS - DATABASE SPECIFIC ====================
+
+    /**
+     * Update specific fields of a product in database
+     */
+    public void updateProductFields(String productId, java.util.Map<String, Object> updates, OnCompleteListener<Void> listener) {
+        Log.d("FirebaseManager", "=== UPDATING PRODUCT FIELDS ===");
+        Log.d("FirebaseManager", "Product ID: " + productId);
+        Log.d("FirebaseManager", "Fields to update: " + updates.keySet());
+
+        if (productId == null || productId.isEmpty()) {
+            Log.e("FirebaseManager", "Product ID is null or empty");
+            listener.onComplete(com.google.android.gms.tasks.Tasks.forException(new Exception("Product ID is required")));
+            return;
+        }
+
+        if (updates == null || updates.isEmpty()) {
+            Log.e("FirebaseManager", "No updates provided");
+            listener.onComplete(com.google.android.gms.tasks.Tasks.forException(new Exception("Updates map is empty")));
+            return;
+        }
+
+        // Always add updatedAt timestamp
+        updates.put("updatedAt", System.currentTimeMillis());
+
+        DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
+
+        productRef.updateChildren(updates)
+            .addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    Log.d("FirebaseManager", "✅ Product fields updated successfully");
+                } else {
+                    Log.e("FirebaseManager", "❌ Failed to update product fields: " +
+                        (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
+                }
+                listener.onComplete(task);
+            });
+    }
+
+    /**
+     * Update product title and description
+     */
+    public void updateProductBasicInfo(String productId, String title, String description, OnCompleteListener<Void> listener) {
+        Log.d("FirebaseManager", "Updating product basic info - ID: " + productId);
+
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("title", title);
+        updates.put("description", description);
+
+        updateProductFields(productId, updates, listener);
+    }
+
+    /**
+     * Update product price
+     */
+    public void updateProductPrice(String productId, double price, OnCompleteListener<Void> listener) {
+        Log.d("FirebaseManager", "Updating product price - ID: " + productId + ", New price: " + price);
+
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("price", price);
+
+        updateProductFields(productId, updates, listener);
+    }
+
+    /**
+     * Update product category and condition
+     */
+    public void updateProductCategoryAndCondition(String productId, String category, String condition, OnCompleteListener<Void> listener) {
+        Log.d("FirebaseManager", "Updating product category and condition - ID: " + productId);
+
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("category", category);
+        updates.put("condition", condition);
+
+        updateProductFields(productId, updates, listener);
+    }
+
+    /**
+     * Update product images
+     */
+    public void updateProductImages(String productId, java.util.List<String> imageUrls, OnCompleteListener<Void> listener) {
+        Log.d("FirebaseManager", "Updating product images - ID: " + productId + ", Images count: " +
+            (imageUrls != null ? imageUrls.size() : 0));
+
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("imageUrls", imageUrls);
+
+        updateProductFields(productId, updates, listener);
+    }
+
+    /**
+     * Update product location and tags
+     */
+    public void updateProductLocationAndTags(String productId, String location, java.util.List<String> tags, OnCompleteListener<Void> listener) {
+        Log.d("FirebaseManager", "Updating product location and tags - ID: " + productId);
+
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("location", location);
+        if (tags != null) {
+            updates.put("tags", tags);
+        }
+
+        updateProductFields(productId, updates, listener);
+    }
+
+    /**
+     * Update product negotiable status
+     */
+    public void updateProductNegotiable(String productId, boolean negotiable, OnCompleteListener<Void> listener) {
+        Log.d("FirebaseManager", "Updating product negotiable status - ID: " + productId + ", Negotiable: " + negotiable);
+
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("negotiable", negotiable);
+
+        updateProductFields(productId, updates, listener);
+    }
+
+    public void updateProduct(Product product, OnCompleteListener<Void> listener) {
+        Log.d("FirebaseManager", "=== STARTING COMPLETE PRODUCT UPDATE ===");
+
+        // Validate input
+        if (product == null) {
+            Log.e("FirebaseManager", "Product is null - cannot update");
+            listener.onComplete(com.google.android.gms.tasks.Tasks.forException(new Exception("Product is null")));
+            return;
+        }
+
+        if (product.getId() == null || product.getId().isEmpty()) {
+            Log.e("FirebaseManager", "Product ID is null or empty - cannot update");
+            listener.onComplete(com.google.android.gms.tasks.Tasks.forException(new Exception("Product ID is null or empty")));
+            return;
+        }
+
+        String productId = product.getId();
+        Log.d("FirebaseManager", "Updating complete product with ID: " + productId);
+        Log.d("FirebaseManager", "Product details:");
+        Log.d("FirebaseManager", "  - Title: " + product.getTitle());
+        Log.d("FirebaseManager", "  - Price: " + product.getPrice());
+        Log.d("FirebaseManager", "  - Description: " + product.getDescription());
+        Log.d("FirebaseManager", "  - Category: " + product.getCategory());
+        Log.d("FirebaseManager", "  - Condition: " + product.getCondition());
+        Log.d("FirebaseManager", "  - Location: " + product.getLocation());
+        Log.d("FirebaseManager", "  - Negotiable: " + product.isNegotiable());
+        Log.d("FirebaseManager", "  - Images count: " + (product.getImageUrls() != null ? product.getImageUrls().size() : 0));
+
+        // Set updated timestamp
+        long currentTime = System.currentTimeMillis();
+        product.setUpdatedAt(currentTime);
+        Log.d("FirebaseManager", "Set updatedAt timestamp: " + currentTime);
+
+        // Get reference to the product in Firebase
+        DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
+
+        Log.d("FirebaseManager", "Saving complete product to Firebase path: " + PRODUCTS_NODE + "/" + productId);
+
+        // Update the entire product object in Firebase
+        productRef.setValue(product)
+            .addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    Log.d("FirebaseManager", "✅ Complete product update SUCCESSFUL for ID: " + productId);
+                    Log.d("FirebaseManager", "=== COMPLETE PRODUCT UPDATE COMPLETED ===");
+                } else {
+                    Log.e("FirebaseManager", "❌ Complete product update FAILED for ID: " + productId);
+                    if (task.getException() != null) {
+                        Log.e("FirebaseManager", "Error details: " + task.getException().getMessage());
+                        task.getException().printStackTrace();
+                    }
+                    Log.d("FirebaseManager", "=== COMPLETE PRODUCT UPDATE FAILED ===");
+                }
+
+                // Always call the listener
+                listener.onComplete(task);
+            })
+            .addOnFailureListener(e -> {
+                Log.e("FirebaseManager", "❌ Firebase setValue failed: " + e.getMessage());
+                e.printStackTrace();
+            });
+    }
+
     // Product methods
     public void getProducts(ProductCallback callback) {
         database.getReference(PRODUCTS_NODE)
