@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.Editable;
@@ -14,11 +15,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ImageView;
 
-import androidx.annotation.NonNull;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
@@ -38,6 +39,12 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.util.Map;
+
+import com.cloudinary.android.MediaManager;
+import com.cloudinary.android.callback.ErrorInfo;
+import com.cloudinary.android.callback.UploadCallback;
+
 public class RegisterActivity extends AppCompatActivity {
 
     private TextInputEditText usernameEditText, emailEditText, passwordEditText, confirmPasswordEditText;
@@ -52,8 +59,6 @@ public class RegisterActivity extends AppCompatActivity {
     private BeginSignInRequest signInRequest;
 
     private Uri selectedImageUri;
-    private final int PICK_IMAGE_REQUEST = 1001;
-    private final int PERMISSION_REQUEST_CODE = 100;
     private final int REQ_ONE_TAP = 2;
 
     @Override
@@ -203,48 +208,53 @@ public class RegisterActivity extends AppCompatActivity {
         }
     }
 
+    // Activity Result Launchers
+    private final ActivityResultLauncher<Intent> imagePickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Uri imageUri = result.getData().getData();
+                    if (imageUri != null) {
+                        selectedImageUri = imageUri;
+                        Glide.with(this)
+                                .load(selectedImageUri)
+                                .placeholder(R.drawable.ic_user_placeholder)
+                                .into(profileImageView);
+                    }
+                }
+            });
+
+    private final ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(),
+            isGranted -> {
+                if (isGranted) {
+                    openImagePicker();
+                } else {
+                    Toast.makeText(this, "Permission denied to access media files", Toast.LENGTH_SHORT).show();
+                }
+            });
+
     private void selectImage() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                    PERMISSION_REQUEST_CODE);
+        // For Android 13+ (API 33+), use READ_MEDIA_IMAGES permission
+        // For older versions, use READ_EXTERNAL_STORAGE
+        String permission;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permission = Manifest.permission.READ_MEDIA_IMAGES;
         } else {
+            permission = Manifest.permission.READ_EXTERNAL_STORAGE;
+        }
+
+        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
             openImagePicker();
+        } else {
+            requestPermissionLauncher.launch(permission);
         }
     }
 
     private void openImagePicker() {
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*");
-        startActivityForResult(intent, PICK_IMAGE_REQUEST);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                openImagePicker();
-            } else {
-                Toast.makeText(this, "Permission denied to read your External storage", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            selectedImageUri = data.getData();
-            Glide.with(this)
-                    .load(selectedImageUri)
-                    .placeholder(R.drawable.ic_user_placeholder)
-                    .into(profileImageView);
-        } else if (requestCode == REQ_ONE_TAP && resultCode == RESULT_OK) {
-            handleGoogleSignInResult(data);
-        }
+        imagePickerLauncher.launch(intent);
     }
 
     private void performRegistration() {
@@ -301,45 +311,49 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        // TODO: Implement Cloudinary upload logic here
-        // For now, save profile without image URL
-        // You can implement Cloudinary upload using MediaManager.get().upload()
-        saveUserProfile(uid, username, email, "");
+        // Show uploading message
+        Toast.makeText(this, "Uploading profile image...", Toast.LENGTH_SHORT).show();
 
-        // Example Cloudinary upload (commented out - implement as needed):
-        /*
+        // Upload to Cloudinary
         MediaManager.get().upload(selectedImageUri)
-            .option("folder", "profile_images")
-            .option("public_id", "user_" + uid)
-            .callback(new UploadCallback() {
-                @Override
-                public void onStart(String requestId) {
-                    // Upload started
-                }
+                .unsigned("my_profile_upload") // Make sure this preset exists in your Cloudinary
+                .option("folder", "profile_images")
+                .option("public_id", "user_" + uid)
+                .callback(new UploadCallback() {
+                    @Override
+                    public void onStart(String requestId) {
+                        // Upload started
+                    }
 
-                @Override
-                public void onProgress(String requestId, long bytes, long totalBytes) {
-                    // Upload progress
-                }
+                    @Override
+                    public void onProgress(String requestId, long bytes, long totalBytes) {
+                        // Upload progress
+                    }
 
-                @Override
-                public void onSuccess(String requestId, Map resultData) {
-                    String imageUrl = (String) resultData.get("secure_url");
-                    saveUserProfile(uid, username, email, imageUrl);
-                }
+                    @Override
+                    public void onSuccess(String requestId, Map resultData) {
+                        String imageUrl = (String) resultData.get("secure_url");
+                        if (imageUrl != null) {
+                            // Save profile with uploaded image URL
+                            saveUserProfile(uid, username, email, imageUrl);
+                        } else {
+                            // Save profile without image if URL not found
+                            saveUserProfile(uid, username, email, "");
+                        }
+                    }
 
-                @Override
-                public void onError(String requestId, ErrorInfo error) {
-                    // Upload failed, save profile without image
-                    saveUserProfile(uid, username, email, "");
-                }
+                    @Override
+                    public void onError(String requestId, ErrorInfo error) {
+                        // Upload failed, save profile without image
+                        Toast.makeText(RegisterActivity.this, "Failed to upload image: " + error.getDescription(), Toast.LENGTH_SHORT).show();
+                        saveUserProfile(uid, username, email, "");
+                    }
 
-                @Override
-                public void onReschedule(String requestId, ErrorInfo error) {
-                    // Upload rescheduled
-                }
-            }).dispatch();
-        */
+                    @Override
+                    public void onReschedule(String requestId, ErrorInfo error) {
+                        // Upload rescheduled
+                    }
+                }).dispatch();
     }
 
     private void saveUserProfile(String uid, String username, String email, String photoUrl) {
@@ -475,6 +489,15 @@ public class RegisterActivity extends AppCompatActivity {
             registerButton.setText(R.string.creating_account);
         } else {
             registerButton.setText(R.string.create_account);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQ_ONE_TAP && resultCode == RESULT_OK) {
+            handleGoogleSignInResult(data);
         }
     }
 }
