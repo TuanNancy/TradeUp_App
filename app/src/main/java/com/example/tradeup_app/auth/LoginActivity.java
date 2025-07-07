@@ -22,6 +22,11 @@ import com.google.android.gms.auth.api.identity.BeginSignInRequest;
 import com.google.android.gms.auth.api.identity.Identity;
 import com.google.android.gms.auth.api.identity.SignInClient;
 import com.google.android.gms.auth.api.identity.SignInCredential;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -152,6 +157,35 @@ public class LoginActivity extends AppCompatActivity {
         String password = passwordEditText.getText() != null ?
             passwordEditText.getText().toString() : "";
 
+        // Validate inputs before calling Firebase
+        if (email.isEmpty()) {
+            emailInputLayout.setError("Email is required");
+            emailEditText.requestFocus();
+            return;
+        }
+
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            emailInputLayout.setError("Please enter a valid email");
+            emailEditText.requestFocus();
+            return;
+        }
+
+        if (password.isEmpty()) {
+            passwordInputLayout.setError("Password is required");
+            passwordEditText.requestFocus();
+            return;
+        }
+
+        if (password.length() < 6) {
+            passwordInputLayout.setError("Password must be at least 6 characters");
+            passwordEditText.requestFocus();
+            return;
+        }
+
+        // Clear any previous errors
+        emailInputLayout.setError(null);
+        passwordInputLayout.setError(null);
+
         setLoading(true);
 
         auth.signInWithEmailAndPassword(email, password)
@@ -169,7 +203,7 @@ public class LoginActivity extends AppCompatActivity {
                     } else {
                         String errorMessage = task.getException() != null ?
                             task.getException().getMessage() : "Login failed";
-                        Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
+                        Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -288,6 +322,7 @@ public class LoginActivity extends AppCompatActivity {
                                 .setServerClientId(getString(R.string.default_web_client_id))
                                 .setFilterByAuthorizedAccounts(false)
                                 .build())
+                .setAutoSelectEnabled(true)
                 .build();
     }
 
@@ -302,13 +337,40 @@ public class LoginActivity extends AppCompatActivity {
                                 null, 0, 0, 0, null);
                     } catch (IntentSender.SendIntentException e) {
                         setLoading(false);
+                        android.util.Log.e("LoginActivity", "Error starting Google Sign In", e);
                         Toast.makeText(this, R.string.error_starting_google_signin, Toast.LENGTH_SHORT).show();
                     }
                 })
                 .addOnFailureListener(this, e -> {
                     setLoading(false);
-                    Toast.makeText(this, R.string.google_signin_not_available, Toast.LENGTH_SHORT).show();
+                    android.util.Log.e("LoginActivity", "Google Sign In failed", e);
+
+                    // Try fallback method if One Tap fails
+                    signInWithGoogleFallback();
                 });
+    }
+
+    // Fallback method using traditional Google Sign In
+    private void signInWithGoogleFallback() {
+        try {
+            // Use GoogleSignInOptions as fallback
+            GoogleSignInOptions gso =
+                new GoogleSignInOptions.Builder(
+                    GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken(getString(R.string.default_web_client_id))
+                    .requestEmail()
+                    .build();
+
+            GoogleSignInClient googleSignInClient =
+                GoogleSignIn.getClient(this, gso);
+
+            Intent signInIntent = googleSignInClient.getSignInIntent();
+            startActivityForResult(signInIntent, 9001);
+
+        } catch (Exception e) {
+            android.util.Log.e("LoginActivity", "Fallback Google Sign In failed", e);
+            Toast.makeText(this, R.string.google_signin_not_available, Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -338,6 +400,10 @@ public class LoginActivity extends AppCompatActivity {
             } catch (Exception e) {
                 Toast.makeText(this, R.string.google_signin_failed, Toast.LENGTH_SHORT).show();
             }
+        } else if (requestCode == 9001) {
+            // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...);
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            handleSignInResult(task);
         }
     }
 
@@ -389,6 +455,61 @@ public class LoginActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e ->
                     Toast.makeText(this, R.string.failed_save_user_profile, Toast.LENGTH_SHORT).show());
+    }
+
+    // Handle fallback Google Sign In result
+    private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
+        setLoading(false);
+        try {
+            GoogleSignInAccount account = completedTask.getResult(com.google.android.gms.common.api.ApiException.class);
+            if (account != null) {
+                String idToken = account.getIdToken();
+                if (idToken != null) {
+                    setLoading(true);
+                    AuthCredential firebaseCredential = GoogleAuthProvider.getCredential(idToken, null);
+                    auth.signInWithCredential(firebaseCredential)
+                            .addOnCompleteListener(task -> {
+                                setLoading(false);
+                                if (task.isSuccessful()) {
+                                    FirebaseUser user = auth.getCurrentUser();
+                                    if (user != null) {
+                                        handleGoogleSignInSuccess(user);
+                                    }
+                                } else {
+                                    android.util.Log.e("LoginActivity", "Firebase auth failed", task.getException());
+                                    Toast.makeText(this, R.string.google_authentication_failed, Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                } else {
+                    android.util.Log.e("LoginActivity", "ID Token is null");
+                    Toast.makeText(this, R.string.google_signin_failed, Toast.LENGTH_SHORT).show();
+                }
+            }
+        } catch (com.google.android.gms.common.api.ApiException e) {
+            android.util.Log.e("LoginActivity", "Google Sign In failed with status code: " + e.getStatusCode(), e);
+
+            // Handle specific error codes
+            switch (e.getStatusCode()) {
+                case 10: // DEVELOPER_ERROR
+                    Toast.makeText(this, "Google Sign In configuration error. Please check SHA-1 fingerprint.", Toast.LENGTH_LONG).show();
+                    break;
+                case 12500: // SIGN_IN_REQUIRED
+                    Toast.makeText(this, "Please sign in to your Google account first.", Toast.LENGTH_SHORT).show();
+                    break;
+                case 7: // NETWORK_ERROR
+                    Toast.makeText(this, "Network error. Please check your internet connection.", Toast.LENGTH_SHORT).show();
+                    break;
+                case 12501: // SIGN_IN_CANCELLED
+                    Toast.makeText(this, "Google Sign In was cancelled.", Toast.LENGTH_SHORT).show();
+                    break;
+                default:
+                    Toast.makeText(this, "Google Sign In failed: " + e.getStatusCode(), Toast.LENGTH_SHORT).show();
+                    break;
+            }
+        } catch (Exception e) {
+            android.util.Log.e("LoginActivity", "Google Sign In failed", e);
+            Toast.makeText(this, R.string.google_signin_failed, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void setLoading(boolean loading) {

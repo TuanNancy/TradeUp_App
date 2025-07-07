@@ -2,6 +2,9 @@
 <resources>
     <string name="app_name">TradeUp</string>
 
+    <!-- Google Sign In -->
+    <string name="default_web_client_id">612893384832-6mc745n3oe6u3gtmf3t9mgl9dtdntvkj.apps.googleusercontent.com</string>
+
     <!-- Product related strings -->
     <string name="view_count_format">%d lượt xem</string>
     <string name="added_to_favorites">Đã thêm vào yêu thích</string>
@@ -92,6 +95,8 @@
     <!-- Authentication -->
     <string name="login">Đăng nhập</string>
     <string name="register">Đăng ký</string>
+    <string name="create_account">Tạo tài khoản</string>
+    <string name="creating_account">Đang tạo tài khoản...</string>
     <string name="password">Mật khẩu</string>
     <string name="confirm_password">Xác nhận mật khẩu</string>
     <string name="forgot_password">Quên mật khẩu</string>
@@ -101,8 +106,23 @@
     <string name="register_success">Đăng ký thành công</string>
     <string name="password_reset_sent">Email đặt lại mật khẩu đã được gửi</string>
     <string name="invalid_email">Email không hợp lệ</string>
-    <string name="password_too_short">Mật khẩu quá ngắn</string>
-    <string name="passwords_dont_match">Mật khẩu không khớp</string>
+    <string name="password_too_short">Mật khẩu phải có ít nhất 6 ký tự</string>
+    <string name="email_verification_required">Cần xác thực email</string>
+    <string name="please_verify_email">Vui lòng xác thực email của bạn trước khi đăng nhập</string>
+    <string name="resend">Gửi lại</string>
+    <string name="ive_verified">Tôi đã xác thực</string>
+    <string name="verification_email_sent">Email xác thực đã được gửi</string>
+    <string name="failed_send_verification">Gửi email xác thực thất bại</string>
+    <string name="email_not_verified">Email chưa được xác thực</string>
+    <string name="signing_in">Đang đăng nhập...</string>
+    <string name="sign_in">Đăng nhập</string>
+    <string name="error_starting_google_signin">Lỗi khởi động Google Sign In</string>
+    <string name="google_signin_not_available">Google Sign In không khả dụng</string>
+    <string name="google_authentication_failed">Xác thực Google thất bại</string>
+    <string name="google_signin_failed">Google Sign In thất bại</string>
+    <string name="failed_load_user_data">Lỗi tải dữ liệu người dùng</string>
+    <string name="welcome_to_tradeup">Chào mừng đến với TradeUp</string>
+    <string name="failed_save_user_profile">Lỗi lưu thông tin người dùng</string>
 
     <!-- Product Management -->
     <string name="add_product">Thêm sản phẩm</string>
@@ -254,28 +274,10 @@
     <!-- Authentication - Additional -->
     <string name="no_user_found">Không tìm thấy người dùng với email này</string>
     <string name="network_error">Lỗi mạng, vui lòng thử lại</string>
-    <string name="resend">Gửi lại</string>
     <string name="reset_email_message">Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.</string>
     <string name="reset_email_sent">Email đặt lại đã gửi</string>
     <string name="sending">Đang gửi...</string>
     <string name="send_reset_email">Gửi email đặt lại</string>
-    <string name="ive_verified">Tôi đã xác minh</string>
-    <string name="please_verify_email">Vui lòng xác minh email của bạn trước khi đăng nhập. Kiểm tra hộp thư để xem email xác minh.</string>
-    <string name="email_verification_required">Cần xác minh email</string>
-    <string name="verification_email_sent">Email xác minh đã được gửi</string>
-    <string name="failed_send_verification">Không thể gửi email xác minh</string>
-    <string name="email_not_verified">Email chưa được xác minh</string>
-    <string name="error_starting_google_signin">Lỗi khi khởi động đăng nhập Google</string>
-    <string name="google_signin_not_available">Đăng nhập Google không khả dụng</string>
-    <string name="google_authentication_failed">Xác thực Google thất bại</string>
-    <string name="google_signin_failed">Đăng nhập Google thất bại</string>
-    <string name="failed_load_user_data">Không thể tải dữ liệu người dùng</string>
-    <string name="welcome_to_tradeup">Chào mừng đến với TradeUp!</string>
-    <string name="failed_save_user_profile">Không thể lưu hồ sơ người dùng</string>
-    <string name="signing_in">Đang đăng nhập...</string>
-    <string name="sign_in">Đăng nhập</string>
-    <string name="creating_account">Đang tạo tài khoản...</string>
-    <string name="create_account">Tạo tài khoản</string>
 
     <!-- User Profile View Activity -->
     <string name="chat_feature_coming_soon">Tính năng chat sẽ sớm ra mắt</string>

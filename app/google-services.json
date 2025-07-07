@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "612893384832-7adhu1vc9anmmtmgrdqm9sqlc4ete02e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tradeup_app",
+            "certificate_hash": "ce8bcd0809c86d8e3beb60fe6d67ddd16ca583e9"
+          }
+        },
+        {
           "client_id": "612893384832-p59g8749f6fbq0acben92dmqm1e76qcp.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

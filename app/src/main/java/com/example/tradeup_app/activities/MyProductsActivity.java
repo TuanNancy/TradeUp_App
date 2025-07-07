@@ -147,176 +147,128 @@ public class MyProductsActivity extends AppCompatActivity {
     }
 
     private void loadMyProducts() {
-        if (currentUser == null) {
-            Log.e(TAG, "CurrentUser is null!");
-            Toast.makeText(this, "Không thể tải thông tin người dùng", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-
-        // Lấy UID từ Firebase Auth thay vì từ UserModel
-        FirebaseUser firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (firebaseUser == null) {
-            Log.e(TAG, "Firebase user is null!");
-            Toast.makeText(this, "Phiên đăng nhập đã hết hạn", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-
-        String userId = firebaseUser.getUid();
-        String userModelUid = currentUser.getUid();
-
-        Log.d(TAG, "Firebase Auth UID: " + userId);
-        Log.d(TAG, "UserModel UID: " + userModelUid);
-        Log.d(TAG, "Username: " + currentUser.getUsername());
-        Log.d(TAG, "Email from UserModel: " + currentUser.getEmail());
-        Log.d(TAG, "Email from Firebase Auth: " + firebaseUser.getEmail());
-
+        // Bỏ debug log và toast thừa
         showLoading(true);
 
-        // DEBUG: Kiểm tra database structure
-        Log.d(TAG, "=== DEBUG: Checking database structure ===");
-        DatabaseReference rootRef = FirebaseDatabase.getInstance().getReference();
-        rootRef.addListenerForSingleValueEvent(new ValueEventListener() {
+        // Sử dụng CurrentUser mới với callback
+        CurrentUser.loadUserSynchronously(new CurrentUser.LoadUserCallback() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                Log.d(TAG, "Root database children:");
-                for (DataSnapshot child : snapshot.getChildren()) {
-                    Log.d(TAG, "- " + child.getKey() + " (count: " + child.getChildrenCount() + ")");
+            public void onUserLoaded(UserModel user) {
+                currentUser = user;
+                String userId = user.getUid();
+
+                if (userId == null || userId.isEmpty()) {
+                    Toast.makeText(MyProductsActivity.this, "Lỗi: User ID không hợp lệ", Toast.LENGTH_SHORT).show();
+                    showLoading(false);
+                    return;
                 }
 
-                // Kiểm tra các path có thể có
-                checkMultiplePaths(userId);
+                performProductQuery(userId);
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e(TAG, "Root database check failed: " + error.getMessage());
-                checkMultiplePaths(userId);
+            public void onError(String error) {
+                // Fallback: thử dùng Firebase Auth trực tiếp
+                com.google.firebase.auth.FirebaseUser firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+                if (firebaseUser != null) {
+                    performProductQuery(firebaseUser.getUid());
+                } else {
+                    Toast.makeText(MyProductsActivity.this, "Vui lòng đăng nhập lại", Toast.LENGTH_LONG).show();
+                    showLoading(false);
+                    finish();
+                }
             }
         });
     }
 
-    private void checkMultiplePaths(String userId) {
-        Log.d(TAG, "=== Checking multiple possible paths ===");
+    private void performProductQuery(String userId) {
+        showLoading(true);
 
-        // Danh sách các path có thể có
-        String[] possiblePaths = {"Products", "products", "Product", "Items", "items", "Listings"};
-
-        for (String path : possiblePaths) {
-            DatabaseReference pathRef = FirebaseDatabase.getInstance().getReference(path);
-            pathRef.addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    Log.d(TAG, "Path '" + path + "' has " + snapshot.getChildrenCount() + " children");
-
-                    if (snapshot.getChildrenCount() > 0) {
-                        // Nếu tìm thấy data, log vài sample
-                        int count = 0;
-                        for (DataSnapshot productSnapshot : snapshot.getChildren()) {
-                            if (count < 3) { // Log 3 sản phẩm đầu tiên
-                                Log.d(TAG, "Sample from '" + path + "': " + productSnapshot.getKey());
-                                // Thử parse as Product
-                                try {
-                                    Product product = productSnapshot.getValue(Product.class);
-                                    if (product != null) {
-                                        Log.d(TAG, "  - Title: " + product.getTitle() + ", SellerId: " + product.getSellerId());
-                                    }
-                                } catch (Exception e) {
-                                    Log.w(TAG, "  - Cannot parse as Product: " + e.getMessage());
-                                }
-                                count++;
-                            }
-                        }
+        // Thử cả "products" và "Products" để đảm bảo tương thích
+        tryLoadFromPath("products", userId, success -> {
+            if (!success) {
+                tryLoadFromPath("Products", userId, success2 -> {
+                    if (!success2) {
+                        showEmptyState();
                     }
-                }
-
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    Log.w(TAG, "Failed to check path '" + path + "': " + error.getMessage());
-                }
-            });
-        }
-
-        // Vẫn thử query với path gốc
-        performActualQuery(userId);
+                });
+            }
+        });
     }
 
-    private void performActualQuery(String userId) {
-        Log.d(TAG, "=== Performing actual query for userId: " + userId + " ===");
+    private void tryLoadFromPath(String path, String userId, LoadCallback callback) {
+        DatabaseReference pathRef = FirebaseDatabase.getInstance().getReference(path);
 
-        productsRef.orderByChild("sellerId").equalTo(userId)
+        pathRef.orderByChild("sellerId").equalTo(userId)
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        Log.d(TAG, "Firebase query completed. Snapshot exists: " + snapshot.exists());
-                        Log.d(TAG, "Number of children: " + snapshot.getChildrenCount());
+                        if (snapshot.getChildrenCount() > 0) {
+                            List<Product> products = new ArrayList<>();
 
-                        myProductsList.clear();
-                        int productCount = 0;
-
-                        for (DataSnapshot productSnapshot : snapshot.getChildren()) {
-                            String productId = productSnapshot.getKey();
-                            Log.d(TAG, "Processing product ID: " + productId);
-
-                            Product product = productSnapshot.getValue(Product.class);
-                            if (product != null) {
-                                Log.d(TAG, "Product found - Title: " + product.getTitle() +
-                                        ", SellerId: " + product.getSellerId() +
-                                        ", Status: " + product.getStatus());
-
-                                product.setId(productId);
-                                myProductsList.add(product);
-                                productCount++;
-                            } else {
-                                Log.w(TAG, "Product is null for snapshot: " + productId);
+                            for (DataSnapshot productSnapshot : snapshot.getChildren()) {
+                                try {
+                                    Product product = productSnapshot.getValue(Product.class);
+                                    if (product != null) {
+                                        product.setId(productSnapshot.getKey());
+                                        products.add(product);
+                                    }
+                                } catch (Exception e) {
+                                    Log.w(TAG, "Failed to parse product: " + e.getMessage());
+                                }
                             }
+
+                            myProductsList.clear();
+                            myProductsList.addAll(products);
+
+                            runOnUiThread(() -> {
+                                myProductsAdapter.updateProducts(new ArrayList<>(products));
+                                showLoading(false);
+
+                                if (products.isEmpty()) {
+                                    showEmptyState();
+                                } else {
+                                    hideEmptyState();
+                                }
+                            });
+
+                            callback.onComplete(true);
+                        } else {
+                            callback.onComplete(false);
                         }
-
-                        Log.d(TAG, "Total products loaded: " + productCount);
-                        Log.d(TAG, "myProductsList size before adapter update: " + myProductsList.size());
-
-                        showLoading(false);
-                        updateUI();
-
-                        // Create a copy of the list to avoid reference issues
-                        List<Product> productsCopy = new ArrayList<>(myProductsList);
-                        Log.d(TAG, "productsCopy size: " + productsCopy.size());
-                        myProductsAdapter.updateProducts(productsCopy);
                     }
 
                     @Override
                     public void onCancelled(@NonNull DatabaseError error) {
-                        Log.e(TAG, "Firebase query cancelled: " + error.getMessage());
-                        Log.e(TAG, "Error code: " + error.getCode());
-                        Log.e(TAG, "Error details: " + error.getDetails());
-
-                        showLoading(false);
-                        Toast.makeText(MyProductsActivity.this,
-                                "Lỗi khi tải sản phẩm: " + error.getMessage(),
-                                Toast.LENGTH_SHORT).show();
+                        runOnUiThread(() -> {
+                            showLoading(false);
+                            Toast.makeText(MyProductsActivity.this,
+                                    "Lỗi tải dữ liệu: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                        });
+                        callback.onComplete(false);
                     }
                 });
     }
 
-    private void showLoading(boolean isLoading) {
-        progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-        recyclerView.setVisibility(isLoading ? View.GONE : View.VISIBLE);
+    private void showEmptyState() {
+        emptyStateText.setVisibility(View.VISIBLE);
+        emptyStateText.setText("Bạn chưa có sản phẩm nào.\nHãy đăng sản phẩm đầu tiên của bạn!");
+        recyclerView.setVisibility(View.GONE);
     }
 
-    private void updateUI() {
-        Log.d(TAG, "Updating UI. Products list size: " + myProductsList.size());
+    private void hideEmptyState() {
+        emptyStateText.setVisibility(View.GONE);
+        recyclerView.setVisibility(View.VISIBLE);
+    }
 
-        if (myProductsList.isEmpty()) {
-            Log.d(TAG, "No products found - showing empty state");
-            emptyStateText.setVisibility(View.VISIBLE);
-            emptyStateText.setText("Bạn chưa có sản phẩm nào.\nHãy đăng sản phẩm đầu tiên của bạn!");
-            recyclerView.setVisibility(View.GONE);
-        } else {
-            Log.d(TAG, "Products found - showing RecyclerView with " + myProductsList.size() + " items");
-            emptyStateText.setVisibility(View.GONE);
-            recyclerView.setVisibility(View.VISIBLE);
+    private void showLoading(boolean show) {
+        if (progressBar != null) {
+            progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
         }
+    }
+
+    private interface LoadCallback {
+        void onComplete(boolean success);
     }
 
     @Override

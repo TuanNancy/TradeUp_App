@@ -82,20 +82,19 @@ public class ProfileFragment extends Fragment {
     private void setupListeners(View view) {
         editProfileButton.setOnClickListener(v -> showEditProfileDialog());
 
+        // FIX: Navigate to MyProductsActivity instead of showing toast
+        myListingsButton.setOnClickListener(v -> {
+            android.util.Log.d("ProfileFragment", "=== My Listings button clicked ===");
+            Toast.makeText(getContext(), "Đang mở sản phẩm của tôi...", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(getContext(), com.example.tradeup_app.activities.MyProductsActivity.class);
+            startActivity(intent);
+        });
 
-
-
-
-        myListingsButton.setOnClickListener(v ->
-                Toast.makeText(getContext(), "My Listings feature coming soon", Toast.LENGTH_SHORT).show());
-
-
-
-
-
+        // FIX: Navigate to TransactionHistoryActivity instead of PaymentHistoryActivity
         purchaseHistoryButton.setOnClickListener(v -> {
-
-            Intent intent = new Intent(getContext(), com.example.tradeup_app.activities.PaymentHistoryActivity.class);
+            android.util.Log.d("ProfileFragment", "=== Purchase History button clicked ===");
+            Toast.makeText(getContext(), "Đang mở lịch sử giao dịch...", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(getContext(), com.example.tradeup_app.activities.TransactionHistoryActivity.class);
             startActivity(intent);
         });
 

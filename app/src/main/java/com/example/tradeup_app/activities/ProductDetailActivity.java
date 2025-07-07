@@ -1,15 +1,14 @@
 package com.example.tradeup_app.activities;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ImageView;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -32,7 +31,6 @@ import com.example.tradeup_app.models.Report;
 import com.example.tradeup_app.utils.Constants;
 import com.example.tradeup_app.utils.DataValidator;
 import com.example.tradeup_app.utils.NotificationManager;
-import com.example.tradeup_app.utils.ReportUtils;
 import com.example.tradeup_app.utils.VNDPriceFormatter;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.google.android.material.button.MaterialButton;
@@ -45,7 +43,6 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.ValueEventListener;
 
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -181,7 +178,15 @@ public class ProductDetailActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayShowHomeEnabled(true);
         }
 
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        // Setup back button handling using OnBackPressedCallback
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                finish();
+            }
+        });
+
+        toolbar.setNavigationOnClickListener(v -> finish());
     }
 
     private void setupImagePager() {
@@ -659,7 +664,9 @@ public class ProductDetailActivity extends AppCompatActivity {
             return;
         }
 
-        if (currentUserId.equals(product.getSellerId())) {
+        // Check for null to prevent NullPointerException
+        if (currentUserId != null && product != null && product.getSellerId() != null &&
+            currentUserId.equals(product.getSellerId())) {
             Toast.makeText(this, "You cannot make an offer on your own product", Toast.LENGTH_SHORT).show();
             android.util.Log.d("ProductDetailActivity", "User is the seller");
             return;

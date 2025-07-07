@@ -25,7 +25,13 @@ import com.example.tradeup_app.firebase.FirebaseManager;
 import com.example.tradeup_app.models.Transaction;
 import com.example.tradeup_app.models.Rating;
 import com.example.tradeup_app.auth.Helper.CurrentUser;
+import com.example.tradeup_app.auth.Domain.UserModel;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +46,10 @@ public class TransactionsFragment extends Fragment implements TransactionAdapter
 
     private FirebaseManager firebaseManager;
     private List<Transaction> transactions = new ArrayList<>();
+
+    private interface LoadTransactionCallback {
+        void onComplete(boolean success);
+    }
 
     @Nullable
     @Override
@@ -70,65 +80,156 @@ public class TransactionsFragment extends Fragment implements TransactionAdapter
     }
 
     private void loadTransactions() {
-        Log.d("TransactionsFragment", "loadTransactions() called");
         showLoading(true);
 
-        String currentUserId = firebaseManager.getCurrentUserId();
-        Log.d("TransactionsFragment", "Current user ID: " + currentUserId);
-
-        if (currentUserId == null) {
-            Log.e("TransactionsFragment", "User not logged in");
-            showError("User not logged in");
-            return;
-        }
-
-        // Use the new method that gets transactions from both data sources
-        firebaseManager.getAllTransactionsForUser(currentUserId, new FirebaseManager.TransactionCallback() {
+        // Sử dụng CurrentUser mới với callback
+        CurrentUser.loadUserSynchronously(new CurrentUser.LoadUserCallback() {
             @Override
-            public void onTransactionsLoaded(List<Transaction> loadedTransactions) {
-                Log.d("TransactionsFragment", "onTransactionsLoaded called with " + loadedTransactions.size() + " transactions");
-                for (Transaction t : loadedTransactions) {
-                    Log.d("TransactionsFragment", "Loaded transaction: " + t.getId() + " - " + t.getProductTitle());
+            public void onUserLoaded(UserModel user) {
+                String currentUserId = user.getUid();
+
+                if (currentUserId == null || currentUserId.isEmpty()) {
+                    showError("User ID not found");
+                    return;
                 }
 
-                transactions.clear();
-                transactions.addAll(loadedTransactions);
-                updateUI();
+                // Load transactions directly from Firebase
+                loadTransactionsFromFirebase(currentUserId);
             }
 
             @Override
             public void onError(String error) {
-                Log.e("TransactionsFragment", "Error loading transactions: " + error);
-                showError("Error loading transactions: " + error);
+                // Fallback: thử dùng Firebase Auth trực tiếp
+                com.google.firebase.auth.FirebaseUser firebaseUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+                if (firebaseUser != null) {
+                    loadTransactionsFromFirebase(firebaseUser.getUid());
+                } else {
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "Vui lòng đăng nhập lại", Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+        });
+    }
+
+    private void loadTransactionsFromFirebase(String userId) {
+        // Thử cả "transactions" và "Transactions" để đảm bảo tương thích
+        tryLoadTransactionsFromPath("transactions", userId, success -> {
+            if (!success) {
+                Log.d("TransactionsFragment", "No transactions found in 'transactions', trying 'Transactions'");
+                tryLoadTransactionsFromPath("Transactions", userId, success2 -> {
+                    if (!success2) {
+                        Log.d("TransactionsFragment", "No transactions found in both paths");
+                        showEmptyState();
+                    }
+                });
+            }
+        });
+    }
+
+    private void tryLoadTransactionsFromPath(String path, String userId, LoadTransactionCallback callback) {
+        DatabaseReference transactionsRef = FirebaseDatabase.getInstance().getReference(path);
+
+        // Query transactions where user is either buyer or seller
+        transactionsRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                Log.d("TransactionsFragment", "Query result from '" + path + "': " + snapshot.getChildrenCount() + " transactions");
+
+                List<Transaction> userTransactions = new ArrayList<>();
+
+                for (DataSnapshot transactionSnapshot : snapshot.getChildren()) {
+                    try {
+                        Transaction transaction = transactionSnapshot.getValue(Transaction.class);
+                        if (transaction != null) {
+                            transaction.setId(transactionSnapshot.getKey());
+
+                            // Check if user is involved in this transaction
+                            if (userId.equals(transaction.getBuyerId()) || userId.equals(transaction.getSellerId())) {
+                                userTransactions.add(transaction);
+                                Log.d("TransactionsFragment", "Found transaction: " + transaction.getId() + " - " + transaction.getProductTitle());
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.w("TransactionsFragment", "Failed to parse transaction: " + e.getMessage());
+                    }
+                }
+
+                if (!userTransactions.isEmpty()) {
+                    transactions.clear();
+                    transactions.addAll(userTransactions);
+
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            updateUI();
+                        });
+                    }
+
+                    callback.onComplete(true);
+                } else {
+                    callback.onComplete(false);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("TransactionsFragment", "Database query failed for path '" + path + "': " + error.getMessage());
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        showError("Lỗi tải dữ liệu: " + error.getMessage());
+                    });
+                }
+                callback.onComplete(false);
             }
         });
     }
 
     private void updateUI() {
-        Log.d("TransactionsFragment", "updateUI() called with " + transactions.size() + " transactions");
+        Log.d("TransactionsFragment", "updateUI called with " + transactions.size() + " transactions");
+
         showLoading(false);
-        transactionAdapter.updateTransactions(transactions);
 
         if (transactions.isEmpty()) {
-            Log.d("TransactionsFragment", "No transactions found, showing empty view");
-            emptyView.setVisibility(View.VISIBLE);
-            transactionsRecyclerView.setVisibility(View.GONE);
-            emptyMessageText.setText("No transactions yet\nStart buying or selling to see your transaction history");
+            showEmptyState();
         } else {
-            Log.d("TransactionsFragment", "Showing " + transactions.size() + " transactions");
+            hideEmptyState();
+            transactionAdapter.notifyDataSetChanged();
+        }
+    }
+
+    private void showEmptyState() {
+        if (emptyView != null) {
+            emptyView.setVisibility(View.VISIBLE);
+        }
+        if (emptyMessageText != null) {
+            emptyMessageText.setText("Bạn chưa có giao dịch nào.\nHãy bắt đầu mua hoặc bán sản phẩm!");
+        }
+        if (transactionsRecyclerView != null) {
+            transactionsRecyclerView.setVisibility(View.GONE);
+        }
+    }
+
+    private void hideEmptyState() {
+        if (emptyView != null) {
             emptyView.setVisibility(View.GONE);
+        }
+        if (transactionsRecyclerView != null) {
             transactionsRecyclerView.setVisibility(View.VISIBLE);
         }
     }
 
     private void showLoading(boolean show) {
-        progressIndicator.setVisibility(show ? View.VISIBLE : View.GONE);
-        transactionsRecyclerView.setVisibility(show ? View.GONE : View.VISIBLE);
+        if (progressIndicator != null) {
+            progressIndicator.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
     }
 
     private void showError(String message) {
         showLoading(false);
-        Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+        if (getContext() != null) {
+            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+        }
+        Log.e("TransactionsFragment", "Error: " + message);
     }
 
     // TransactionAdapter.OnTransactionActionListener implementations
@@ -226,55 +327,6 @@ public class TransactionsFragment extends Fragment implements TransactionAdapter
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
-        // Add debug buttons for testing (remove in production)
-        addDebugButtons(view);
-    }
-
-    private void addDebugButtons(View view) {
-        // Add a debug button to create test transaction
-        Button debugButton = new Button(getContext());
-        debugButton.setText("DEBUG: Create Test Transaction");
-        debugButton.setOnClickListener(v -> {
-            firebaseManager.createTestTransaction(new FirebaseManager.OnTransactionSavedListener() {
-                @Override
-                public void onSuccess(String transactionId) {
-                    Toast.makeText(getContext(), "Test transaction created: " + transactionId, Toast.LENGTH_SHORT).show();
-                    loadTransactions(); // Refresh the list
-                }
-
-                @Override
-                public void onError(String error) {
-                    Toast.makeText(getContext(), "Failed to create test transaction: " + error, Toast.LENGTH_SHORT).show();
-                }
-            });
-        });
-
-        // Add a debug button to check database state
-        Button checkButton = new Button(getContext());
-        checkButton.setText("DEBUG: Check Database");
-        checkButton.setOnClickListener(v -> {
-            firebaseManager.checkTransactionData(result -> {
-                Toast.makeText(getContext(), result, Toast.LENGTH_LONG).show();
-                Log.d("TransactionsFragment", "Database check result: " + result);
-            });
-        });
-
-        // Add buttons to the layout programmatically (for debug only)
-        if (view instanceof FrameLayout) {
-            LinearLayout debugLayout = new LinearLayout(getContext());
-            debugLayout.setOrientation(LinearLayout.VERTICAL);
-            debugLayout.addView(debugButton);
-            debugLayout.addView(checkButton);
-
-            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            );
-            params.gravity = Gravity.TOP | Gravity.END;
-            params.setMargins(16, 16, 16, 16);
-
-            ((FrameLayout) view).addView(debugLayout, params);
-        }
+        // Removed debug buttons - không cần debug nữa
     }
 }
