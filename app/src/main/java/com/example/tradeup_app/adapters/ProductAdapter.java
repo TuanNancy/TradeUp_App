@@ -155,6 +155,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         private final ImageView productImage;
         private final TextView productTitle, productPrice, productDescription;
         private final TextView sellerName, sellerRating, viewCount, timePosted;
+        private final TextView soldCount; // Add sold count TextView
         private final Chip statusChip, categoryChip, conditionChip;
         private final CircleImageView sellerAvatar;
         private final MaterialButton btnChat, btnMakeOffer, btnBuy;
@@ -173,6 +174,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             sellerRating = itemView.findViewById(R.id.seller_rating);
             viewCount = itemView.findViewById(R.id.view_count);
             timePosted = itemView.findViewById(R.id.time_posted);
+            soldCount = itemView.findViewById(R.id.sold_count); // Initialize sold count
             statusChip = itemView.findViewById(R.id.status_chip);
             categoryChip = itemView.findViewById(R.id.category_chip);
             conditionChip = itemView.findViewById(R.id.condition_chip);
@@ -188,7 +190,10 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             productPrice.setText(formatPrice(product.getPrice()));
             productDescription.setText(product.getDescription());
             sellerName.setText(product.getSellerName());
-            viewCount.setText(product.getViewCount() + " views");
+            viewCount.setText("👁 " + product.getViewCount() + " lượt xem");
+
+            // Use interactionCount for sold items display
+            soldCount.setText("🛒 " + product.getInteractionCount() + " đã bán");
 
             // Set chips
             setupStatusChip(product.getStatus());
