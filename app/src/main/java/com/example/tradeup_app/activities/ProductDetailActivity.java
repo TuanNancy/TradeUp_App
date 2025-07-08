@@ -63,6 +63,7 @@ public class ProductDetailActivity extends AppCompatActivity {
 
     // Product Info
     private TextView productTitle, productPrice, productLocation, viewCount, productDescription;
+    private TextView soldCount; // Add sold count TextView
     private Chip statusChip, categoryChip, conditionChip;
 
     // Seller Info
@@ -128,6 +129,7 @@ public class ProductDetailActivity extends AppCompatActivity {
         productLocation = findViewById(R.id.product_location);
         viewCount = findViewById(R.id.view_count);
         productDescription = findViewById(R.id.product_description);
+        soldCount = findViewById(R.id.sold_count); // Initialize sold count TextView
         statusChip = findViewById(R.id.status_chip);
         categoryChip = findViewById(R.id.category_chip);
         conditionChip = findViewById(R.id.condition_chip);
@@ -312,6 +314,9 @@ public class ProductDetailActivity extends AppCompatActivity {
         productLocation.setText(currentProduct.getLocation());
         viewCount.setText(currentProduct.getViewCount() + " views");
         productDescription.setText(currentProduct.getDescription());
+
+        // Sold count - new feature
+        soldCount.setText("🛒 " + currentProduct.getInteractionCount() + " đã bán");
 
         // Status chip
         updateStatusChip();
