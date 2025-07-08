@@ -349,7 +349,7 @@ public class HomeFragment extends Fragment {
                                                             Toast.LENGTH_SHORT).show());
                                                 }
                                             }
-                                        });
+                                       });
                                 });
                             }
 
@@ -884,16 +884,12 @@ public class HomeFragment extends Fragment {
 
         String[] options;
         if (isOwner) {
-            // ✅ FIX: Show different options based on product status
-            if ("Sold".equals(product.getStatus())) {
-                options = new String[]{"View Offers", "Edit Product", "Mark as Available", "Delete Product"};
-            } else {
-                options = new String[]{"View Offers", "Edit Product", "Mark as Sold", "Delete Product"};
-            }
+            // Owner options with new listing status functionality
+            options = new String[]{"View Offers", "Edit Product", "Change Listing Status", "Delete Product"};
         } else {
             // Show different options based on product status for buyers
-            if ("Sold".equals(product.getStatus())) {
-                // Product is sold - only allow reporting
+            if ("Sold".equals(product.getStatus()) || "Paused".equals(product.getStatus())) {
+                // Product is sold or paused - only allow reporting
                 options = new String[]{"Report Product"};
             } else {
                 // Product is available - allow both make offer and reporting
@@ -925,20 +921,69 @@ public class HomeFragment extends Fragment {
                 if (getContext() != null) {
                     Intent editIntent = new Intent(getContext(), com.example.tradeup_app.activities.EditProductActivity.class);
                     editIntent.putExtra("product", product);
-                    startActivityForResult(editIntent, 1001); // Use startActivityForResult with request code
+                    startActivityForResult(editIntent, 1001);
                 }
                 break;
-            case 2: // ✅ FIX: Handle both Mark as Sold and Mark as Available based on current status
-                if ("Sold".equals(product.getStatus())) {
-                    markProductAsAvailable(product);
-                } else {
-                    markProductAsSold(product);
-                }
+            case 2: // Change Listing Status
+                showListingStatusDialog(product);
                 break;
             case 3: // Delete Product
                 deleteProduct(product);
                 break;
         }
+    }
+
+    private void showListingStatusDialog(Product product) {
+        String[] statusOptions = {"Available", "Sold", "Paused"};
+        String currentStatus = product.getStatus();
+        int selectedIndex = 0;
+
+        // Find current status index
+        for (int i = 0; i < statusOptions.length; i++) {
+            if (statusOptions[i].equals(currentStatus)) {
+                selectedIndex = i;
+                break;
+            }
+        }
+
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(requireContext());
+        builder.setTitle("Change Listing Status")
+                .setSingleChoiceItems(statusOptions, selectedIndex, null)
+                .setPositiveButton("Update", (dialog, which) -> {
+                    androidx.appcompat.app.AlertDialog alertDialog = (androidx.appcompat.app.AlertDialog) dialog;
+                    int checkedItem = alertDialog.getListView().getCheckedItemPosition();
+                    if (checkedItem != -1) {
+                        String newStatus = statusOptions[checkedItem];
+                        updateProductStatus(product, newStatus);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void updateProductStatus(Product product, String newStatus) {
+        firebaseManager.updateProductStatus(product.getId(), newStatus, new FirebaseManager.UpdateCallback() {
+            @Override
+            public void onSuccess() {
+                if (getActivity() != null) {
+                    Toast.makeText(getContext(), "Product status updated to " + newStatus, Toast.LENGTH_SHORT).show();
+
+                    // Update the product object
+                    product.setStatus(newStatus);
+
+                    // Refresh the adapters to reflect the change
+                    featuredAdapter.notifyDataSetChanged();
+                    recentAdapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                if (getActivity() != null) {
+                    Toast.makeText(getContext(), "Failed to update status: " + error, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     private void handleBuyerAction(Product product, int actionIndex) {

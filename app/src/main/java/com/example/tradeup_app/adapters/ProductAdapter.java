@@ -191,12 +191,15 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             viewCount.setText(product.getViewCount() + " views");
 
             // Set chips
-            statusChip.setText(product.getStatus());
+            setupStatusChip(product.getStatus());
             categoryChip.setText(product.getCategory());
             conditionChip.setText(product.getCondition());
 
             // Set time posted
             timePosted.setText(formatTimeAgo(product.getCreatedAt()));
+
+            // Setup buttons based on product status
+            setupButtonStates(product.getStatus());
 
             // Load product image
             if (product.getImageUrls() != null && !product.getImageUrls().isEmpty()) {
@@ -276,6 +279,62 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                     adapter.listener.onBuyProduct(product);
                 }
             });
+        }
+
+        private void setupStatusChip(String status) {
+            statusChip.setText(status);
+
+            switch (status) {
+                case "Available":
+                    statusChip.setChipBackgroundColorResource(android.R.color.holo_green_light);
+                    statusChip.setTextColor(itemView.getContext().getColor(android.R.color.white));
+                    break;
+                case "Sold":
+                    statusChip.setChipBackgroundColorResource(android.R.color.holo_red_light);
+                    statusChip.setTextColor(itemView.getContext().getColor(android.R.color.white));
+                    break;
+                case "Paused":
+                    statusChip.setChipBackgroundColorResource(android.R.color.holo_orange_light);
+                    statusChip.setTextColor(itemView.getContext().getColor(android.R.color.white));
+                    break;
+                default:
+                    statusChip.setChipBackgroundColorResource(android.R.color.darker_gray);
+                    statusChip.setTextColor(itemView.getContext().getColor(android.R.color.white));
+                    break;
+            }
+        }
+
+        private void setupButtonStates(String status) {
+            switch (status) {
+                case "Available":
+                    // Enable all buttons for available products
+                    btnBuy.setEnabled(true);
+                    btnMakeOffer.setEnabled(true);
+                    btnBuy.setBackgroundTintList(itemView.getContext().getColorStateList(android.R.color.holo_green_light));
+                    btnMakeOffer.setAlpha(1.0f);
+                    break;
+                case "Sold":
+                    // Disable buy and make offer buttons for sold products
+                    btnBuy.setEnabled(false);
+                    btnMakeOffer.setEnabled(false);
+                    btnBuy.setBackgroundTintList(itemView.getContext().getColorStateList(android.R.color.darker_gray));
+                    btnMakeOffer.setAlpha(0.5f);
+                    break;
+                case "Paused":
+                    // Disable buy and make offer buttons for paused products
+                    btnBuy.setEnabled(false);
+                    btnMakeOffer.setEnabled(false);
+                    btnBuy.setBackgroundTintList(itemView.getContext().getColorStateList(android.R.color.darker_gray));
+                    btnMakeOffer.setAlpha(0.5f);
+                    break;
+                default:
+                    // Default to enabled for unknown status
+                    btnBuy.setEnabled(true);
+                    btnMakeOffer.setEnabled(true);
+                    btnBuy.setBackgroundTintList(itemView.getContext().getColorStateList(android.R.color.holo_green_light));
+                    btnMakeOffer.setAlpha(1.0f);
+                    break;
+            }
         }
 
         private String formatPrice(double price) {

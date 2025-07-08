@@ -91,6 +91,11 @@ public class FirebaseManager {
         void onError(String error);
     }
 
+    public interface UpdateCallback {
+        void onSuccess();
+        void onError(String error);
+    }
+
     private FirebaseManager() {
         database = FirebaseDatabase.getInstance();
         auth = FirebaseAuth.getInstance();
@@ -574,6 +579,21 @@ public class FirebaseManager {
         productRef.child("status").setValue(status);
         productRef.child("updatedAt").setValue(System.currentTimeMillis())
             .addOnCompleteListener(listener);
+    }
+
+    // Overloaded method for UpdateCallback compatibility
+    public void updateProductStatus(String productId, String status, UpdateCallback callback) {
+        DatabaseReference productRef = database.getReference(PRODUCTS_NODE).child(productId);
+        productRef.child("status").setValue(status);
+        productRef.child("updatedAt").setValue(System.currentTimeMillis())
+            .addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    callback.onSuccess();
+                } else {
+                    callback.onError(task.getException() != null ?
+                        task.getException().getMessage() : "Unknown error");
+                }
+            });
     }
 
     public void incrementProductViewCount(String productId) {
