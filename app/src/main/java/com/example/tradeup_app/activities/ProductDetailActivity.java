@@ -77,7 +77,7 @@ public class ProductDetailActivity extends AppCompatActivity {
 
     // Owner Actions
     private MaterialCardView ownerActionsCard;
-    private MaterialButton viewOffersButton, editProductButton, markSoldButton, deleteProductButton;
+    private MaterialButton viewOffersButton, editProductButton, changeListingStatusButton, deleteProductButton;
 
     // Product Details
     private TextView detailCondition, detailPostedDate, detailNegotiable;
@@ -152,7 +152,7 @@ public class ProductDetailActivity extends AppCompatActivity {
         ownerActionsCard = findViewById(R.id.owner_actions_card);
         viewOffersButton = findViewById(R.id.view_offers_button);
         editProductButton = findViewById(R.id.edit_product_button);
-        markSoldButton = findViewById(R.id.mark_sold_button);
+        changeListingStatusButton = findViewById(R.id.mark_sold_button);
         deleteProductButton = findViewById(R.id.delete_product_button);
 
         // Product details
@@ -265,7 +265,7 @@ public class ProductDetailActivity extends AppCompatActivity {
         // Owner actions
         viewOffersButton.setOnClickListener(v -> viewOffers());
         editProductButton.setOnClickListener(v -> editProduct());
-        markSoldButton.setOnClickListener(v -> markAsSold());
+        changeListingStatusButton.setOnClickListener(v -> showListingStatusDialog());
         deleteProductButton.setOnClickListener(v -> deleteProduct());
     }
 
@@ -1066,5 +1066,52 @@ public class ProductDetailActivity extends AppCompatActivity {
         Intent intent = new Intent(context, ProductDetailActivity.class);
         intent.putExtra(Constants.EXTRA_PRODUCT_ID, productId);
         context.startActivity(intent);
+    }
+
+    private void showListingStatusDialog() {
+        String[] statusOptions = {"Available", "Sold", "Paused"};
+        String currentStatus = currentProduct.getStatus();
+        int selectedIndex = 0;
+
+        // Find current status index
+        for (int i = 0; i < statusOptions.length; i++) {
+            if (statusOptions[i].equals(currentStatus)) {
+                selectedIndex = i;
+                break;
+            }
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Change Listing Status")
+                .setSingleChoiceItems(statusOptions, selectedIndex, null)
+                .setPositiveButton("Update", (dialog, which) -> {
+                    AlertDialog alertDialog = (AlertDialog) dialog;
+                    int checkedItem = alertDialog.getListView().getCheckedItemPosition();
+                    if (checkedItem != -1) {
+                        String newStatus = statusOptions[checkedItem];
+                        updateProductStatus(newStatus);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void updateProductStatus(String newStatus) {
+        firebaseManager.updateProductStatus(productId, newStatus, new FirebaseManager.UpdateCallback() {
+            @Override
+            public void onSuccess() {
+                currentProduct.setStatus(newStatus);
+                updateUI();
+                Toast.makeText(ProductDetailActivity.this, "Product status updated to " + newStatus, Toast.LENGTH_SHORT).show();
+
+                // Send notification about listing update
+                sendListingUpdateNotification(newStatus.toLowerCase());
+            }
+
+            @Override
+            public void onError(String error) {
+                Toast.makeText(ProductDetailActivity.this, "Failed to update status: " + error, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
